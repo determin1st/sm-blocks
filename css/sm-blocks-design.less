@@ -1,0 +1,67 @@
+/**
+* design
+*/
+#sm-products.custom {
+  // {{{
+  > .main
+  {
+    > .item // vertical
+    {
+      > .box
+      {
+        > .head // image
+        {
+          svg {fill:red;}
+        }
+        > .body
+        {
+          svg {fill:green;}
+        }
+        > .foot
+        {
+          svg {fill:blue;}
+        }
+      }
+      &.empty
+      {
+        > .box > div
+        {
+          display: flex;
+        }
+      }
+    }
+    &.x > .item // horizontal
+    {
+    }
+  }
+  &.inactive // initial state
+  {
+    visibility: visible;
+    pointer-events: auto;
+  }
+  // }}}
+}
+div.sm-paginator.custom {
+  // {{{
+  > div.inactive
+  {
+    pointer-events: auto;
+    > .range
+    {
+      padding: 0;
+      > div
+      {
+        flex: 100 100 0;
+        display: flex;
+        padding: 4px 1px 4px 1px;
+      }
+      > svg {display: none;}
+      > .page.ix, > page.xi
+      {
+        opacity: 0.4;
+      }
+    }
+  }
+  // }}}
+}
+// vim: fdm=marker ts=2 sts=2 sw=2 :

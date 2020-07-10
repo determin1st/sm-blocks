@@ -1,0 +1,15 @@
+/**
+* demo
+*/
+#sm-demo {
+  display: flex;
+  padding: 0 8px 0 8px;
+}
+#sm-demo > .a {
+  flex: 1 1 0;
+  max-width: 300px;
+  padding-right: 8px;
+}
+#sm-demo > .b {
+  flex: 1 1 0;
+}

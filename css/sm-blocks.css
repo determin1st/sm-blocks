@@ -1,0 +1,650 @@
+/**
+* base
+*/
+#sm-products {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  height: auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+#sm-products > .main {
+  --columns: 4;
+  --column-gap: 4px;
+  --row-gap: 4px;
+  --item-max-x: 304px;
+  --item-max-y: 640px;
+  --item-sz-1: 35;
+  --item-sz-2: 40;
+  --item-sz-3: 25;
+  --font-size: 20px;
+  --font-size-header: calc(var(--font-size) + 4px);
+  --rows: 1;
+  --height: calc(var(--rows) * var(--item-max-y));
+  --svg-icon-size: calc(10px + var(--font-size));
+  width: 100%;
+  height: var(--height);
+  max-width: calc(var(--columns) * var(--item-max-x));
+  max-height: calc(var(--rows) * var(--item-max-y));
+  display: grid;
+  grid-template-columns: repeat(var(--columns), 1fr);
+  grid-column-gap: var(--column-gap);
+  grid-row-gap: var(--row-gap);
+  justify-content: center;
+}
+#sm-products > .main > .item {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+}
+#sm-products > .main > .item > .box {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  max-width: var(--item-max-x);
+  max-height: var(--item-max-y);
+}
+#sm-products > .main > .item > .box .ph {
+  position: relative;
+}
+#sm-products > .main > .item > .box .ph > * {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+}
+#sm-products > .main > .item > .box .ph > div {
+  display: none;
+}
+#sm-products > .main > .item > .box .ph.loaded > div {
+  display: flex;
+}
+#sm-products > .main > .item > .box .ph.loaded > svg {
+  display: none;
+}
+#sm-products > .main > .item > .box > div {
+  flex-shrink: 100;
+  display: flex;
+  flex-direction: column;
+}
+#sm-products > .main > .item > .box > div > div {
+  flex-grow: 100;
+  flex-shrink: 100;
+  display: flex;
+}
+#sm-products > .main > .item > .box > .head {
+  flex-grow: var(--item-sz-1);
+}
+#sm-products > .main > .item > .box > .head > div {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+}
+#sm-products > .main > .item > .box > .head > div > img {
+  max-width: 100%;
+  max-height: 100%;
+}
+#sm-products > .main > .item > .box > .body {
+  flex-grow: var(--item-sz-2);
+}
+#sm-products > .main > .item > .box > .body > .icon {
+  max-height: calc(2 * var(--font-size-header));
+  display: flex;
+}
+#sm-products > .main > .item > .box > .body > .icon > .a {
+  flex: 1 1 30%;
+}
+#sm-products > .main > .item > .box > .body > .icon > .b {
+  flex: 1 1 70%;
+}
+#sm-products > .main > .item > .box > .body > .title {
+  max-height: calc(3 * var(--font-size-header));
+}
+#sm-products > .main > .item > .box > .body > .title > div,
+#sm-products > .main > .item > .box > .body > .title > div > button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: var(--font-size-header);
+  line-height: 1;
+  text-align: center;
+  word-break: keep-all;
+  overflow: hidden;
+}
+#sm-products > .main > .item > .box > .foot {
+  flex-grow: var(--item-sz-3);
+}
+#sm-products > .main > .item > .box > .foot > .price {
+  max-height: calc(3 * var(--font-size));
+  font-size: var(--font-size-header);
+}
+#sm-products > .main > .item > .box > .foot > .price > div {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+#sm-products > .main > .item > .box > .foot > .price > div > .old {
+  display: none;
+  line-height: 0.65em;
+  opacity: 0.7;
+}
+#sm-products > .main > .item > .box > .foot > .price > div > .old > span {
+  text-decoration: line-through;
+  font-size: 0.65em;
+}
+#sm-products > .main > .item > .box > .foot > .price > div > .current {
+  display: flex;
+  line-height: 0.9em;
+}
+#sm-products > .main > .item > .box > .foot > .price > div > .current > .currency {
+  font-size: 1em;
+  padding-right: 0.2em;
+}
+#sm-products > .main > .item > .box > .foot > .price > div > .current > .value {
+  font-size: 1em;
+  font-weight: bold;
+}
+#sm-products > .main > .item > .box > .foot > .price > div > .current > .mantissa {
+  font-size: 0.7em;
+  padding-top: 0.1em;
+  display: flex;
+}
+#sm-products > .main > .item > .box > .foot > .price > div.none {
+  display: none;
+}
+#sm-products > .main > .item > .box > .foot > .price > div.lower > .old {
+  display: block;
+}
+#sm-products > .main > .item > .box > .foot > .price > div.right > .current > .currency {
+  order: 2;
+  padding-left: 0.2em;
+  padding-right: 0;
+}
+#sm-products > .main > .item > .box > .foot > .controls {
+  max-height: calc(3 * var(--font-size));
+}
+#sm-products > .main > .item > .box > .foot > .controls > div {
+  padding-left: 4px;
+  padding-right: 4px;
+}
+#sm-products > .main > .item > .box > .foot > .controls > div a,
+#sm-products > .main > .item > .box > .foot > .controls > div button {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: var(--font-size);
+  font-weight: bold;
+  border-width: 0;
+  border-style: solid;
+  border-color: slategray;
+  border-radius: 2px;
+  background-color: gainsboro;
+  color: black;
+  outline: 0;
+  cursor: pointer;
+}
+#sm-products > .main > .item > .box > .foot > .controls > div a:focus,
+#sm-products > .main > .item > .box > .foot > .controls > div button:focus {
+  border-width: 1px;
+  background-color: silver;
+}
+#sm-products > .main > .item > .box > .foot > .controls > div a:hover,
+#sm-products > .main > .item > .box > .foot > .controls > div button:hover {
+  background-color: silver;
+}
+#sm-products > .main > .item > .box > .foot > .controls > div .cart {
+  max-width: calc(30px + var(--svg-icon-size));
+}
+#sm-products > .main > .item > .box > .foot > .controls > div .cart > svg {
+  width: var(--svg-icon-size);
+  height: auto;
+  fill: black;
+}
+#sm-products > .main > .item > .box > .foot > .controls > div .cart.none {
+  display: none;
+}
+#sm-products > .main > .item.empty > .box {
+  border-style: dotted;
+  border-color: slategray;
+  border-width: 0;
+  border-right-width: 1px;
+  border-bottom-width: 1px;
+}
+#sm-products > .main > .item.empty > .box > div {
+  display: none;
+}
+#sm-products > .main.x > .item > .box {
+  flex-direction: row;
+  max-width: 100%;
+  max-height: var(--item-max-x);
+}
+#sm-products > .main.x > .item > .box .ph {
+  max-height: 100%;
+}
+#sm-products > .main.x > .item > .box > .image {
+  max-width: var(--item-max-x);
+  max-height: 100%;
+}
+#sm-products > .main.x > .item > .box > .controls {
+  max-width: calc(1.5 * var(--item-C));
+  max-height: 100%;
+}
+#sm-products.inactive {
+  visibility: hidden;
+  pointer-events: none;
+}
+#sm-products div,
+#sm-products input,
+#sm-products svg,
+#sm-products img {
+  box-sizing: border-box;
+  margin: 0;
+}
+div.sm-category-filter {
+  display: flex;
+  flex-direction: column;
+}
+div.sm-category-filter > .title {
+  display: flex;
+}
+div.sm-category-filter > .title > h3 {
+  flex: 1 1 0;
+  font-size: 36px;
+  font-weight: 700;
+  margin: 0;
+}
+div.sm-category-filter > hr {
+  height: 1px;
+  margin: 0;
+  color: lightgray;
+}
+div.sm-category-filter > .section {
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-left: 4px;
+  padding-right: 0;
+}
+div.sm-category-filter > .section .item > .name {
+  padding-top: 0;
+  padding-bottom: 0;
+  display: flex;
+  flex-direction: row;
+}
+div.sm-category-filter > .section .item > .name > div {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+div.sm-category-filter > .section .item > .name > .box {
+  flex: 1 1 0;
+  min-width: 0;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  cursor: pointer;
+}
+div.sm-category-filter > .section .item > .name > .box > input {
+  flex: 0 0 0;
+  width: 0;
+  height: 0;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border-style: none;
+  border-width: 0;
+  opacity: 0;
+  position: static;
+  outline: none;
+}
+div.sm-category-filter > .section .item > .name > .box > input:focus ~ .check {
+  border-width: 2px;
+}
+div.sm-category-filter > .section .item > .name > .box > .check {
+  flex: 0 0 0;
+  min-width: 20px;
+  min-height: 20px;
+  border: 1px solid slategray;
+  border-radius: 2px;
+  background-color: white;
+  position: relative;
+}
+div.sm-category-filter > .section .item > .name > .box > .check > svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  fill: white;
+  stroke: silver;
+}
+div.sm-category-filter > .section .item > .name > .box > .check.checked {
+  background-color: black;
+}
+div.sm-category-filter > .section .item > .name > .box > .check.checked > svg:nth-child(1) {
+  opacity: 1;
+}
+div.sm-category-filter > .section .item > .name > .box > .check.indeterminated {
+  background-color: black;
+}
+div.sm-category-filter > .section .item > .name > .box > .check.indeterminated > svg:nth-child(2) {
+  opacity: 1;
+}
+div.sm-category-filter > .section .item > .name > .box > .check.disabled {
+  background-color: gainsboro;
+}
+div.sm-category-filter > .section .item > .name > .box > label {
+  flex: 1 1 0;
+  padding-top: 1px;
+  padding-bottom: 0;
+  padding-left: 8px;
+  padding-right: 0;
+  min-width: 0;
+  margin: 0;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  user-select: none;
+  font-weight: normal;
+  color: black;
+}
+div.sm-category-filter > .section .item > .name > .box:hover {
+  padding-left: 1px;
+}
+div.sm-category-filter > .section .item > .name > .box:hover > .check {
+  border-width: 2px;
+}
+div.sm-category-filter > .section .item > .name > .count {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+div.sm-category-filter > .section .item > .name > .arrow {
+  flex: 1 1 0;
+  min-width: 20px;
+  max-width: 48px;
+  justify-content: flex-end;
+  cursor: pointer;
+}
+div.sm-category-filter > .section .item > .name > .arrow > svg {
+  width: auto;
+  height: 100%;
+  max-height: 24px;
+  transform: rotate(90deg);
+  fill: silver;
+  stroke: black;
+}
+div.sm-category-filter > .section .item > .name > .arrow:hover > svg {
+  fill: black;
+  stroke: silver;
+}
+div.sm-category-filter > .section .item > .name > .arrow.opened > svg {
+  transform: rotate(0deg);
+  fill: black;
+}
+div.sm-category-filter > .section .item > .section {
+  display: none;
+  opacity: 0;
+  padding-left: 20px;
+}
+div.sm-category-filter > .section .item > .section.opened {
+  display: block;
+  opacity: 1;
+}
+div.sm-category-filter.inactive {
+  pointer-events: none;
+}
+div.sm-category-filter.inactive svg {
+  opacity: 0.4;
+}
+div.sm-category-filter.inactive .item > .name > .box > .check {
+  background-color: gainsboro;
+}
+div.sm-category-filter div,
+div.sm-category-filter hr,
+div.sm-category-filter input,
+div.sm-category-filter label {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+div.sm-paginator {
+  --height: 48px;
+  --width: calc(1.35 * var(--height));
+  --font-size: calc(0.35 * var(--height));
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  height: calc(8px + var(--height));
+  margin: 0;
+  padding: 0;
+}
+div.sm-paginator > div {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+  box-sizing: border-box;
+  width: auto;
+  min-width: 0;
+  max-width: 10000px;
+  padding: 0;
+  margin: 0;
+  opacity: 0;
+}
+div.sm-paginator > div.v {
+  opacity: 1;
+}
+div.sm-paginator > div > div {
+  display: flex;
+  flex-direction: row;
+  font-size: var(--font-size);
+  padding: 0;
+  margin: 0;
+}
+div.sm-paginator > div > div button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  line-height: 0;
+  white-space: nowrap;
+  font-size: 1em;
+  text-decoration: none;
+  border-width: 0;
+  border-style: solid;
+  border-color: slategray;
+  border-radius: 2px;
+  background-color: gainsboro;
+  color: black;
+  outline: 0;
+  cursor: pointer;
+}
+div.sm-paginator > div > div button:focus {
+  border-width: 1px;
+  background-color: silver;
+}
+div.sm-paginator > div > div button:hover {
+  background-color: silver;
+}
+div.sm-paginator > div > div svg {
+  width: 100%;
+  height: 100%;
+}
+div.sm-paginator > div > .goto {
+  flex: 1 1 0;
+  max-width: calc(2px + var(--width));
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+div.sm-paginator > div > .goto.prev {
+  padding-left: 2px;
+}
+div.sm-paginator > div > .goto.next {
+  padding-right: 2px;
+}
+div.sm-paginator > div > .goto > button > svg {
+  fill: darkslategray;
+}
+div.sm-paginator > div > .goto.fast {
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+div.sm-paginator > div > .goto.fast > button {
+  border-width: 1px;
+  background-color: black;
+  padding: 4px;
+}
+div.sm-paginator > div > .goto.fast > button > svg {
+  fill: white;
+}
+div.sm-paginator > div > .sep {
+  max-width: 8px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+div.sm-paginator > div > .sep > svg {
+  fill: silver;
+}
+div.sm-paginator > div > .range {
+  --count: 0;
+  --max-width: calc(2px + (1 + var(--count)) * var(--width));
+  flex: 1 0 0;
+  justify-content: center;
+  overflow: hidden;
+  width: 10000px;
+  min-width: 0;
+  max-width: var(--max-width);
+}
+div.sm-paginator > div > .range.static {
+  --max-width: calc(2px + var(--count) * var(--width));
+}
+div.sm-paginator > div > .range > .gap {
+  flex: 0 100 0;
+  padding: 4px 0 4px 0;
+  min-width: calc(0.25 * var(--width));
+  display: none;
+}
+div.sm-paginator > div > .range > .gap.v {
+  display: flex;
+}
+div.sm-paginator > div > .range > .gap > svg {
+  fill: silver;
+}
+div.sm-paginator > div > .range > .page {
+  flex: 0 0 0;
+  overflow: hidden;
+  min-width: var(--width);
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-left: 1px;
+  padding-right: 1px;
+  display: none;
+}
+div.sm-paginator > div > .range > .page.v {
+  display: flex;
+}
+div.sm-paginator > div > .range > .page.current {
+  min-width: calc(2px + var(--width));
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+div.sm-paginator > div > .range > .page.current > button {
+  font-size: 1.4em;
+  font-weight: bold;
+  border-color: silver;
+  background-color: black;
+  color: white;
+  cursor: default;
+}
+div.sm-paginator > div.expand.v {
+  width: 100%;
+}
+div.sm-paginator > div.expand.v > .range {
+  width: 100%;
+  max-width: 100%;
+}
+div.sm-paginator > div.expand.v > .range > .gap {
+  padding: 4px 1px 4px 1px;
+}
+div.sm-paginator > div.expand.v > .range > .gap > svg {
+  fill: gainsboro;
+}
+div.sm-paginator > div.expand.v > .range > .page.current > button {
+  cursor: grab;
+}
+div.sm-paginator > div.expand.v > .range.drag {
+  cursor: grabbing;
+}
+div.sm-paginator > div.expand.v > .range.static > .page {
+  flex-grow: 1;
+}
+div.sm-paginator > div.expand.v > .range.static > .page.current > button {
+  cursor: default;
+}
+div.sm-paginator > div.expand.v.locked > .range > .gap > svg {
+  fill: silver;
+}
+div.sm-paginator > div.nosep > .goto.prev {
+  padding-right: 1px;
+}
+div.sm-paginator > div.nosep > .goto.next {
+  padding-left: 1px;
+}
+div.sm-paginator > div.hovered > .sep {
+  max-width: 8px;
+}
+div.sm-paginator > div.hovered > .sep > svg {
+  fill: slategray;
+}
+div.sm-paginator > svg {
+  display: none;
+  position: absolute;
+  box-sizing: border-box;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  padding: 4px 8px 4px 8px;
+  margin: 0;
+  stroke: gainsboro;
+  fill: gainsboro;
+}
+div.sm-paginator.inactive {
+  pointer-events: none;
+}
+div.sm-paginator.inactive > div {
+  display: none;
+}
+div.sm-paginator.inactive > svg {
+  display: block;
+}
+div.sm-paginator div,
+div.sm-paginator button,
+div.sm-paginator svg {
+  box-sizing: border-box;
+}

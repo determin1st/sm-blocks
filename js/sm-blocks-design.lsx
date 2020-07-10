@@ -1,0 +1,732 @@
+"use strict"
+do !->
+	# prepare
+	# {{{
+	group = 'sm-blocks'
+	# get dependencies
+	{Fragment, useState} = React
+	{
+		InspectorControls,
+		ServerSideRender
+	} = wp.editor
+	{
+		PanelBody, Placeholder,
+		ToggleControl, RadioControl,
+		RangeControl, SelectControl,
+		HorizontalRule, TextControl, TextareaControl
+	} = wp.components
+	# create svgs
+	svgGroupLogo = ``
+	<svg preserveAspectRatio="none" viewBox="0 0 24 24">
+		<path d="M22.5 20.9h-7.6c-.3 0-.5-.2-.5-.5v-2.5c0-.3.2-.5.5-.5H16v-7l-2.8 10.1c-.1.2-.3.4-.5.4H9.9c-.2 0-.4-.2-.5-.4L6.6 10.4v7h1.1c.3 0 .5.2.5.5v2.5c0 .3-.2.5-.5.5H1.4c-.3 0-.5-.2-.5-.5v-2.5c0-.3.2-.5.5-.5h.8c.1 0 .2-.1.3-.2V6.9c0-.1-.2-.2-.3-.2h-.8c-.3 0-.5-.2-.5-.5V3.6c0-.3.2-.5.5-.5h7.9c.2 0 .4.2.5.4l2.2 8 2.2-8c.1-.2.3-.4.5-.4h7.9c.3 0 .5.2.5.5v2.5c0 .3-.2.5-.5.5h-.8c-.1 0-.2.2-.3.3v10.4s.2.2.3.2h.8c.3 0 .5.2.5.5v2.5c-.1.1-.3.4-.6.4zm-7.1-1H22v-1.5h-.3c-.5 0-1.2-.6-1.2-1.2V6.8c0-.6.7-1.2 1.2-1.2h.3V4.1h-7l-2.5 9.3c-.1.2-.3.4-.5.4s-.5-.2-.6-.4L8.9 4.1h-7v1.5h.3c.6 0 1.3.7 1.3 1.2v10.4c0 .6-.7 1.2-1.3 1.2h-.3v1.5h5.3v-1.5H6.1c-.3 0-.5-.2-.5-.5V7c0-.3.2-.5.5-.5.2 0 .5.2.6.4l3.6 13h2.1l3.6-13c.1-.2.3-.4.5-.4s.5.2.5.5v10.9c0 .3-.2.5-.5.5h-1.1v1.5z"/>
+		<path d="M4 20.9H1c-.3 0-.5-.2-.5-.5s.2-.5.5-.5h3c.3 0 .5.2.5.5s-.2.5-.5.5zM23 20.9h-3c-.3 0-.5-.2-.5-.5s.2-.5.5-.5h3c.3 0 .5.2.5.5s-.2.5-.5.5z"/>
+	</svg>
+	``
+	svgProduct = ``
+	<svg preserveAspectRatio="none" viewBox="0 0 24 24">
+		<path d="M1 1v6h6V1H1zm8 0v6h6V1H9zm8 0v6h6V1h-6zM1 9v6h6V9H1zm8 0v6h6V9H9zm8 0v6h6V9h-6zM1 17v6h6v-6H1zm8 0v6h6v-6H9zm8 0v6h6v-6h-6z"/>
+	</svg>
+	``
+	svgFilter = ``
+	<svg preserveAspectRatio="none" viewBox="0 0 36 30">
+		<path d="M14 30l8-5v-8L35.999 0H0l14 17z"/>
+	</svg>
+	``
+	svgLeftRight = ``
+	<svg preserveAspectRatio="none" viewBox="0 0 67 47">
+		<path d="M25.091 47L0 23.354 25.091-.252l5.808 6.578L12.434 23.27l18.465 17.152L25.091 47zM36.102 40.422L54.566 23.27 36.102 6.326 41.91-.252 67 23.354 41.909 47l-5.807-6.578z"/>
+	</svg>
+	``
+	# create blocks category
+	a = wp.blocks.getCategories!
+	a.unshift {
+		title: 'storefront modern blocks'
+		slug: group
+		icon: svgGroupLogo
+	}
+	wp.blocks.setCategories a
+	# }}}
+	# configuration
+	B =
+		"#{group}/products": # {{{
+			title: 'каталог'
+			category: group
+			icon: svgProduct
+			supports:
+				multiple: false
+				customClassName: false
+				className: false
+			attributes:
+				size:
+					type: 'number'
+					default: 4
+				columns:
+					type: 'number'
+					default: 4
+				columnsMin:
+					type: 'number'
+					default: 1
+				order:
+					type: 'string'
+					default: 'default'
+				maxX:
+					type: 'number'
+					default: 304
+				maxY:
+					type: 'number'
+					default: 640
+				itemSizeBalance:
+					type: 'string'
+					default: '35:40:25'
+				itemImage:
+					type: 'boolean'
+					default: true
+				itemIcon:
+					type: 'boolean'
+					default: false
+				itemFeatures:
+					type: 'boolean'
+					default: false
+				itemPrice:
+					type: 'boolean'
+					default: true
+				itemControls:
+					type: 'boolean'
+					default: true
+				fontSize:
+					type: 'number'
+					default: 20
+			###
+			save: -> null
+			edit: (props) ->
+				return ``<Products { ...props } />``
+		# }}}
+		"#{group}/category-filter": # {{{
+			title: 'фильтр категорий'
+			category: group
+			icon: svgFilter
+			supports:
+				multiple: false # TODO: true
+				customClassName: false
+				className: false
+			attributes:
+				mode:
+					type: 'string'
+					default: 'compact'
+				hasCount:
+					type: 'boolean'
+					default: true
+				hasEmpty:
+					type: 'boolean'
+					default: false
+				subOpened:
+					type: 'boolean'
+					default: false
+			###
+			save: -> null
+			edit: (props) ->
+				return ``<CategoryFilter { ...props } />``
+		# }}}
+		"#{group}/paginator": # {{{
+			title: 'нумератор'
+			category: group
+			icon: svgLeftRight
+			supports:
+				multiple: true
+				customClassName: false
+				className: false
+			attributes:
+				modeFirstLast:
+					type: 'string'
+					default: 'inner'
+				modePrevNext:
+					type: 'string'
+					default: 'standard'
+				range:
+					type: 'boolean'
+					default: true
+				rangePlus:
+					type: 'number'
+					default: 2
+				rangeMinus:
+					type: 'number'
+					default: 1
+				inversion:
+					type: 'boolean'
+					default: false
+				expansion:
+					type: 'boolean'
+					default: true
+				separator:
+					type: 'boolean'
+					default: true
+				bFirst:
+					type: 'string'
+					default: ''
+				bLast:
+					type: 'string'
+					default: ''
+				bPrev:
+					type: 'string'
+					default: ''
+				bNext:
+					type: 'string'
+					default: ''
+				bGap:
+					type: 'string'
+					default: ''
+				bSep1:
+					type: 'string'
+					default: ''
+				bSep2:
+					type: 'string'
+					default: ''
+			###
+			save: -> null
+			edit: (props) ->
+				return ``<Paginator { ...props } />``
+		# }}}
+	# components
+	EmptyPlaceholder = (label) -> -> # {{{
+		return ``<Placeholder
+			label={ label }
+			className="category-filter"
+		>
+			{ "пусто" }
+		</Placeholder>
+		``
+	# }}}
+	RangeSlider = (o) -> # {{{
+		[x, setX] = useState o.value
+		return ``<RangeControl
+			label = { o.label }
+			help  = { o.help }
+			value = { x }
+			allowReset = { !!o.allowReset }
+			onChange={ (x) => {
+				if (typeof x === 'undefined') {
+					x = o.default;
+				}
+				return o.onChange
+					? setX(o.onChange(x))
+					: setX(x);
+			} }
+			min={ o.min }
+			max={ o.max }
+		/>
+		``
+	# }}}
+	TextInput = (o) -> # {{{
+		[x, setX] = useState o.value
+		return ``<TextControl
+			label = { o.label }
+			help  = { o.help }
+			value = { x }
+			hideLabelFromVision = { !!o.hideLabelFromVision }
+			onChange={ (x) => {
+				if (!x) {
+					x = o.default;
+				}
+				return o.onChange
+					? setX(o.onChange(x))
+					: setX(x);
+			} }
+		/>
+		``
+	# }}}
+	TextareaInput = (o) -> # {{{
+		[x, setX] = useState o.value
+		return ``<TextareaControl
+			label = { o.label }
+			help  = { o.help }
+			value = { x }
+			hideLabelFromVision = { !!o.hideLabelFromVision }
+			onChange={ (x) => {
+				if (!x) {
+					x = o.default;
+				}
+				return o.onChange
+					? setX(o.onChange(x))
+					: setX(x);
+			} }
+		/>
+		``
+	# }}}
+	SelectOption = (o) -> # {{{
+		[x, setX] = useState o.value
+		return ``<SelectControl
+			label={ o.label }
+			help={ o.help }
+			value={ x }
+			options={ o.options }
+			onChange={
+				(x) => {
+					setX(x);
+					o.onChange(x);
+				}
+			}
+		/>
+		``
+	# }}}
+	# blocks
+	Products = (props) -> # {{{
+		# get some props
+		{attributes, setAttributes, name} = props
+		title = B[name].title
+		defs  = B[name].attributes
+		# create inspector controls
+		f = ->
+			# get attributes
+			{
+				size, columns, columnsMin, order,
+				maxX, maxY, itemSizeBalance,
+				itemImage, itemIcon, itemFeatures, itemPrice, itemControls,
+				fontSize
+			} = attributes
+			# create controls
+			return ``<InspectorControls key="inspector">
+				<PanelBody
+					title       = { 'grid (сетка)' }
+					initialOpen = { true }
+				>
+					{RangeSlider({
+						label: "size (размер)",
+						help:  "total number of cards (общее количество карточек) displayed inside the block (отображаемых внутри блока)",
+						value: size,
+						default: defs.size.default,
+						min: 2,
+						max: 100,
+						allowReset: true,
+						onChange: (x) => {
+							setAttributes({ size: x });
+							return x;
+						},
+					})}
+					{RangeSlider({
+						label: "max columns (максимум колонок)",
+						help:  "maximal number of columns in the block (максимальное количество колонок в блоке), 1 column deactivates vertical mode (1 колонка деактивирует вертикальный режим)",
+						value: columns,
+						default: defs.columns.default,
+						min: 1,
+						max: 10,
+						allowReset: true,
+						onChange: (x) => {
+							setAttributes({ columns: x });
+							return x;
+						},
+					})}
+					{RangeSlider({
+						label: "min columns (минимум колонок)",
+						help:  "to preserve view quality (для сохранения качества отображения), column count is reduced automatically (количество колонок сокращается автоматически) to this minimal value (до данного, минимамльного значения)",
+						value: columnsMin,
+						default: defs.columnsMin.default,
+						min: 1,
+						max: 10,
+						allowReset: true,
+						onChange: (x) => {
+							setAttributes({ columnsMin: x });
+							return x;
+						},
+					})}
+					{SelectOption({
+						label: "sorting (сортировка)",
+						value: order,
+						options: [
+							{label: 'default (по-умолчанию)', value: 'default'},
+							{label: 'title ascending (наименование по-убыванию)', value: 'title_ASC'},
+							{label: 'title descending (наименование по-возрастанию)', value: 'title_DESC'},
+							{label: 'creation date ascending (дата создания, по-убыванию)', value: 'created_ASC'},
+							{label: 'creation date descending (дата создания, по-возрастанию)', value: 'created_DESC'},
+							{label: 'modification date ascending (дата изменения, по-убыванию)', value: 'modified_ASC'},
+							{label: 'modification date descending (дата изменения, по-возрастанию)', value: 'modified_DESC'},
+						],
+						onChange: (x) => {
+							setAttributes({ order: x });
+						},
+					})}
+				</PanelBody>
+				<PanelBody
+					title={ 'card (карточка)' }
+					initialOpen={ false }
+				>
+					{RangeSlider({
+						label: "max width (максимальная ширина)",
+						help:  "limits the width of a tile (ограничивает ширину плитки), or the height of a row in horizontal mode (либо высоту строки в горизонтальном режиме)",
+						value: maxX,
+						default: defs.maxX.default,
+						min: 16,
+						max: 1072,
+						allowReset: true,
+						onChange: (x) => {
+							// round //
+							x = 16 * Math.round(x / 16);
+							setAttributes({ maxX: x });
+							return x;
+						},
+					})}
+					{RangeSlider({
+						label: "max height (максимальная высота)",
+						help:  "limits the height of a tile (ограничивает высоту плитки)",
+						value: maxY,
+						default: defs.maxY.default,
+						min: 16,
+						max: 1072,
+						allowReset: true,
+						onChange: (x) => {
+							// round //
+							x = 16 * Math.round(x / 16);
+							setAttributes({ maxY: x });
+							return x;
+						},
+					})}
+					{RangeSlider({
+						label: "font size (размер шрифта)",
+						help:  "it is only an initial size to match the layout at the max (это только начальный размер для соответствия с разметкой максимального размера). the sizing is handled automatically (изменение размеров происходит автоматически), using the fit-text concept (с применением технологии fit-text)",
+						value: fontSize,
+						default: defs.fontSize.default,
+						min: 6,
+						max: 68,
+						allowReset: true,
+						onChange: (x) => {
+							// round //
+							x = 2 * Math.round(x / 2);
+							setAttributes({ fontSize: x });
+							return x;
+						},
+					})}
+					{TextInput({
+						label: "size balance % (соотношение размеров)",
+						help:  "[red]:[green]:[blue]",
+						value: itemSizeBalance,
+						default: defs.itemSizeBalance.default,
+						onChange: (x) => {
+							setAttributes({ itemSizeBalance: x });
+							return x;
+						},
+					})}
+				</PanelBody>
+				<PanelBody
+					title       = { 'standard blocks (стандартные блоки)' }
+					initialOpen = { false }
+				>
+					<ToggleControl
+						label    = { 'image (изображение)' }
+						checked  = { itemImage }
+						onChange = { () => {
+							setAttributes({ itemImage: !itemImage });
+						}}
+					/>
+					<ToggleControl
+						label    = { 'icon (иконка)' }
+						checked  = { itemIcon }
+						onChange = { () => {
+							setAttributes({ itemIcon: !itemIcon });
+						}}
+					/>
+					<ToggleControl
+						label    = { 'features (характеристики)' }
+						checked  = { itemFeatures }
+						onChange = { () => {
+							setAttributes({ itemFeatures: !itemFeatures });
+						}}
+					/>
+					<ToggleControl
+						label    = { 'price (цена)' }
+						checked  = { itemPrice }
+						onChange = { () => {
+							setAttributes({ itemPrice: !itemPrice });
+						}}
+					/>
+					<ToggleControl
+						label    = { 'actions (действия)' }
+						checked  = { itemControls }
+						onChange = { () => {
+							setAttributes({ itemControls: !itemControls });
+						}}
+					/>
+					<HorizontalRule />
+				</PanelBody>
+			</InspectorControls>
+			``
+		###
+		return ``<Fragment>
+			{ f() }
+			<ServerSideRender
+				block      = { name }
+				attributes = { attributes }
+				EmptyResponsePlaceholder={ EmptyPlaceholder(title) }
+			/>
+		</Fragment>
+		``
+	# }}}
+	CategoryFilter = (props) -> # {{{
+		# get some props
+		{attributes, setAttributes, name} = props
+		title = B[name].title
+		# create inspector controls
+		f = ->
+			# get attributes
+			{mode, hasCount, hasEmpty, subOpened} = attributes
+			# create controls
+			return ``<InspectorControls key="inspector">
+				<PanelBody
+					title={ 'settings (настройки)' }
+					initialOpen={ true }
+				>
+					<RadioControl
+						label    = { 'title (заголовок)' }
+						selected = { mode }
+						options  = {[
+							{label: 'standard (обычный)', value: 'compact'},
+							{label: 'section (секция)', value: 'section'},
+							{label: 'collapsed section (свернутая секция)', value: 'collapsed'},
+							{label: 'none (отсутствует)', value: 'none'},
+						]}
+						onChange = {(value) =>
+							setAttributes({ mode: value })
+						}
+					/>
+					<ToggleControl
+						label = { 'product count (количество товаров)' }
+						help  = {
+							hasCount
+								? 'shown (отображается)'
+								: 'hidden (скрыто)'
+						}
+						checked  = { hasCount }
+						onChange = { () =>
+							setAttributes({ hasCount: !hasCount })
+						}
+					/>
+					<ToggleControl
+						label = { 'empty categories (пустые категории)' }
+						help  = {
+							hasEmpty
+								? 'shown (отображаются)'
+								: 'hidden (скрыты)'
+						}
+						checked  = { hasEmpty }
+						onChange = { () =>
+							setAttributes({ hasEmpty: !hasEmpty })
+						}
+					/>
+					<ToggleControl
+						label = { 'sub-categories (подкатегории)' }
+						help  = {
+							subOpened
+								? 'opened (раскрыты)'
+								: 'collapsed (закрыты)'
+						}
+						checked  = { subOpened }
+						onChange = { () =>
+							setAttributes({ subOpened: !subOpened })
+						}
+					/>
+				</PanelBody>
+			</InspectorControls>
+			``
+		###
+		return ``<Fragment>
+			{ f() }
+			<ServerSideRender
+				block      = { name }
+				attributes = { attributes }
+				EmptyResponsePlaceholder={ EmptyPlaceholder(title) }
+			/>
+		</Fragment>
+		``
+	# }}}
+	Paginator = (props) -> # {{{
+		# get some props
+		{attributes, setAttributes, name} = props
+		title = B[name].title
+		defs  = B[name].attributes
+		# create inspector controls
+		f = ->
+			# get attributes
+			{
+				modeFirstLast,modePrevNext,
+				range,rangePlus,rangeMinus,inversion,expansion,separator,
+				bFirst,bLast,bPrev,bNext,bGap,bSep1,bSep2
+			} = attributes
+			# create controls
+			return ``<InspectorControls key="inspector">
+				<PanelBody
+					title       = { 'base (основное)' }
+					initialOpen = { true }
+				>
+					<RadioControl
+						label    = { 'first/last mode (режим первого/последнего)' }
+						selected = { modeFirstLast }
+						options  = {[
+							{label: 'inner (внутри)', value: 'inner'},
+							{label: 'outer (снаружи)', value: 'outer'},
+							{label: 'both (оба варианта)', value: 'both'},
+							{label: 'none (отсутствует)', value: 'none'},
+						]}
+						onChange = {(value) =>
+							setAttributes({ modeFirstLast: value })
+						}
+					/>
+					<RadioControl
+						label    = { 'prev/next buttons (кнопы предыдущего/следующего)' }
+						selected = { modePrevNext }
+						options  = {[
+							{label: 'standard (обычные)', value: 'standard'},
+							{label: 'custom (нестандартные)', value: 'custom'},
+							{label: 'none (отсутствуют)', value: 'none'},
+						]}
+						onChange = {(value) =>
+							setAttributes({ modePrevNext: value })
+						}
+					/>
+					<ToggleControl
+						label    = { 'range (интервал)' }
+						help     = { 'enables the range of pages (включает интервал страниц) which consist of backward, current and forward page numbers to go (который состоит из предыдущих, текущего и следущих номеров страничного перехода)' }
+						checked  = { range }
+						onChange = { () =>
+							setAttributes({ range: !range })
+						}
+					/>
+				</PanelBody>
+				<PanelBody
+					title       = { 'range (интервал)' }
+					initialOpen = { false }
+				>
+					{RangeSlider({
+						label: "backward pages (страниц позади)",
+						help:  "maximal count of pages displayed before the current page (максимальное число страниц отображаемых перед текущей)",
+						value: rangeMinus,
+						default: defs.rangeMinus.default,
+						min: 0,
+						max: 8,
+						allowReset: true,
+						onChange: (x) => {
+							setAttributes({ rangeMinus: x });
+							return x;
+						},
+					})}
+					{RangeSlider({
+						label: "forward pages (страниц впереди)",
+						help:  "maximal count of pages displayed after the current page (максимальное число страниц отображаемых после текущей)",
+						value: rangePlus,
+						default: defs.rangePlus.default,
+						min: 0,
+						max: 8,
+						allowReset: true,
+						onChange: (x) => {
+							setAttributes({ rangePlus: x });
+							return x;
+						},
+					})}
+					<ToggleControl
+						label    = { 'expansion (растяжение)' }
+						help     = { 'enables expansion of the range (включает расширение интервала) to all the available width (на всю доступную ширину)' }
+						checked  = { expansion }
+						onChange = { () =>
+							setAttributes({ expansion: !expansion })
+						}
+					/>
+					<ToggleControl
+						label    = { 'separators (разделители)' }
+						help     = { 'enables range border separators (включает разделители на границах интервала)' }
+						checked  = { separator }
+						onChange = { () =>
+							setAttributes({ separator: !separator })
+						}
+					/>
+					<ToggleControl
+						label    = { 'inversion (инверсия)' }
+						help     = { 'enables inversion of the range (включает инверсию интервала) which swaps sizes of backward and forward range pages according to the move direction (которая переключает размеры предыдущих и последующих страниц интервала в зависимости от направления перемещения)' }
+						checked  = { inversion }
+						onChange = { () =>
+							setAttributes({ inversion: !inversion })
+						}
+					/>
+				</PanelBody>
+				<PanelBody
+					title       = { 'content (содержимое)' }
+					initialOpen = { false }
+				>
+					{TextareaInput({
+						label: "first (первая)",
+						value: bFirst,
+						default: defs.bFirst.default,
+						onChange: (x) => {
+							setAttributes({ bFirst: x });
+							return x;
+						},
+					})}
+					{TextareaInput({
+						label: "last (последняя)",
+						value: bLast,
+						default: defs.bLast.default,
+						onChange: (x) => {
+							setAttributes({ bLast: x });
+							return x;
+						},
+					})}
+					{TextareaInput({
+						label: "prev (предыдущая)",
+						value: bPrev,
+						default: defs.bPrev.default,
+						onChange: (x) => {
+							setAttributes({ bPrev: x });
+							return x;
+						},
+					})}
+					{TextareaInput({
+						label: "next (следующая)",
+						value: bNext,
+						default: defs.bNext.default,
+						onChange: (x) => {
+							setAttributes({ bNext: x });
+							return x;
+						},
+					})}
+					{TextareaInput({
+						label: "gap (разрыв)",
+						value: bGap,
+						default: defs.bGap.default,
+						onChange: (x) => {
+							setAttributes({ bGap: x });
+							return x;
+						},
+					})}
+					{TextareaInput({
+						label: "first separator (первый разделитель)",
+						value: bSep1,
+						default: defs.bSep1.default,
+						onChange: (x) => {
+							setAttributes({ bSep1: x });
+							return x;
+						},
+					})}
+					{TextareaInput({
+						label: "second separator (второй разделитель)",
+						value: bSep2,
+						default: defs.bSep2.default,
+						onChange: (x) => {
+							setAttributes({ bSep2: x });
+							return x;
+						},
+					})}
+				</PanelBody>
+			</InspectorControls>
+			``
+		###
+		return ``<Fragment>
+			{ f() }
+			<ServerSideRender
+				block      = { name }
+				attributes = { attributes }
+				EmptyResponsePlaceholder = { EmptyPlaceholder(title) }
+			/>
+		</Fragment>
+		``
+	# }}}
+	# register all
+	for a in Object.getOwnPropertyNames B
+		wp.blocks.registerBlockType a, B[a]
+	# done
+###
