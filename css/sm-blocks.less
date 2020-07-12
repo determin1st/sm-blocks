@@ -786,6 +786,10 @@ div.sm-paginator {
         &.drag
         {
           cursor: grabbing;
+          > .gap > svg
+          {
+            fill: silver;
+          }
         }
         &.static
         {
@@ -801,12 +805,9 @@ div.sm-paginator {
       }
       &.locked // actively changed
       {
-        > .range > .gap
+        > .range > .gap > svg
         {
-          > svg
-          {
-            fill: silver;
-          }
+          fill: silver;
         }
       }
     }

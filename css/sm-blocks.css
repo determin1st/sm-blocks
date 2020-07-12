@@ -600,6 +600,9 @@ div.sm-paginator > div.expand.v > .range > .page.current > button {
 div.sm-paginator > div.expand.v > .range.drag {
   cursor: grabbing;
 }
+div.sm-paginator > div.expand.v > .range.drag > .gap > svg {
+  fill: silver;
+}
 div.sm-paginator > div.expand.v > .range.static > .page {
   flex-grow: 1;
 }

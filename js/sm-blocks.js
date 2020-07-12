@@ -905,9 +905,15 @@ smBlocks = async function(){
       this.block = block;
       this.lock = null;
       this.lockType = 0;
+      this.rootCS = getComputedStyle(block.root);
+      this.rootBoxCS = getComputedStyle(block.rootBox);
+      this.rootPads = [0, 0, 0, 0];
+      this.baseSz = [0, 0];
+      this.currentSz = [0, 0];
+      this.pageSz = [0, 0];
+      this.dragbox = [];
       this.maxSpeed = 10;
       this.brake = 15;
-      this.isDrag = false;
       this.keyDown = function(e){
         var a;
         if (this$.lock || !this$.block.range || !this$.block.mode) {
@@ -1008,28 +1014,87 @@ smBlocks = async function(){
         }
       };
       this.dragStart = async function(e){
-        var node;
+        var node, a, c, b, d, i$, ref$, len$;
         e.preventDefault();
         e.stopPropagation();
         if (this$.lock || this$.block.mode !== 1 || !e.isPrimary || e.button || typeof e.offsetX !== 'number') {
-          return;
+          return true;
         }
         this$.lock = newPromise();
         this$.lockType = 2;
         node = this$.block.rangeBox;
         node.setPointerCapture(e.pointerId);
         node.classList.add('drag');
+        a = this$.block.range;
+        if ((c = a.pages.length) > 1) {
+          b = a.index;
+          c = c - a.index - 1;
+        } else {
+          b = 0;
+        }
+        if (a.first) {
+          b += 1;
+          c += 1;
+        }
+        a = this$.pageSz;
+        d = this$.dragbox;
+        d[0] = a[0] + b * a[1];
+        d[1] = d[0] / (b + 1);
+        d[0] = d[0] - d[1];
+        d[1] = d[1] / 2;
+        d[4] = a[0] + c * a[1];
+        d[3] = d[4] / (c + 1);
+        d[4] = d[4] - d[3];
+        d[3] = d[3] / 2;
+        d[2] = node.clientWidth - d[0] - d[1] - d[3] - d[4];
+        d[5] = b;
+        d[7] = c;
+        d[6] = state.data[1] - d[5] - d[7] - 2;
+        a = state.data[0];
         (await this$.lock);
         this$.lock = null;
         node.classList.remove('drag');
         node.releasePointerCapture(e.pointerId);
+        if (a !== state.data[0]) {
+          state.master.resolve(state);
+          for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
+            a = ref$[i$];
+            if (a !== this$.block) {
+              a.refresh();
+            }
+          }
+        }
+        return true;
       };
       this.drag = function(e){
+        var d, c, b, a;
         e.preventDefault();
         e.stopPropagation();
-        if (this$.lock && this$.lockType === 2) {
-          console.log(e.offsetX);
+        if (!this$.lock || this$.lockType !== 2) {
+          return;
         }
+        d = this$.dragbox;
+        c = state.data[1];
+        if ((b = e.offsetX) <= 0) {
+          a = 0;
+        } else if (b <= d[0]) {
+          a = b * d[5] / d[0] | 0;
+        } else if ((b -= d[0]) <= d[1]) {
+          a = d[5];
+        } else if ((b -= d[1]) <= d[2]) {
+          a = d[5] + 1 + b * d[6] / d[2] | 0;
+        } else if ((b -= d[2]) <= d[3]) {
+          a = d[5] + d[6] + 1;
+        } else if ((b -= d[3]) <= d[4]) {
+          a = d[5] + d[6] + 2 + b * d[7] / d[4] | 0;
+        } else {
+          a = c - 1;
+        }
+        if (state.data[0] === a) {
+          return;
+        }
+        state.data[0] = a;
+        this$.block.refresh();
       };
       this.dragStop = function(e){
         e.preventDefault();
@@ -1080,41 +1145,12 @@ smBlocks = async function(){
         b = -1;
         c = R.pages.length;
         while (++b < c) {
-          a[b] = this$.gotoPageFunc(b - R.index);
+          a[b] = this$.rangeGotoFunc(b - R.index);
         }
         return a;
       }();
-      this.resize = function(){
-        var root, cStyle, baseHeight, padX, baseWidth, height;
-        root = this$.block.root;
-        cStyle = getComputedStyle(root);
-        baseHeight = parseInt(cStyle.getPropertyValue('--height'));
-        padX = parseInt(cStyle.getPropertyValue('padding-left'));
-        padX = padX + parseInt(cStyle.getPropertyValue('padding-right'));
-        baseWidth = 0;
-        height = 0;
-        cStyle = getComputedStyle(root.firstChild);
-        return function(e){
-          var b;
-          if (e) {
-            e = e[0].contentRect.width;
-          } else {
-            if ((e = root.clientWidth - padX) < 0) {
-              e = 0;
-            }
-            baseWidth = parseFloat(cStyle.getPropertyValue('width'));
-          }
-          if ((e = e / baseWidth) > 0.98) {
-            e = 1;
-          }
-          b = baseHeight * e;
-          if (Math.abs(b - height) > 0.1) {
-            root.style.setProperty('--height', b + 'px');
-            height = b;
-          }
-        };
-      }();
-      this.resizeObs = new ResizeObserver(this.resize);
+      this.resize = this.resizeFunc();
+      this.observer = new ResizeObserver(this.resize);
     };
     Control.prototype = {
       attach: function(){
@@ -1159,15 +1195,15 @@ smBlocks = async function(){
           a.addEventListener('pointerdown', this.dragStart);
           B.rangeBox.addEventListener('pointermove', this.drag);
           B.rangeBox.addEventListener('pointerup', this.dragStop);
-          this.resizeObs.observe(B.root);
+          this.observer.observe(B.root);
         }
       },
       detach: function(){
         if (R) {
-          this.resizeObs.disconnect();
+          this.observer.disconnect();
         }
       },
-      gotoPageFunc: function(i){
+      rangeGotoFunc: function(i){
         var this$ = this;
         return function(e){
           var a;
@@ -1192,6 +1228,53 @@ smBlocks = async function(){
             return b.refresh();
           });
           this$.block.focus();
+        };
+      },
+      resizeFunc: function(){
+        var pads, i$, len$, b, a, cs0, cs1, this$ = this;
+        pads = ['padding-top', 'padding-right', 'padding-bottom', 'padding-left'];
+        for (i$ = 0, len$ = pads.length; i$ < len$; ++i$) {
+          b = i$;
+          a = pads[i$];
+          this.rootPads[b] = parseInt(this.rootCS.getPropertyValue(a));
+        }
+        a = this.block.range;
+        b = this.pageSz;
+        cs0 = getComputedStyle(a.pages[a.index]);
+        b[0] = parseFloat(cs0.getPropertyValue('min-width'));
+        cs1 = null;
+        if (a.pages.length > 1) {
+          cs1 = a.index > 0
+            ? 0
+            : a.index + 1;
+          cs1 = getComputedStyle(a.pages[cs1]);
+          b[1] = parseFloat(cs1.getPropertyValue('min-width'));
+        }
+        this.baseSz[1] = parseInt(this.rootCS.getPropertyValue('--height'));
+        return function(e){
+          var a;
+          if (e) {
+            e = e[0].contentRect.width;
+          } else {
+            a = this$.rootPads;
+            a = a[1] + a[3];
+            if ((e = this$.block.root.clientWidth - a) < 0) {
+              e = 0;
+            }
+            this$.baseSz[0] = parseFloat(this$.rootBoxCS.getPropertyValue('width'));
+          }
+          this$.currentSz[0] = e;
+          if ((e = e / this$.baseSz[0]) > 0.98) {
+            e = 1;
+          }
+          a = e * this$.baseSz[1];
+          if (Math.abs(a - this$.currentSz[1]) > 0.1) {
+            this$.block.root.style.setProperty('--height', a + 'px');
+            this$.currentSz[1] = a;
+            a = this$.pageSz;
+            a[0] = parseFloat(cs0.getPropertyValue('min-width'));
+            a[1] = parseFloat(cs1.getPropertyValue('min-width'));
+          }
         };
       },
       fast: async function(id, node, forward){

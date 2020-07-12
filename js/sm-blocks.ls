@@ -91,7 +91,7 @@ smBlocks = do !->>
 			@master.resolve @
 	}
 	# }}}
-	# controllers
+	# widgets
 	smProducts = do -> # (singleton) {{{
 		# prepare
 		# base {{{
@@ -1005,9 +1005,15 @@ smBlocks = do !->>
 			@block     = block
 			@lock      = null
 			@lockType  = 0
+			@rootCS    = getComputedStyle block.root
+			@rootBoxCS = getComputedStyle block.rootBox
+			@rootPads  = [0, 0, 0, 0]
+			@baseSz    = [0, 0]
+			@currentSz = [0, 0]
+			@pageSz    = [0, 0]
+			@dragbox   = []
 			@maxSpeed  = 10
 			@brake     = 15
-			@isDrag    = false
 			# create bound handlers
 			@keyDown = (e) !~> # {{{
 				# check requirements
@@ -1129,7 +1135,7 @@ smBlocks = do !->>
 				if @lock and @lockType == 0
 					@lock.resolve!
 			# }}}
-			@dragStart = (e) !~>> # {{{
+			@dragStart = (e) ~>> # {{{
 				# fulfil event
 				e.preventDefault!
 				e.stopPropagation!
@@ -1138,30 +1144,96 @@ smBlocks = do !->>
 				   not e.isPrimary or e.button or \
 				   typeof e.offsetX != 'number'
 					###
-					return
+					return true
 				# lock
 				@lock = newPromise!
 				@lockType = 2
-				# capture
-				# ...
+				# capture pointer
 				node = @block.rangeBox
 				node.setPointerCapture e.pointerId
 				node.classList.add 'drag'
+				# calculate dragbox parameters
+				# {{{
+				# determine first-last page counts (excluding current)
+				a = @block.range
+				if (c = a.pages.length) > 1
+					b = a.index
+					c = c - a.index - 1
+				else
+					b = 0
+				if a.first
+					b += 1
+					c += 1
+				# calculate drag area sizes
+				a   = @pageSz
+				d   = @dragbox
+				d.0 = a.0 + b * a.1
+				d.1 = d.0 / (b + 1)
+				d.0 = d.0 - d.1
+				d.1 = d.1 / 2
+				d.4 = a.0 + c * a.1
+				d.3 = d.4 / (c + 1)
+				d.4 = d.4 - d.3
+				d.3 = d.3 / 2
+				d.2 = node.clientWidth - d.0 - d.1 - d.3 - d.4
+				# drag area page counts
+				d.5 = b
+				d.7 = c
+				d.6 = state.data.1 - d.5 - d.7 - 2 # >0
+				# }}}
 				# wait released
+				a = state.data.0
 				await @lock
 				@lock = null
 				# release capture
 				node.classList.remove 'drag'
 				node.releasePointerCapture e.pointerId
+				# update global state
+				if a != state.data.0
+					state.master.resolve state
+					for a in blocks when a != @block
+						a.refresh!
+				# done
+				return true
 			# }}}
 			@drag = (e) !~> # {{{
 				# fulfil event
 				e.preventDefault!
 				e.stopPropagation!
 				# check
-				if @lock and @lockType == 2
-					# ...
-					console.log e.offsetX
+				if not @lock or @lockType != 2
+					return
+				# prepare
+				d = @dragbox
+				c = state.data.1
+				# calculate page index
+				if (b = e.offsetX) <= 0
+					# out of first
+					a = 0
+				else if b <= d.0
+					# first
+					a = (b*d.5 / d.0) .|. 0
+				else if (b -= d.0) <= d.1
+					# first-end
+					a = d.5
+				else if (b -= d.1) <= d.2
+					# middle
+					a = d.5 + 1 + (b*d.6 / d.2) .|. 0
+				else if (b -= d.2) <= d.3
+					# last-end
+					a = d.5 + d.6 + 1
+				else if (b -= d.3) <= d.4
+					# last
+					a = d.5 + d.6 + 2 + (b*d.7 / d.4) .|. 0
+				else
+					# out of last
+					a = c - 1
+				# check same
+				if state.data.0 == a
+					return
+				# update local state
+				state.data.0 = a
+				@block.refresh!
 			# }}}
 			@dragStop = (e) !~> # {{{
 				# fulfil event
@@ -1212,47 +1284,13 @@ smBlocks = do !->>
 				b = -1
 				c = R.pages.length
 				while ++b < c
-					a[b] = @gotoPageFunc (b - R.index)
+					a[b] = @rangeGotoFunc (b - R.index)
 				# done
 				return a
 			# }}}
-			@resize = do ~> # {{{
-				# determine initial parameters
-				root       = @block.root
-				cStyle     = getComputedStyle root
-				baseHeight = parseInt (cStyle.getPropertyValue '--height')
-				padX       = parseInt (cStyle.getPropertyValue 'padding-left')
-				padX       = padX + parseInt (cStyle.getPropertyValue 'padding-right')
-				baseWidth  = 0
-				height     = 0
-				cStyle     = getComputedStyle root.firstChild
-				# create resize handler
-				return (e) !~>
-					# check mode
-					if e
-						# observed
-						# get current width
-						e = e.0.contentRect.width
-					else
-						# forced
-						# determine current width
-						if (e = root.clientWidth - padX) < 0
-							e = 0
-						# determine base width
-						baseWidth := parseFloat (cStyle.getPropertyValue 'width')
-					# determine deviation from the base
-					if (e = e / baseWidth) > 0.98
-						e = 1
-					# determine ideal height
-					b = baseHeight * e
-					# compare against current
-					if (Math.abs (b - height)) > 0.1
-						# change current
-						root.style.setProperty '--height', b+'px'
-						height := b
-					# done
-			# }}}
-			@resizeObs = new ResizeObserver @resize
+			# initialize resizer
+			@resize   = @resizeFunc!
+			@observer = new ResizeObserver @resize
 		###
 		Control.prototype = {
 			attach: !-> # {{{
@@ -1302,15 +1340,15 @@ smBlocks = do !->>
 					B.rangeBox.addEventListener 'pointermove', @drag
 					B.rangeBox.addEventListener 'pointerup', @dragStop
 					# resizer
-					@resizeObs.observe B.root
+					@observer.observe B.root
 			# }}}
 			detach: !-> # {{{
 				# range
 				if R
 					# resizer
-					@resizeObs.disconnect!
+					@observer.disconnect!
 			# }}}
-			gotoPageFunc: (i) -> (e) !~> # {{{
+			rangeGotoFunc: (i) -> (e) !~> # {{{
 				# fulfil event
 				e.preventDefault!
 				e.stopPropagation!
@@ -1333,6 +1371,66 @@ smBlocks = do !->>
 				blocks.forEach (b) -> b.refresh!
 				# done
 				@block.focus!
+			# }}}
+			resizeFunc: -> # {{{
+				# determine root pads
+				pads = [
+					'padding-top'
+					'padding-right'
+					'padding-bottom'
+					'padding-left'
+				]
+				for a,b in pads
+					@rootPads[b] = parseInt (@rootCS.getPropertyValue a)
+				# determine page container sizes (current & normal)
+				a   = @block.range
+				b   = @pageSz
+				cs0 = getComputedStyle a.pages[a.index]
+				b.0 = parseFloat (cs0.getPropertyValue 'min-width')
+				cs1 = null
+				if a.pages.length > 1
+					cs1 = if a.index > 0
+						then 0
+						else a.index + 1
+					cs1 = getComputedStyle a.pages[cs1]
+					b.1 = parseFloat (cs1.getPropertyValue 'min-width')
+				# determine initial static axis size
+				@baseSz.1 = parseInt (@rootCS.getPropertyValue '--height')
+				# create resize handler
+				return (e) !~>
+					# operate on dynamic axis
+					# check mode
+					if e
+						# observed
+						# get current
+						e = e.0.contentRect.width
+					else
+						# forced
+						# determine current
+						a = @rootPads
+						a = a.1 + a.3
+						if (e = @block.root.clientWidth - a) < 0
+							e = 0
+						# determine base
+						@baseSz.0 = parseFloat (@rootBoxCS.getPropertyValue 'width')
+					# update current
+					@currentSz.0 = e
+					# determine deviation from the base
+					if (e = e / @baseSz.0) > 0.98
+						e = 1
+					# operate on static axis
+					# determine ideal
+					a = e * @baseSz.1
+					# compare against current
+					if (Math.abs (a - @currentSz.1)) > 0.1
+						# update current
+						@block.root.style.setProperty '--height', a+'px'
+						@currentSz.1 = a
+						# update page container sizes
+						a   = @pageSz
+						a.0 = parseFloat (cs0.getPropertyValue 'min-width')
+						a.1 = parseFloat (cs1.getPropertyValue 'min-width')
+					# done
 			# }}}
 			fast: (id, node, forward) ->> # {{{
 				# get final index
@@ -1459,20 +1557,20 @@ smBlocks = do !->>
 		Block = (root) !-> # {{{
 			# {{{
 			# create object shape
-			# set base container
+			# base container
 			@root    = root
 			@rootBox = root.firstChild
-			# set outer gotos
+			# outer gotos
 			a = [...(root.querySelectorAll '.goto.a')]
 			b = [...(root.querySelectorAll '.goto.b')]
 			@gotoF = (a.length and a.0) or null
 			@gotoL = (a.length and a.1) or null
 			@gotoP = (b.length and b.0) or null
 			@gotoN = (b.length and b.1) or null
-			# set range
+			# range
 			@rangeBox = a = root.querySelector '.range'
 			@range    = (a and new BlockRange a) or null
-			# set controller
+			# controller
 			@mode = 0
 			@ctrl = new Control @
 			# }}}
