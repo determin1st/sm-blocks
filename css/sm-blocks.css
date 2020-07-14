@@ -189,21 +189,21 @@
   font-weight: bold;
   border-width: 0;
   border-style: solid;
-  border-color: slategray;
+  border-color: #708090;
   border-radius: 2px;
-  background-color: gainsboro;
-  color: black;
+  background-color: #dcdcdc;
+  color: #000;
   outline: 0;
   cursor: pointer;
 }
 #sm-products > .main > .item > .box > .foot > .controls > div a:focus,
 #sm-products > .main > .item > .box > .foot > .controls > div button:focus {
   border-width: 1px;
-  background-color: silver;
+  background-color: #c0c0c0;
 }
 #sm-products > .main > .item > .box > .foot > .controls > div a:hover,
 #sm-products > .main > .item > .box > .foot > .controls > div button:hover {
-  background-color: silver;
+  background-color: #c0c0c0;
 }
 #sm-products > .main > .item > .box > .foot > .controls > div .cart {
   max-width: calc(30px + var(--svg-icon-size));
@@ -211,14 +211,14 @@
 #sm-products > .main > .item > .box > .foot > .controls > div .cart > svg {
   width: var(--svg-icon-size);
   height: auto;
-  fill: black;
+  fill: #000;
 }
 #sm-products > .main > .item > .box > .foot > .controls > div .cart.none {
   display: none;
 }
 #sm-products > .main > .item.empty > .box {
   border-style: dotted;
-  border-color: slategray;
+  border-color: #708090;
   border-width: 0;
   border-right-width: 1px;
   border-bottom-width: 1px;
@@ -269,7 +269,7 @@ div.sm-category-filter > .title > h3 {
 div.sm-category-filter > hr {
   height: 1px;
   margin: 0;
-  color: lightgray;
+  color: #d3d3d3;
 }
 div.sm-category-filter > .section {
   padding-top: 4px;
@@ -316,9 +316,9 @@ div.sm-category-filter > .section .item > .name > .box > .check {
   flex: 0 0 0;
   min-width: 20px;
   min-height: 20px;
-  border: 1px solid slategray;
+  border: 1px solid #708090;
   border-radius: 2px;
-  background-color: white;
+  background-color: #fff;
   position: relative;
 }
 div.sm-category-filter > .section .item > .name > .box > .check > svg {
@@ -328,23 +328,23 @@ div.sm-category-filter > .section .item > .name > .box > .check > svg {
   width: 100%;
   height: 100%;
   opacity: 0;
-  fill: white;
-  stroke: silver;
+  fill: #fff;
+  stroke: #c0c0c0;
 }
 div.sm-category-filter > .section .item > .name > .box > .check.checked {
-  background-color: black;
+  background-color: #000;
 }
 div.sm-category-filter > .section .item > .name > .box > .check.checked > svg:nth-child(1) {
   opacity: 1;
 }
 div.sm-category-filter > .section .item > .name > .box > .check.indeterminated {
-  background-color: black;
+  background-color: #000;
 }
 div.sm-category-filter > .section .item > .name > .box > .check.indeterminated > svg:nth-child(2) {
   opacity: 1;
 }
 div.sm-category-filter > .section .item > .name > .box > .check.disabled {
-  background-color: gainsboro;
+  background-color: #dcdcdc;
 }
 div.sm-category-filter > .section .item > .name > .box > label {
   flex: 1 1 0;
@@ -361,7 +361,7 @@ div.sm-category-filter > .section .item > .name > .box > label {
   cursor: pointer;
   user-select: none;
   font-weight: normal;
-  color: black;
+  color: #000;
 }
 div.sm-category-filter > .section .item > .name > .box:hover {
   padding-left: 1px;
@@ -385,16 +385,16 @@ div.sm-category-filter > .section .item > .name > .arrow > svg {
   height: 100%;
   max-height: 24px;
   transform: rotate(90deg);
-  fill: silver;
-  stroke: black;
+  fill: #c0c0c0;
+  stroke: #000;
 }
 div.sm-category-filter > .section .item > .name > .arrow:hover > svg {
-  fill: black;
-  stroke: silver;
+  fill: #000;
+  stroke: #c0c0c0;
 }
 div.sm-category-filter > .section .item > .name > .arrow.opened > svg {
   transform: rotate(0deg);
-  fill: black;
+  fill: #000;
 }
 div.sm-category-filter > .section .item > .section {
   display: none;
@@ -412,7 +412,7 @@ div.sm-category-filter.inactive svg {
   opacity: 0.4;
 }
 div.sm-category-filter.inactive .item > .name > .box > .check {
-  background-color: gainsboro;
+  background-color: #dcdcdc;
 }
 div.sm-category-filter div,
 div.sm-category-filter hr,
@@ -477,19 +477,20 @@ div.sm-paginator > div > div button {
   text-decoration: none;
   border-width: 0;
   border-style: solid;
-  border-color: slategray;
+  border-color: #708090;
   border-radius: 2px;
-  background-color: gainsboro;
-  color: black;
+  background-color: #dcdcdc;
+  color: #000;
   outline: 0;
   cursor: pointer;
+  touch-action: none;
 }
 div.sm-paginator > div > div button:focus {
   border-width: 1px;
-  background-color: silver;
+  background-color: #c0c0c0;
 }
 div.sm-paginator > div > div button:hover {
-  background-color: silver;
+  background-color: #c0c0c0;
 }
 div.sm-paginator > div > div svg {
   width: 100%;
@@ -501,14 +502,14 @@ div.sm-paginator > div > .goto {
   padding-top: 4px;
   padding-bottom: 4px;
 }
+div.sm-paginator > div > .goto > button > svg {
+  fill: #2f4f4f;
+}
 div.sm-paginator > div > .goto.prev {
   padding-left: 2px;
 }
 div.sm-paginator > div > .goto.next {
   padding-right: 2px;
-}
-div.sm-paginator > div > .goto > button > svg {
-  fill: darkslategray;
 }
 div.sm-paginator > div > .goto.fast {
   padding-top: 2px;
@@ -516,11 +517,11 @@ div.sm-paginator > div > .goto.fast {
 }
 div.sm-paginator > div > .goto.fast > button {
   border-width: 1px;
-  background-color: black;
+  background-color: #000;
   padding: 4px;
 }
 div.sm-paginator > div > .goto.fast > button > svg {
-  fill: white;
+  fill: #fff;
 }
 div.sm-paginator > div > .sep {
   max-width: 8px;
@@ -528,7 +529,13 @@ div.sm-paginator > div > .sep {
   padding-bottom: 2px;
 }
 div.sm-paginator > div > .sep > svg {
-  fill: silver;
+  fill: #c0c0c0;
+}
+div.sm-paginator > div > .sep.first {
+  padding-left: 0;
+}
+div.sm-paginator > div > .sep.last {
+  padding-right: 0;
 }
 div.sm-paginator > div > .range {
   --count: 0;
@@ -553,7 +560,7 @@ div.sm-paginator > div > .range > .gap.v {
   display: flex;
 }
 div.sm-paginator > div > .range > .gap > svg {
-  fill: silver;
+  fill: #c0c0c0;
 }
 div.sm-paginator > div > .range > .page {
   flex: 0 0 0;
@@ -576,9 +583,9 @@ div.sm-paginator > div > .range > .page.current {
 div.sm-paginator > div > .range > .page.current > button {
   font-size: 1.4em;
   font-weight: bold;
-  border-color: silver;
-  background-color: black;
-  color: white;
+  border-color: #c0c0c0;
+  background-color: #000;
+  color: #fff;
   cursor: default;
 }
 div.sm-paginator > div.expand.v {
@@ -592,7 +599,7 @@ div.sm-paginator > div.expand.v > .range > .gap {
   padding: 4px 1px 4px 1px;
 }
 div.sm-paginator > div.expand.v > .range > .gap > svg {
-  fill: gainsboro;
+  fill: #dcdcdc;
 }
 div.sm-paginator > div.expand.v > .range > .page.current > button {
   cursor: grab;
@@ -600,17 +607,11 @@ div.sm-paginator > div.expand.v > .range > .page.current > button {
 div.sm-paginator > div.expand.v > .range.drag {
   cursor: grabbing;
 }
-div.sm-paginator > div.expand.v > .range.drag > .gap > svg {
-  fill: silver;
-}
 div.sm-paginator > div.expand.v > .range.static > .page {
   flex-grow: 1;
 }
 div.sm-paginator > div.expand.v > .range.static > .page.current > button {
   cursor: default;
-}
-div.sm-paginator > div.expand.v.locked > .range > .gap > svg {
-  fill: silver;
 }
 div.sm-paginator > div.nosep > .goto.prev {
   padding-right: 1px;
@@ -622,7 +623,10 @@ div.sm-paginator > div.hovered > .sep {
   max-width: 8px;
 }
 div.sm-paginator > div.hovered > .sep > svg {
-  fill: slategray;
+  fill: #708090;
+}
+div.sm-paginator > div.active.v > .range > .gap > svg {
+  fill: #c0c0c0;
 }
 div.sm-paginator > svg {
   display: none;
@@ -634,8 +638,8 @@ div.sm-paginator > svg {
   height: 100%;
   padding: 4px 8px 4px 8px;
   margin: 0;
-  stroke: gainsboro;
-  fill: gainsboro;
+  stroke: #dcdcdc;
+  fill: #dcdcdc;
 }
 div.sm-paginator.inactive {
   pointer-events: none;

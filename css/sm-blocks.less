@@ -633,6 +633,7 @@ div.sm-paginator {
         color: black;
         outline: 0;
         cursor: pointer;
+        touch-action: none;// pointer events only
         &:focus
         {
           border-width: 1px;
@@ -786,10 +787,6 @@ div.sm-paginator {
         &.drag
         {
           cursor: grabbing;
-          > .gap > svg
-          {
-            fill: silver;
-          }
         }
         &.static
         {
@@ -801,13 +798,6 @@ div.sm-paginator {
           {
             cursor: default;
           }
-        }
-      }
-      &.locked // actively changed
-      {
-        > .range > .gap > svg
-        {
-          fill: silver;
         }
       }
     }
@@ -835,6 +825,14 @@ div.sm-paginator {
         {
           fill: slategray;
         }
+      }
+    }
+    // }}}
+    &.active.v // actively changed {{{
+    {
+      > .range > .gap > svg
+      {
+        fill: silver;
       }
     }
     // }}}

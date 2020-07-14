@@ -1,7 +1,6 @@
 "use strict"
 smBlocks = do !->>
-	# TODO: paginator expanded drag
-	# TODO: paginator click=>focus
+	# TODO: fixed/expanded paginator tests
 	# TODO: loader init when paginator locked desync
 	# TODO: loader dirty fetch race
 	# TODO: orderer block
@@ -1032,7 +1031,7 @@ smBlocks = do !->>
 						else null
 					# start
 					@lockType = 1
-					@fast 0, a, false
+					@fast null, a, false
 				case <[ArrowRight ArrowUp]>
 					# fast-forward
 					# get node
@@ -1041,7 +1040,7 @@ smBlocks = do !->>
 						else null
 					# start
 					@lockType = 1
-					@fast 0, a, true
+					@fast null, a, true
 				default
 					return
 				# fulfil event
@@ -1058,7 +1057,6 @@ smBlocks = do !->>
 			# }}}
 			@setFocus = (e) !~> # {{{
 				# fulfil event
-				console.log 'setFocus()'
 				e.preventDefault!
 				e.stopPropagation!
 				# operate
@@ -1111,7 +1109,7 @@ smBlocks = do !->>
 				e.stopPropagation!
 				# check requirements
 				if @block.mode == 1 and not @lock and \
-				   e.isPrimary and e.button == 0
+				   e.isPrimary and not e.button
 					###
 					@lockType = 0
 					@fast e.pointerId, e.currentTarget, true
@@ -1122,7 +1120,7 @@ smBlocks = do !->>
 				e.stopPropagation!
 				# check requirements
 				if @block.mode == 1 and not @lock and \
-				   e.isPrimary and e.button == 0
+				   e.isPrimary and not e.button
 					###
 					@lockType = 0
 					@fast e.pointerId, e.currentTarget, false
@@ -1150,8 +1148,10 @@ smBlocks = do !->>
 				@lockType = 2
 				# capture pointer
 				node = @block.rangeBox
-				node.setPointerCapture e.pointerId
+				@block.rootBox.classList.add 'active'
 				node.classList.add 'drag'
+				if not node.hasPointerCapture e.pointerId
+					node.setPointerCapture e.pointerId
 				# calculate dragbox parameters
 				# {{{
 				# determine first-last page counts (excluding current)
@@ -1186,8 +1186,10 @@ smBlocks = do !->>
 				await @lock
 				@lock = null
 				# release capture
+				if node.hasPointerCapture e.pointerId
+					node.releasePointerCapture e.pointerId
 				node.classList.remove 'drag'
-				node.releasePointerCapture e.pointerId
+				@block.rootBox.classList.remove 'active'
 				# update global state
 				if a != state.data.0
 					state.master.resolve state
@@ -1471,9 +1473,10 @@ smBlocks = do !->>
 					@block.focus!
 					return true
 				# set capture
-				node.setPointerCapture id if id
-				node.parentNode.classList.add 'fast' if node
-				@block.rootBox.classList.add 'locked'
+				@block.rootBox.classList.add 'active'
+				node.parentNode.classList.add 'fast'
+				if id != null and not node.hasPointerCapture id
+					node.setPointerCapture id
 				# start
 				while @lock.pending
 					# increment
@@ -1500,9 +1503,10 @@ smBlocks = do !->>
 				for b in blocks when b != @block
 					b.refresh!
 				# release capture
-				@block.rootBox.classList.remove 'locked'
-				node.parentNode.classList.remove 'fast' if node
-				node.releasePointerCapture id if id
+				if id != null and node.hasPointerCapture id
+					node.releasePointerCapture id if id != null
+				node.parentNode.classList.remove 'fast'
+				@block.rootBox.classList.remove 'active'
 				# release lock
 				await delay 100
 				@lock = null

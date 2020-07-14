@@ -924,13 +924,13 @@ smBlocks = async function(){
         case 'ArrowDown':
           a = this$.block.gotoP ? this$.block.gotoP.firstChild : null;
           this$.lockType = 1;
-          this$.fast(0, a, false);
+          this$.fast(null, a, false);
           break;
         case 'ArrowRight':
         case 'ArrowUp':
           a = this$.block.gotoN ? this$.block.gotoN.firstChild : null;
           this$.lockType = 1;
-          this$.fast(0, a, true);
+          this$.fast(null, a, true);
           break;
         default:
           return;
@@ -946,7 +946,6 @@ smBlocks = async function(){
         }
       };
       this.setFocus = function(e){
-        console.log('setFocus()');
         e.preventDefault();
         e.stopPropagation();
         this$.block.focus();
@@ -993,7 +992,7 @@ smBlocks = async function(){
       this.fastForward = function(e){
         e.preventDefault();
         e.stopPropagation();
-        if (this$.block.mode === 1 && !this$.lock && e.isPrimary && e.button === 0) {
+        if (this$.block.mode === 1 && !this$.lock && e.isPrimary && !e.button) {
           this$.lockType = 0;
           this$.fast(e.pointerId, e.currentTarget, true);
         }
@@ -1001,7 +1000,7 @@ smBlocks = async function(){
       this.fastBackward = function(e){
         e.preventDefault();
         e.stopPropagation();
-        if (this$.block.mode === 1 && !this$.lock && e.isPrimary && e.button === 0) {
+        if (this$.block.mode === 1 && !this$.lock && e.isPrimary && !e.button) {
           this$.lockType = 0;
           this$.fast(e.pointerId, e.currentTarget, false);
         }
@@ -1023,8 +1022,11 @@ smBlocks = async function(){
         this$.lock = newPromise();
         this$.lockType = 2;
         node = this$.block.rangeBox;
-        node.setPointerCapture(e.pointerId);
+        this$.block.rootBox.classList.add('active');
         node.classList.add('drag');
+        if (!node.hasPointerCapture(e.pointerId)) {
+          node.setPointerCapture(e.pointerId);
+        }
         a = this$.block.range;
         if ((c = a.pages.length) > 1) {
           b = a.index;
@@ -1053,8 +1055,11 @@ smBlocks = async function(){
         a = state.data[0];
         (await this$.lock);
         this$.lock = null;
+        if (node.hasPointerCapture(e.pointerId)) {
+          node.releasePointerCapture(e.pointerId);
+        }
         node.classList.remove('drag');
-        node.releasePointerCapture(e.pointerId);
+        this$.block.rootBox.classList.remove('active');
         if (a !== state.data[0]) {
           state.master.resolve(state);
           for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
@@ -1312,13 +1317,11 @@ smBlocks = async function(){
           this.block.focus();
           return true;
         }
-        if (id) {
+        this.block.rootBox.classList.add('active');
+        node.parentNode.classList.add('fast');
+        if (id !== null && !node.hasPointerCapture(id)) {
           node.setPointerCapture(id);
         }
-        if (node) {
-          node.parentNode.classList.add('fast');
-        }
-        this.block.rootBox.classList.add('locked');
         while (this.lock.pending) {
           if ((a = a + b) === end) {
             a = beg;
@@ -1343,13 +1346,13 @@ smBlocks = async function(){
             b.refresh();
           }
         }
-        this.block.rootBox.classList.remove('locked');
-        if (node) {
-          node.parentNode.classList.remove('fast');
+        if (id !== null && node.hasPointerCapture(id)) {
+          if (id !== null) {
+            node.releasePointerCapture(id);
+          }
         }
-        if (id) {
-          node.releasePointerCapture(id);
-        }
+        node.parentNode.classList.remove('fast');
+        this.block.rootBox.classList.remove('active');
         (await delay(100));
         this.lock = null;
         this.block.focus();
