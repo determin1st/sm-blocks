@@ -302,7 +302,7 @@ smBlocks = async function(){
         state.count = b > state.total
           ? state.total
           : (c = state.total - req.offset) < b ? c : b;
-        state.pages = Math.ceil(state.total / b);
+        state.pages = 20;
         for (i$ = 0, len$ = (ref$ = gridControl).length; i$ < len$; ++i$) {
           c = ref$[i$];
           c.event('init', state);
@@ -1022,8 +1022,7 @@ smBlocks = async function(){
         this$.lock = newPromise();
         this$.lockType = 2;
         node = this$.block.rangeBox;
-        this$.block.rootBox.classList.add('active');
-        node.classList.add('drag');
+        node.classList.add('active', 'drag');
         if (!node.hasPointerCapture(e.pointerId)) {
           node.setPointerCapture(e.pointerId);
         }
@@ -1058,9 +1057,8 @@ smBlocks = async function(){
         if (node.hasPointerCapture(e.pointerId)) {
           node.releasePointerCapture(e.pointerId);
         }
-        node.classList.remove('drag');
-        this$.block.rootBox.classList.remove('active');
-        if (a !== state.data[0]) {
+        node.classList.remove('active', 'drag');
+        if (false) {
           state.master.resolve(state);
           for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
             a = ref$[i$];
@@ -1508,9 +1506,9 @@ smBlocks = async function(){
               this.rootBox.classList.remove('v');
               this.root.classList.add('inactive');
             } else if (mode === 1) {
-              this.rangeBox.classList.remove('static');
+              this.rangeBox.classList.remove('nogaps');
             } else {
-              this.rangeBox.classList.add('static');
+              this.rangeBox.classList.add('nogaps');
             }
             this.mode = mode;
           }

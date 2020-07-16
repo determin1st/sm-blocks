@@ -3,7 +3,8 @@ smBlocks = do !->>
 	# TODO: fixed/expanded paginator tests
 	# TODO: loader init when paginator locked desync
 	# TODO: loader dirty fetch race
-	# TODO: orderer block
+	# TODO: orderer
+	# TODO: expanded paginator page enlargement (when count is low)
 	# prepare
 	# {{{
 	# constants
@@ -347,7 +348,8 @@ smBlocks = do !->>
 						then c
 						else b
 				# determine count of pages
-				state.pages = Math.ceil (state.total / b)
+				#state.pages = Math.ceil (state.total / b)
+				state.pages = 20
 				# base parameters loaded,
 				# dispatch init event before reading items..
 				for c in gridControl
@@ -1148,8 +1150,7 @@ smBlocks = do !->>
 				@lockType = 2
 				# capture pointer
 				node = @block.rangeBox
-				@block.rootBox.classList.add 'active'
-				node.classList.add 'drag'
+				node.classList.add 'active', 'drag'
 				if not node.hasPointerCapture e.pointerId
 					node.setPointerCapture e.pointerId
 				# calculate dragbox parameters
@@ -1188,10 +1189,10 @@ smBlocks = do !->>
 				# release capture
 				if node.hasPointerCapture e.pointerId
 					node.releasePointerCapture e.pointerId
-				node.classList.remove 'drag'
-				@block.rootBox.classList.remove 'active'
+				node.classList.remove 'active', 'drag'
 				# update global state
-				if a != state.data.0
+				#if a != state.data.0
+				if false
 					state.master.resolve state
 					for a in blocks when a != @block
 						a.refresh!
@@ -1696,9 +1697,9 @@ smBlocks = do !->>
 							@rootBox.classList.remove 'v'
 							@root.classList.add 'inactive'
 						else if mode == 1
-							@rangeBox.classList.remove 'static'
+							@rangeBox.classList.remove 'nogaps'
 						else
-							@rangeBox.classList.add 'static'
+							@rangeBox.classList.add 'nogaps'
 						@mode = mode
 					# range capacity
 					if R.nCount != nCount

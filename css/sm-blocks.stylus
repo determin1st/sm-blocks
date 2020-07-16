@@ -1,359 +1,359 @@
 /**
-* base
+* widgets
 */
 #sm-products
-  // {{{
-  // i don't want to write !important here,
-  // don't modify if not sure
-  display: flex;
-  flex-direction: column;// just in case
-  align-items: center;// grid is centered, not stretched
-  width:  100%;// eat all width
-  height: auto;// grid will grow or shrink automatically
-  min-width:  0;// may zap into zero-point
-  min-height: 0;// same
-  overflow: hidden;// no scrollbars please
-  > .main // primary container (grid)
-  {
-    // settings
-    // configurable defaults
-    --columns: 4;
-    --column-gap: 4px;
-    --row-gap:    4px;
-    --item-max-x: 304px;
-    --item-max-y: 640px;
-    --item-sz-1: 35;
-    --item-sz-2: 40;
-    --item-sz-3: 25;
-    --font-size: 20px;
-    --font-size-header: calc(var(--font-size) + 4px);
-    // non-configurable
-    --rows: 1;
-    --height: calc(var(--rows) * var(--item-max-y));
-    --svg-icon-size: calc(10px + var(--font-size));
-    ////
-    width:  100%;
-    height: var(--height);
-    max-width:  calc(var(--columns) * var(--item-max-x));
-    max-height: calc(var(--rows) * var(--item-max-y));
-    display: grid;
-    grid-template-columns: repeat(var(--columns), 1fr);
-    grid-column-gap: var(--column-gap);
-    grid-row-gap: var(--row-gap);
-    justify-content: center;
-    ////
-    > .item // vertical
-    {
-      width:  100%;
-      height: 100%;
-      display: flex;
-      justify-content: center;
-      > .box
-      {
-        width:  100%;
-        height: 100%;
-        min-width:  0;
-        min-height: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: stretch;
-        justify-content: flex-start;
-        max-width:  var(--item-max-x);
-        max-height: var(--item-max-y);
-        // data is placed into this block,
-        // it displays svg placeholder by default
-        .ph
-        {
-          // {{{
-          position: relative;
-          > *
-          {
-            position: absolute;
-            left: 0;
-            top:  0;
-            width:  100%;
-            height: 100%;
-          }
-          > div
-          {
-            display: none;
-          }
-          > svg
-          {
-            // scaling mode must be defined in the svg
-            // default color is black
-          }
-          &.loaded
-          {
-            // state is determined,
-            // placeholder must be hidden
-            > div
-            {
-              display: flex;
-            }
-            > svg
-            {
-              display: none;
-            }
-          }
-          // }}}
-        }
-        // item is divided into 3 sections and
-        // those sections may also be divided..
-        > div
-        {
-          flex-shrink: 100;
-          display: flex;
-          flex-direction: column;// always!
-          > div
-          {
-            flex-grow:   100;
-            flex-shrink: 100;
-            display: flex;
-          }
-        }
-        > .head // image
-        {
-          flex-grow: var(--item-sz-1);
-          > div
-          {
-            flex-direction: column;
-            align-items: stretch;
-            justify-content: center;
-            > img
-            {
-              max-width:  100%;
-              max-height: 100%;
-            }
-          }
-        }
-        > .body
-        {
-          flex-grow: var(--item-sz-2);
-          > .icon // {{{
-          {
-            // this is intended to be one-liner
-            max-height: calc(2 * var(--font-size-header));
-            display: flex;
-            > .a
-            {
-              flex: 1 1 30%;
-            }
-            > .b
-            {
-              flex: 1 1 70%;
-            }
-          }
-          // }}}
-          > .title // {{{
-          {
-            // This block is fixed at top space it may take.
-            // The multiplier to header size should be +1 from
-            //  the desired number of lines, the default is 3,
-            //  which means that 2 lines will display perfectly fine.
-            // The plugin script auto-breaks titles,
-            //  this is done via special markers in the block's
-            //  content data. Markers are natural, like " | " or " . ",
-            //  it will replace it with line break for
-            //  the perfect text fit.
-            max-height: calc(3 * var(--font-size-header));
-            > div, > div > button // TODO: kind of merging should be removed?
-            {
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              font-weight: bold;
-              font-size: var(--font-size-header);// auto-controlled
-              line-height: 1;
-              text-align: center;
-              word-break: keep-all;// +to break-word Asian languages
-              overflow: hidden;
-            }
-          }
-          // }}}
-          > .features // {{{
-          {
-          }
-          // }}}
-        }
-        > .foot
-        {
-          flex-grow: var(--item-sz-3);
-          > .price // {{{
-          {
-            max-height: calc(3 * var(--font-size));
-            font-size: var(--font-size-header);
-            > div
-            {
-              flex-direction: column;
-              align-items: center;
-              justify-content: center;
-              > .old
-              {
-                display: none;
-                line-height: 0.65em;
-                opacity: 0.7;
-                > span
-                {
-                  text-decoration: line-through;
-                  font-size: 0.65em;
-                }
-              }
-              > .current
-              {
-                display: flex;
-                line-height: 0.9em;
-                > .currency
-                {
-                  font-size: 1em;
-                  padding-right: 0.2em;
-                }
-                > .value
-                {
-                  font-size: 1em;
-                  font-weight: bold;
-                }
-                > .mantissa
-                {
-                  font-size: 0.7em;
-                  padding-top: 0.1em;
-                  display: flex;
-                }
-              }
-              // states
-              &.none // no price specified
-              {
-                display: none;
-              }
-              &.higher // current > old
-              {
-              }
-              &.lower  // current < old
-              {
-                > .old {display: block;}
-              }
-              &.right  // currency sign position
-              {
-                > .current > .currency
-                {
-                  order: 2;
-                  padding-left: 0.2em;
-                  padding-right: 0;
-                }
-              }
-            }
-          }
-          // }}}
-          > .controls // {{{
-          {
-            max-height: calc(3 * var(--font-size));
-            > div
-            {
-              padding-left:  4px;
-              padding-right: 4px;
-              a, button // buttons
-              {
-                flex: 1 1 auto;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                padding: 0;
-                font-size: var(--font-size);
-                font-weight: bold;
-                border-width: 0;
-                border-style: solid;
-                border-color: slategray;
-                border-radius: 2px;
-                background-color: gainsboro;
-                color: black;
-                outline: 0;
-                cursor: pointer;
-                &:focus
-                {
-                  border-width: 1px;
-                  background-color: silver;
-                }
-                &:hover
-                {
-                  background-color: silver;
-                }
-              }
-              .cart
-              {
-                // limited width
-                max-width: calc(30px + var(--svg-icon-size));
-                > svg
-                {
-                  width: var(--svg-icon-size);
-                  height: auto;
-                  fill: black;
-                }
-                &.none // out of stock
-                {
-                  display: none;
-                }
-              }
-            }
-          }
-          // }}}
-        }
-      }
-      &.empty // no data
-      {
-        // in case of instant layout change,
-        // element have to take space.
-        > .box
-        {
-          // display a small border
-          border-style: dotted;
-          border-color: slategray;
-          border-width: 0;
-          border-right-width:  1px;
-          border-bottom-width: 1px;
-          > div
-          {
-            // don't display anything else
-            display: none;
-          }
-        }
-      }
-    }
-    &.x > .item // horizontal
-    {
-      > .box
-      {
-        flex-direction: row;
-        max-width:  100%;
-        max-height: var(--item-max-x);
-        .ph
-        {
-          max-height: 100%;
-        }
-        > .image
-        {
-          max-width:  var(--item-max-x);
-          max-height: 100%;
-        }
-        > .controls
-        {
-          max-width:  calc(1.5 * var(--item-C));
-          max-height: 100%;
-        }
-      }
-    }
-  }
-  &.inactive // initial state
-  {
-    visibility: hidden;
-    pointer-events: none;
-  }
-  // guards
-  div, input, svg, img
-  {
-    box-sizing: border-box;
-    margin: 0;
-  }
-  // }}}
+	// {{{
+	// i don't want to write !important here,
+	// don't modify if not sure
+	display: flex;
+	flex-direction: column;// just in case
+	align-items: center;// grid is centered, not stretched
+	width:  100%;// eat all width
+	height: auto;// grid will grow or shrink automatically
+	min-width:  0;// may zap into zero-point
+	min-height: 0;// same
+	overflow: hidden;// no scrollbars please
+	> .main // primary container (grid)
+	{
+		// settings
+		// configurable defaults
+		--columns: 4;
+		--column-gap: 4px;
+		--row-gap:    4px;
+		--item-max-x: 304px;
+		--item-max-y: 640px;
+		--item-sz-1: 35;
+		--item-sz-2: 40;
+		--item-sz-3: 25;
+		--font-size: 20px;
+		--font-size-header: calc(var(--font-size) + 4px);
+		// non-configurable
+		--rows: 1;
+		--height: calc(var(--rows) * var(--item-max-y));
+		--svg-icon-size: calc(10px + var(--font-size));
+		////
+		width:  100%;
+		height: var(--height);
+		max-width:  calc(var(--columns) * var(--item-max-x));
+		max-height: calc(var(--rows) * var(--item-max-y));
+		display: grid;
+		grid-template-columns: repeat(var(--columns), 1fr);
+		grid-column-gap: var(--column-gap);
+		grid-row-gap: var(--row-gap);
+		justify-content: center;
+		////
+		> .item // vertical
+		{
+			width:  100%;
+			height: 100%;
+			display: flex;
+			justify-content: center;
+			> .box
+			{
+				width:  100%;
+				height: 100%;
+				min-width:  0;
+				min-height: 0;
+				display: flex;
+				flex-direction: column;
+				align-items: stretch;
+				justify-content: flex-start;
+				max-width:  var(--item-max-x);
+				max-height: var(--item-max-y);
+				// data is placed into this block,
+				// it displays svg placeholder by default
+				.ph
+				{
+					// {{{
+					position: relative;
+					> *
+					{
+						position: absolute;
+						left: 0;
+						top:  0;
+						width:  100%;
+						height: 100%;
+					}
+					> div
+					{
+						display: none;
+					}
+					> svg
+					{
+						// scaling mode must be defined in the svg
+						// default color is black
+					}
+					&.loaded
+					{
+						// state is determined,
+						// placeholder must be hidden
+						> div
+						{
+							display: flex;
+						}
+						> svg
+						{
+							display: none;
+						}
+					}
+					// }}}
+				}
+				// item is divided into 3 sections and
+				// those sections may also be divided..
+				> div
+				{
+					flex-shrink: 100;
+					display: flex;
+					flex-direction: column;// always!
+					> div
+					{
+						flex-grow:   100;
+						flex-shrink: 100;
+						display: flex;
+					}
+				}
+				> .head // image
+				{
+					flex-grow: var(--item-sz-1);
+					> div
+					{
+						flex-direction: column;
+						align-items: stretch;
+						justify-content: center;
+						> img
+						{
+							max-width:  100%;
+							max-height: 100%;
+						}
+					}
+				}
+				> .body
+				{
+					flex-grow: var(--item-sz-2);
+					> .icon // {{{
+					{
+						// this is intended to be one-liner
+						max-height: calc(2 * var(--font-size-header));
+						display: flex;
+						> .a
+						{
+							flex: 1 1 30%;
+						}
+						> .b
+						{
+							flex: 1 1 70%;
+						}
+					}
+					// }}}
+					> .title // {{{
+					{
+						// This block is fixed at top space it may take.
+						// The multiplier to header size should be +1 from
+						//  the desired number of lines, the default is 3,
+						//  which means that 2 lines will display perfectly fine.
+						// The plugin script auto-breaks titles,
+						//  this is done via special markers in the block's
+						//  content data. Markers are natural, like " | " or " . ",
+						//  it will replace it with line break for
+						//  the perfect text fit.
+						max-height: calc(3 * var(--font-size-header));
+						> div, > div > button // TODO: kind of merging should be removed?
+						{
+							display: flex;
+							align-items: center;
+							justify-content: center;
+							font-weight: bold;
+							font-size: var(--font-size-header);// auto-controlled
+							line-height: 1;
+							text-align: center;
+							word-break: keep-all;// +to break-word Asian languages
+							overflow: hidden;
+						}
+					}
+					// }}}
+					> .features // {{{
+					{
+					}
+					// }}}
+				}
+				> .foot
+				{
+					flex-grow: var(--item-sz-3);
+					> .price // {{{
+					{
+						max-height: calc(3 * var(--font-size));
+						font-size: var(--font-size-header);
+						> div
+						{
+							flex-direction: column;
+							align-items: center;
+							justify-content: center;
+							> .old
+							{
+								display: none;
+								line-height: 0.65em;
+								opacity: 0.7;
+								> span
+								{
+									text-decoration: line-through;
+									font-size: 0.65em;
+								}
+							}
+							> .current
+							{
+								display: flex;
+								line-height: 0.9em;
+								> .currency
+								{
+									font-size: 1em;
+									padding-right: 0.2em;
+								}
+								> .value
+								{
+									font-size: 1em;
+									font-weight: bold;
+								}
+								> .mantissa
+								{
+									font-size: 0.7em;
+									padding-top: 0.1em;
+									display: flex;
+								}
+							}
+							// states
+							&.none // no price specified
+							{
+								display: none;
+							}
+							&.higher // current > old
+							{
+							}
+							&.lower  // current < old
+							{
+								> .old {display: block;}
+							}
+							&.right  // currency sign position
+							{
+								> .current > .currency
+								{
+									order: 2;
+									padding-left: 0.2em;
+									padding-right: 0;
+								}
+							}
+						}
+					}
+					// }}}
+					> .controls // {{{
+					{
+						max-height: calc(3 * var(--font-size));
+						> div
+						{
+							padding-left:  4px;
+							padding-right: 4px;
+							a, button // buttons
+							{
+								flex: 1 1 auto;
+								display: flex;
+								align-items: center;
+								justify-content: center;
+								padding: 0;
+								font-size: var(--font-size);
+								font-weight: bold;
+								border-width: 0;
+								border-style: solid;
+								border-color: slategray;
+								border-radius: 2px;
+								background-color: gainsboro;
+								color: black;
+								outline: 0;
+								cursor: pointer;
+								&:focus
+								{
+									border-width: 1px;
+									background-color: silver;
+								}
+								&:hover
+								{
+									background-color: silver;
+								}
+							}
+							.cart
+							{
+								// limited width
+								max-width: calc(30px + var(--svg-icon-size));
+								> svg
+								{
+									width: var(--svg-icon-size);
+									height: auto;
+									fill: black;
+								}
+								&.none // out of stock
+								{
+									display: none;
+								}
+							}
+						}
+					}
+					// }}}
+				}
+			}
+			&.empty // no data
+			{
+				// in case of instant layout change,
+				// element have to take space.
+				> .box
+				{
+					// display a small border
+					border-style: dotted;
+					border-color: slategray;
+					border-width: 0;
+					border-right-width:  1px;
+					border-bottom-width: 1px;
+					> div
+					{
+						// don't display anything else
+						display: none;
+					}
+				}
+			}
+		}
+		&.x > .item // horizontal
+		{
+			> .box
+			{
+				flex-direction: row;
+				max-width:  100%;
+				max-height: var(--item-max-x);
+				.ph
+				{
+					max-height: 100%;
+				}
+				> .image
+				{
+					max-width:  var(--item-max-x);
+					max-height: 100%;
+				}
+				> .controls
+				{
+					max-width:  calc(1.5 * var(--item-C));
+					max-height: 100%;
+				}
+			}
+		}
+	}
+	&.inactive // initial state
+	{
+		visibility: hidden;
+		pointer-events: none;
+	}
+	// guards
+	div, input, svg, img
+	{
+		box-sizing: border-box;
+		margin: 0;
+	}
+// }}}
 div.sm-category-filter
 	// {{{
 	display: flex;
@@ -566,7 +566,7 @@ div.sm-category-filter
 		margin:  0;
 		padding: 0;
 	}
-	// }}}
+// }}}
 div.sm-paginator
 	// {{{
 	// configuration
@@ -593,15 +593,12 @@ div.sm-paginator
 		flex-direction: row
 		overflow: hidden
 		box-sizing: border-box
-		width: auto
+		width:     auto
 		min-width: 0
 		max-width: 10000px
+		opacity: 0
 		padding: 0
 		margin:  0
-		// non-visible by default
-		opacity: 0
-		&.v
-			opacity: 1
 		////
 		> div // {{{
 			display: flex
@@ -675,10 +672,9 @@ div.sm-paginator
 				padding-right: 0
 		// }}}
 		> .range // {{{
-			--count: 0 // count of page buttons
+			////
+			--count: 0
 			--max-width: calc(2px + (1 + var(--count)) * var(--width))
-			&.static
-				--max-width: calc(2px + var(--count) * var(--width))
 			////
 			flex: 1 0 0
 			justify-content: center
@@ -687,16 +683,18 @@ div.sm-paginator
 			min-width: 0
 			max-width: var(--max-width)
 			////
-			> .gap
+			> .gap // {{{
 				flex: 0 100 0
 				padding: 4px 0 4px 0
 				min-width: calc(0.25 * var(--width))
+				// non-visible by default
 				display: none
-				&.v // visible
+				&.v
 					display: flex
 				> svg
 					fill: silver
-			> .page
+			// }}}
+			> .page // {{{
 				flex: 0 0 0
 				overflow: hidden
 				min-width: var(--width)
@@ -719,10 +717,27 @@ div.sm-paginator
 						border-color: silver
 						background-color: black
 						color: white
-						cursor: default
+						cursor: grab
+			// }}}
+			////
+			// range without gaps
+			&.nogaps
+				// reduced size
+				--max-width: calc(2px + var(--count) * var(--width))
+				// dragging is not possible
+				> .page.current > button
+					cursor: default
+			// current page is actively changed
+			&.active
+				> .gap > svg
+					fill: silver
+				&.drag
+					cursor: grabbing
 		// }}}
 		////
-		&.expand.v // greedy width {{{
+		&.v // visible
+			opacity: 1
+		&.v.flexy // greedy width {{{
 			width: 100%
 			> .range
 				width:     100%
@@ -731,21 +746,8 @@ div.sm-paginator
 					padding: 4px 1px 4px 1px
 					> svg
 						fill: gainsboro
-				> .page.current > button
-					cursor: grab
-				&.drag
-					cursor: grabbing
-				&.static
-					> .page
-						flex-grow: 1
-					> .page.current > button
-						cursor: default
-		// }}}
-		&.nosep // no separators {{{
-			> .goto.prev
-				padding-right: 1px
-			> .goto.next
-				padding-left: 1px
+				&.static > .page
+					flex-grow: 1
 		// }}}
 		&.hovered // {{{
 			> .sep
@@ -753,9 +755,11 @@ div.sm-paginator
 				> svg
 					fill: slategray
 		// }}}
-		&.active.v // actively changed {{{
-			> .range > .gap > svg
-				fill: silver
+		&.nosep // no separators {{{
+			> .goto.prev
+				padding-right: 1px
+			> .goto.next
+				padding-left: 1px
 		// }}}
 	////
 	// placeholder
@@ -781,5 +785,5 @@ div.sm-paginator
 	// guards
 	div, button, svg
 		box-sizing: border-box
-	// }}}
+// }}}
 

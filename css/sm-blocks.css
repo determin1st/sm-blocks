@@ -1,5 +1,5 @@
 /**
-* base
+* widgets
 */
 #sm-products {
   display: flex;
@@ -449,12 +449,9 @@ div.sm-paginator > div {
   width: auto;
   min-width: 0;
   max-width: 10000px;
+  opacity: 0;
   padding: 0;
   margin: 0;
-  opacity: 0;
-}
-div.sm-paginator > div.v {
-  opacity: 1;
 }
 div.sm-paginator > div > div {
   display: flex;
@@ -547,9 +544,6 @@ div.sm-paginator > div > .range {
   min-width: 0;
   max-width: var(--max-width);
 }
-div.sm-paginator > div > .range.static {
-  --max-width: calc(2px + var(--count) * var(--width));
-}
 div.sm-paginator > div > .range > .gap {
   flex: 0 100 0;
   padding: 4px 0 4px 0;
@@ -586,38 +580,38 @@ div.sm-paginator > div > .range > .page.current > button {
   border-color: #c0c0c0;
   background-color: #000;
   color: #fff;
+  cursor: grab;
+}
+div.sm-paginator > div > .range.nogaps {
+  --max-width: calc(2px + var(--count) * var(--width));
+}
+div.sm-paginator > div > .range.nogaps > .page.current > button {
   cursor: default;
 }
-div.sm-paginator > div.expand.v {
+div.sm-paginator > div > .range.active > .gap > svg {
+  fill: #c0c0c0;
+}
+div.sm-paginator > div > .range.active.drag {
+  cursor: grabbing;
+}
+div.sm-paginator > div.v {
+  opacity: 1;
+}
+div.sm-paginator > div.v.flexy {
   width: 100%;
 }
-div.sm-paginator > div.expand.v > .range {
+div.sm-paginator > div.v.flexy > .range {
   width: 100%;
   max-width: 100%;
 }
-div.sm-paginator > div.expand.v > .range > .gap {
+div.sm-paginator > div.v.flexy > .range > .gap {
   padding: 4px 1px 4px 1px;
 }
-div.sm-paginator > div.expand.v > .range > .gap > svg {
+div.sm-paginator > div.v.flexy > .range > .gap > svg {
   fill: #dcdcdc;
 }
-div.sm-paginator > div.expand.v > .range > .page.current > button {
-  cursor: grab;
-}
-div.sm-paginator > div.expand.v > .range.drag {
-  cursor: grabbing;
-}
-div.sm-paginator > div.expand.v > .range.static > .page {
+div.sm-paginator > div.v.flexy > .range.static > .page {
   flex-grow: 1;
-}
-div.sm-paginator > div.expand.v > .range.static > .page.current > button {
-  cursor: default;
-}
-div.sm-paginator > div.nosep > .goto.prev {
-  padding-right: 1px;
-}
-div.sm-paginator > div.nosep > .goto.next {
-  padding-left: 1px;
 }
 div.sm-paginator > div.hovered > .sep {
   max-width: 8px;
@@ -625,8 +619,11 @@ div.sm-paginator > div.hovered > .sep {
 div.sm-paginator > div.hovered > .sep > svg {
   fill: #708090;
 }
-div.sm-paginator > div.active.v > .range > .gap > svg {
-  fill: #c0c0c0;
+div.sm-paginator > div.nosep > .goto.prev {
+  padding-right: 1px;
+}
+div.sm-paginator > div.nosep > .goto.next {
+  padding-left: 1px;
 }
 div.sm-paginator > svg {
   display: none;

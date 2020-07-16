@@ -33,6 +33,7 @@ $o = json_encode([
   "itemControls" => true,
 ]);
 $po = json_encode([
+  #"expansion"  => false,
   "expansion"  => true,
   #"rangePlus"  => 2,
   #"rangeMinus" => 2,

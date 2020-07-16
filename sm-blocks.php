@@ -858,7 +858,7 @@ EOD;
       $b .= ' norange';
     }
     if ($attr['expansion']) {
-      $b .= ' expand';
+      $b .= ' flexy';
     }
     $b = trim($b);
     # compose
