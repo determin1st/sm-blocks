@@ -593,13 +593,25 @@ div.sm-paginator
 		flex-direction: row
 		overflow: hidden
 		box-sizing: border-box
-		width:     auto
-		min-width: 0
-		max-width: 10000px
-		opacity: 0
 		padding: 0
 		margin:  0
-		////
+		// size and visibility {{{
+		// these are for maximal size calculation
+		min-width: 0
+		max-width: 10000px
+		width:     auto
+		// non-visible by default
+		opacity:   0
+		&.v
+			opacity: 1
+			&.flexy
+				width: 100%
+				> .range
+					width:     100%
+					max-width: 100%
+					&.nogaps > .page
+						flex-grow: 1
+		// }}}
 		> div // {{{
 			display: flex
 			flex-direction: row
@@ -636,7 +648,7 @@ div.sm-paginator
 				width:  100%
 				height: 100%
 		// }}}
-		> .goto // first-last-prev-next {{{
+		> .goto // {{{
 			flex: 1 1 0
 			max-width: calc(2px + var(--width))
 			padding-top:    4px
@@ -678,15 +690,14 @@ div.sm-paginator
 			////
 			flex: 1 0 0
 			justify-content: center
-			overflow: hidden
-			width: 10000px
 			min-width: 0
 			max-width: var(--max-width)
+			width:     10000px
 			////
 			> .gap // {{{
 				flex: 0 100 0
-				padding: 4px 0 4px 0
 				min-width: calc(0.25 * var(--width))
+				padding: 4px 0 4px 0
 				// non-visible by default
 				display: none
 				&.v
@@ -714,10 +725,12 @@ div.sm-paginator
 					> button
 						font-size: 1.4em
 						font-weight: bold
-						border-color: silver
+						border-color: black
 						background-color: black
 						color: white
 						cursor: grab
+						&:focus
+							box-shadow: inset 0 0 1px 1px white
 			// }}}
 			////
 			// range without gaps
@@ -729,25 +742,19 @@ div.sm-paginator
 					cursor: default
 			// current page is actively changed
 			&.active
-				> .gap > svg
-					fill: silver
 				&.drag
 					cursor: grabbing
 		// }}}
 		////
-		&.v // visible
-			opacity: 1
-		&.v.flexy // greedy width {{{
-			width: 100%
+		&.flexy // {{{
 			> .range
-				width:     100%
-				max-width: 100%
 				> .gap
 					padding: 4px 1px 4px 1px
 					> svg
 						fill: gainsboro
-				&.static > .page
-					flex-grow: 1
+				&.active > .gap
+					> svg
+						fill: silver
 		// }}}
 		&.hovered // {{{
 			> .sep
@@ -755,7 +762,17 @@ div.sm-paginator
 				> svg
 					fill: slategray
 		// }}}
-		&.nosep // no separators {{{
+		&.locked // {{{
+			// intermediate state of the widget,
+			// it will be intitialized soon
+			opacity: 0.8
+			pointer-events: none
+			> .goto > button > svg
+				fill: rgba(0, 0, 0, 0)
+			> .range > .page > button
+				color: rgba(0, 0, 0, 0)
+		// }}}
+		&.nosep // {{{
 			> .goto.prev
 				padding-right: 1px
 			> .goto.next
