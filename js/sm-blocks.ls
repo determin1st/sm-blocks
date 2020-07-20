@@ -76,8 +76,9 @@ smBlocks = do !->>
 		return (o) ->
 			return new Proxy [o, {} <<< o], handler
 	# }}}
-	BlockState = (name, handler) !-> # {{{
+	BlockState = (name, level, handler) !-> # {{{
 		@name   = name
+		@level  = level
 		@event  = handler
 		@data   = null
 		@master = null
@@ -197,15 +198,15 @@ smBlocks = do !->>
 		# }}}
 		gridLoader = do -> # {{{
 			# {{{
-			cooldown = 400  # update timeout
+			cooldown = 800  # update timeout
 			state = {
 				first: true   # first loader run
-				initiator: '' # update origin
-				dirty: 0      # resolved-in-process flag
+				dirty: false  # resolved-in-process flag
+				level: 0      # update priority level
 				total: 0      # items in the set
 				count: 0      # displayed items
-				pageCount: 0  # calculated from total/count
-				pageIndex: 0  # current page number
+				pageCount: 0  # calculated total/count
+				pageIndex: 0  # current page
 			}
 			# create items fetcher
 			iFetch = httpFetch.create {
@@ -225,9 +226,16 @@ smBlocks = do !->>
 				category: null
 			}
 			# }}}
-			setState = (s) !-> # {{{
-				console.log 'new state arrived!'
-				switch state.initiator = s.name
+			setState = (s) -> # {{{
+				# manage update priority
+				# prevent changes from lower levels
+				if state.level > s.level
+					return false
+				# rise current
+				if state.level < s.level
+					state.level = s.level
+				# change state
+				switch s.name
 				case 'category'
 					# {{{
 					# format category filter's data
@@ -260,6 +268,8 @@ smBlocks = do !->>
 					state.pageIndex = s.data.0
 					req.offset = state.pageIndex * req.limit
 					# }}}
+				# done
+				return true
 			# }}}
 			unloadItems = !-> # {{{
 				# check
@@ -280,7 +290,8 @@ smBlocks = do !->>
 				p.pending = true
 				p.resolve = (data) !->
 					# update state
-					setState data if data
+					if data and not setState data
+						return
 					# check
 					if p.pending
 						# resolve clean
@@ -288,7 +299,7 @@ smBlocks = do !->>
 						r!
 					else if not state.dirty
 						# set dirty
-						++state.dirty
+						state.dirty = true
 						# terminate fetcher
 						res.cancel! if res
 				# done
@@ -298,9 +309,9 @@ smBlocks = do !->>
 				# check
 				if state.dirty
 					# reset everything
-					state.dirty = 0
+					state.dirty = false
 					unloadItems!
-					# to guard against excessive dirty loads
+					# to guard against excessive load calls
 					# caused by multiple user actions,
 					# it's important to do a short cooldown..
 					await delay cooldown
@@ -311,7 +322,7 @@ smBlocks = do !->>
 						c.master = gridLock
 					# check
 					if state.first
-						# first load is instant
+						# first load is instantaneous
 						gridLock.resolve!
 						state.first = false
 					else
@@ -320,18 +331,21 @@ smBlocks = do !->>
 						# unload everything
 						unloadItems!
 				# multiple updates may not squeeze in here,
-				# check it and restart early..
+				# otherwise, restart early..
 				if state.dirty
 					return true
 				# new update arrived,
-				# dispatch change event before processing..
+				# dispatch lock/change events
 				for c in gridControl when c.ready
-					if not (c.event 'change', state)
-						# some controller is about to change again,
+					if c.level < state.level
+						# widget operation level is lower,
+						# so lock it up until initialized
+						c.event 'lock'
+					else if not (c.event 'change', state)
+						# widget is about to change again,
 						# dont rush, just restart
 						return true
 				# start fetching
-				console.log 'fetching items..'
 				a = await (res := iFetch req)
 				# cleanup
 				res := null
@@ -353,14 +367,18 @@ smBlocks = do !->>
 						else b
 				# determine count of pages
 				state.pageCount = Math.ceil (state.total / b)
-				# base parameters loaded,
-				# dispatch init event before reading items..
+				# base processing finished,
+				# dispatch init/unlock/refresh events
 				for c in gridControl
-					# execute callback
-					c.event 'init', state
-					# set ready
-					if not c.ready
+					if c.ready
+						if c.level < state.level
+							c.event 'unlock'
+						c.event 'refresh', state
+					else
+						c.event 'init', state
 						c.ready = true
+				# reset
+				state.level = 0
 				# async loop
 				c = -1
 				while ++c < state.count and not state.dirty
@@ -985,14 +1003,13 @@ smBlocks = do !->>
 		# initialize
 		# {{{
 		# create common state
-		state = new BlockState 'category', (event, data) ->
+		state = new BlockState 'category', 2, (event, data) ->
 			switch event
 			case 'init'
-				if not state.ready
-					# initialize once
-					state.data = []
-					blocks.forEach (a, b) !->
-						a.init b
+				# create widget's data storage
+				state.data = []
+				for a,b in blocks
+					a.init b
 			# done
 			return true
 		# create individual blocks
@@ -1155,7 +1172,8 @@ smBlocks = do !->>
 				# lock
 				@lock = newPromise!
 				@lockType = 2
-				# capture pointer
+				# set capture
+				@block.focus!
 				node = @block.rangeBox
 				node.classList.add 'active', 'drag'
 				if not node.hasPointerCapture e.pointerId
@@ -1192,17 +1210,17 @@ smBlocks = do !->>
 				# wait released
 				a = state.data.0
 				await @lock
-				@lock = null
 				# release capture
 				if node.hasPointerCapture e.pointerId
 					node.releasePointerCapture e.pointerId
 				node.classList.remove 'active', 'drag'
 				# update global state
-				if a != state.data.0
+				if not @block.locked and a != state.data.0
 					state.master.resolve state
 					for a in blocks when a != @block
 						a.refresh!
 				# done
+				@lock = null
 				return true
 			# }}}
 			@drag = (e) !~> # {{{
@@ -1480,7 +1498,8 @@ smBlocks = do !->>
 					@block.focus!
 					return true
 				# set capture
-				@block.rootBox.classList.add 'active'
+				@block.focus!
+				@block.rangeBox.classList.add 'active'
 				node.parentNode.classList.add 'fast'
 				if id != null and not node.hasPointerCapture id
 					node.setPointerCapture id
@@ -1505,20 +1524,22 @@ smBlocks = do !->>
 						# accelerate
 						b = b + inc
 						c = @brake
-				# update global state
-				state.master.resolve state
-				for b in blocks when b != @block
-					b.refresh!
 				# release capture
 				if id != null and node.hasPointerCapture id
 					node.releasePointerCapture id if id != null
 				node.parentNode.classList.remove 'fast'
-				@block.rootBox.classList.remove 'active'
-				# release lock
-				await delay 100
-				@lock = null
+				@block.rangeBox.classList.remove 'active'
+				# update global state
+				if not @block.locked
+					state.master.resolve state
+					for b in blocks when b != @block
+						b.refresh!
+					#await delay 100
+					# complete
+					#@block.focus!
 				# complete
-				@block.focus!
+				# release lock
+				@lock = null
 				return true
 			# }}}
 			refresh: -> # {{{
@@ -1600,8 +1621,11 @@ smBlocks = do !->>
 			# }}}
 			focus: !-> # {{{
 				# set focus to the current node
-				if not @locked and @range and @range.current
-					@range.current.focus!
+				if not @locked and \
+				   @range and (a = @range.current) and \
+				   document.activeElement != a
+					###
+					a.focus!
 			# }}}
 			refresh: !-> # {{{
 				# check
@@ -1786,34 +1810,37 @@ smBlocks = do !->>
 		# initialize
 		# {{{
 		# create common state
-		state = new BlockState 'page', (event, data) !->
+		state = new BlockState 'page', 1, (event, data) !->
 			switch event
+			case 'init'
+				# create widget's data storage
+				state.data = [data.pageIndex, data.pageCount]
+				for a in blocks
+					a.init!
+			case 'lock'
+				# must stop any interactions..
+				for a in blocks
+					a.lock!
 			case 'change'
-				# check any block is active/locked
+				# when some block is active,
+				# prevent current change
 				for a in blocks
 					if (a = a.ctrl.lock) and a.pending
-						# another update will arrive soon,
-						# prevent current change
 						return false
-				# check update origin and
-				# lock all blocks until initialized
-				if data.initiator != 'page'
-					for a in blocks
-						a.lock!
-			case 'init'
-				if not state.ready
-					# initialize once
-					state.data = [data.pageIndex, data.pageCount]
-					for a in blocks
-						a.init!
-				else if state.data.0 != data.pageIndex or \
-				        state.data.1 != data.pageCount
-					# update
-					state.data.0 = data.pageIndex
-					state.data.1 = data.pageCount
-					for a in blocks
-						a.unlock! if a.locked
-						a.refresh!
+			case 'unlock'
+				# may continue interactions..
+				for a in blocks
+					a.unlock!
+			case 'refresh'
+				# when some block is active,
+				# prevent self refreshing..
+				for a in blocks when a.ctrl.lock
+					return true
+				# update
+				state.data.0 = data.pageIndex
+				state.data.1 = data.pageCount
+				for a in blocks
+					a.refresh!
 			# done
 			return true
 		# create individual blocks
@@ -1840,7 +1867,7 @@ smBlocks = do !->>
 		# initialize
 		# {{{
 		# create common state
-		state = new BlockState 'order', (event, data) ->
+		state = new BlockState 'order', 1, (event, data) ->
 			switch event
 			case 'init'
 				true
@@ -1867,7 +1894,7 @@ smBlocks = do !->>
 		# initialize
 		# {{{
 		# create common state
-		state = new BlockState 'sizer', (event, data) ->
+		state = new BlockState 'sizer', 0, (event, data) ->
 			switch event
 			case 'resize'
 				blocks.forEach (b) !->

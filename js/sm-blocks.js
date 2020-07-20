@@ -67,8 +67,9 @@ smBlocks = async function(){
       return new Proxy([o, import$({}, o)], handler);
     };
   }();
-  BlockState = function(name, handler){
+  BlockState = function(name, level, handler){
     this.name = name;
+    this.level = level;
     this.event = handler;
     this.data = null;
     this.master = null;
@@ -169,11 +170,11 @@ smBlocks = async function(){
     }();
     gridLoader = function(){
       var cooldown, state, iFetch, res, req, setState, unloadItems, newMasterPromise;
-      cooldown = 400;
+      cooldown = 800;
       state = {
         first: true,
-        initiator: '',
-        dirty: 0,
+        dirty: false,
+        level: 0,
         total: 0,
         count: 0,
         pageCount: 0,
@@ -197,8 +198,13 @@ smBlocks = async function(){
       };
       setState = function(s){
         var a, b, i$, ref$, len$, c, j$, ref1$, len1$, d;
-        console.log('new state arrived!');
-        switch (state.initiator = s.name) {
+        if (state.level > s.level) {
+          return false;
+        }
+        if (state.level < s.level) {
+          state.level = s.level;
+        }
+        switch (s.name) {
         case 'category':
           a = [];
           b = [];
@@ -229,6 +235,7 @@ smBlocks = async function(){
           state.pageIndex = s.data[0];
           req.offset = state.pageIndex * req.limit;
         }
+        return true;
       };
       unloadItems = function(){
         var c;
@@ -248,14 +255,14 @@ smBlocks = async function(){
         });
         p.pending = true;
         p.resolve = function(data){
-          if (data) {
-            setState(data);
+          if (data && !setState(data)) {
+            return;
           }
           if (p.pending) {
             p.pending = false;
             r();
           } else if (!state.dirty) {
-            ++state.dirty;
+            state.dirty = true;
             if (res) {
               res.cancel();
             }
@@ -266,7 +273,7 @@ smBlocks = async function(){
       return async function(){
         var i$, ref$, len$, c, a, b;
         if (state.dirty) {
-          state.dirty = 0;
+          state.dirty = false;
           unloadItems();
           (await delay(cooldown));
         } else {
@@ -289,12 +296,13 @@ smBlocks = async function(){
         for (i$ = 0, len$ = (ref$ = gridControl).length; i$ < len$; ++i$) {
           c = ref$[i$];
           if (c.ready) {
-            if (!c.event('change', state)) {
+            if (c.level < state.level) {
+              c.event('lock');
+            } else if (!c.event('change', state)) {
               return true;
             }
           }
         }
-        console.log('fetching items..');
         a = (await (res = iFetch(req)));
         res = null;
         if (a instanceof Error) {
@@ -311,11 +319,17 @@ smBlocks = async function(){
         state.pageCount = Math.ceil(state.total / b);
         for (i$ = 0, len$ = (ref$ = gridControl).length; i$ < len$; ++i$) {
           c = ref$[i$];
-          c.event('init', state);
-          if (!c.ready) {
+          if (c.ready) {
+            if (c.level < state.level) {
+              c.event('unlock');
+            }
+            c.event('refresh', state);
+          } else {
+            c.event('init', state);
             c.ready = true;
           }
         }
+        state.level = 0;
         c = -1;
         while (++c < state.count && !state.dirty) {
           if ((b = (await a.readJSON())) === null) {
@@ -886,14 +900,15 @@ smBlocks = async function(){
         item.nameBox.removeEventListener('click', this.toggleCheckbox, true);
       }
     };
-    state = new BlockState('category', function(event, data){
+    state = new BlockState('category', 2, function(event, data){
+      var i$, ref$, len$, b, a;
       switch (event) {
       case 'init':
-        if (!state.ready) {
-          state.data = [];
-          blocks.forEach(function(a, b){
-            a.init(b);
-          });
+        state.data = [];
+        for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
+          b = i$;
+          a = ref$[i$];
+          a.init(b);
         }
       }
       return true;
@@ -1027,6 +1042,7 @@ smBlocks = async function(){
         }
         this$.lock = newPromise();
         this$.lockType = 2;
+        this$.block.focus();
         node = this$.block.rangeBox;
         node.classList.add('active', 'drag');
         if (!node.hasPointerCapture(e.pointerId)) {
@@ -1059,12 +1075,11 @@ smBlocks = async function(){
         d[6] = state.data[1] - d[5] - d[7] - 2;
         a = state.data[0];
         (await this$.lock);
-        this$.lock = null;
         if (node.hasPointerCapture(e.pointerId)) {
           node.releasePointerCapture(e.pointerId);
         }
         node.classList.remove('active', 'drag');
-        if (a !== state.data[0]) {
+        if (!this$.block.locked && a !== state.data[0]) {
           state.master.resolve(state);
           for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
             a = ref$[i$];
@@ -1073,6 +1088,7 @@ smBlocks = async function(){
             }
           }
         }
+        this$.lock = null;
         return true;
       };
       this.drag = function(e){
@@ -1321,7 +1337,8 @@ smBlocks = async function(){
           this.block.focus();
           return true;
         }
-        this.block.rootBox.classList.add('active');
+        this.block.focus();
+        this.block.rangeBox.classList.add('active');
         node.parentNode.classList.add('fast');
         if (id !== null && !node.hasPointerCapture(id)) {
           node.setPointerCapture(id);
@@ -1343,23 +1360,23 @@ smBlocks = async function(){
             c = this.brake;
           }
         }
-        state.master.resolve(state);
-        for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
-          b = ref$[i$];
-          if (b !== this.block) {
-            b.refresh();
-          }
-        }
         if (id !== null && node.hasPointerCapture(id)) {
           if (id !== null) {
             node.releasePointerCapture(id);
           }
         }
         node.parentNode.classList.remove('fast');
-        this.block.rootBox.classList.remove('active');
-        (await delay(100));
+        this.block.rangeBox.classList.remove('active');
+        if (!this.block.locked) {
+          state.master.resolve(state);
+          for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
+            b = ref$[i$];
+            if (b !== this.block) {
+              b.refresh();
+            }
+          }
+        }
         this.lock = null;
-        this.block.focus();
         return true;
       },
       refresh: function(){
@@ -1433,8 +1450,9 @@ smBlocks = async function(){
         this.refresh();
       },
       focus: function(){
-        if (!this.locked && this.range && this.range.current) {
-          this.range.current.focus();
+        var a;
+        if (!this.locked && this.range && (a = this.range.current) && document.activeElement !== a) {
+          a.focus();
         }
       },
       refresh: function(){
@@ -1607,9 +1625,22 @@ smBlocks = async function(){
         }
       }
     };
-    state = new BlockState('page', function(event, data){
+    state = new BlockState('page', 1, function(event, data){
       var i$, ref$, len$, a;
       switch (event) {
+      case 'init':
+        state.data = [data.pageIndex, data.pageCount];
+        for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
+          a = ref$[i$];
+          a.init();
+        }
+        break;
+      case 'lock':
+        for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
+          a = ref$[i$];
+          a.lock();
+        }
+        break;
       case 'change':
         for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
           a = ref$[i$];
@@ -1617,30 +1648,25 @@ smBlocks = async function(){
             return false;
           }
         }
-        if (data.initiator !== 'page') {
-          for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
-            a = ref$[i$];
-            a.lock();
-          }
+        break;
+      case 'unlock':
+        for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
+          a = ref$[i$];
+          a.unlock();
         }
         break;
-      case 'init':
-        if (!state.ready) {
-          state.data = [data.pageIndex, data.pageCount];
-          for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
-            a = ref$[i$];
-            a.init();
+      case 'refresh':
+        for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
+          a = ref$[i$];
+          if (a.ctrl.lock) {
+            return true;
           }
-        } else if (state.data[0] !== data.pageIndex || state.data[1] !== data.pageCount) {
-          state.data[0] = data.pageIndex;
-          state.data[1] = data.pageCount;
-          for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
-            a = ref$[i$];
-            if (a.locked) {
-              a.unlock();
-            }
-            a.refresh();
-          }
+        }
+        state.data[0] = data.pageIndex;
+        state.data[1] = data.pageCount;
+        for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
+          a = ref$[i$];
+          a.refresh();
         }
       }
       return true;
@@ -1664,7 +1690,7 @@ smBlocks = async function(){
         true;
       }
     };
-    state = new BlockState('order', function(event, data){
+    state = new BlockState('order', 1, function(event, data){
       switch (event) {
       case 'init':
         true;
@@ -1691,7 +1717,7 @@ smBlocks = async function(){
         this.root.style.setProperty('--sm-height', data.height + 'px');
       }
     };
-    state = new BlockState('sizer', function(event, data){
+    state = new BlockState('sizer', 0, function(event, data){
       switch (event) {
       case 'resize':
         blocks.forEach(function(b){

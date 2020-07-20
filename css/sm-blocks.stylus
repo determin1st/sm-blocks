@@ -740,10 +740,9 @@ div.sm-paginator
 				// dragging is not possible
 				> .page.current > button
 					cursor: default
-			// current page is actively changed
-			&.active
-				&.drag
-					cursor: grabbing
+			// current page is being dragged
+			&.active.drag
+				cursor: grabbing
 		// }}}
 		////
 		&.flexy // {{{
