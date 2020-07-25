@@ -1,8 +1,9 @@
 "use strict"
 smBlocks = do !->>
-	# TODO: paginator lock
 	# TODO: orderer
 	# TODO: expanded paginator page enlargement (when count is low)
+	# TODO: fixed paginator max width
+	# TODO: paginator placeholder
 	# prepare
 	# {{{
 	# constants
@@ -25,6 +26,18 @@ smBlocks = do !->>
 		p.resolve = (data) !->
 			p.pending = false
 			r data
+		# create a continuator
+		p.spin = ->
+			# create another
+			a = newPromise!
+			# resolve
+			p.pending = false
+			r!
+			# replace
+			p.resolve = a.resolve
+			p.spin    = a.spin
+			# done
+			return a
 		# done
 		return p
 	# }}}
@@ -1172,8 +1185,14 @@ smBlocks = do !->>
 				# lock
 				@lock = newPromise!
 				@lockType = 2
-				# set capture
 				@block.focus!
+				# cooldown
+				await Promise.race [(delay 200), @lock]
+				if not @lock.pending
+					# prevent false startup
+					@lock = null
+					return true
+				# set capture
 				node = @block.rangeBox
 				node.classList.add 'active', 'drag'
 				if not node.hasPointerCapture e.pointerId
@@ -1209,6 +1228,7 @@ smBlocks = do !->>
 				# }}}
 				# wait released
 				a = state.data.0
+				@lockType = 3
 				await @lock
 				# release capture
 				if node.hasPointerCapture e.pointerId
@@ -1220,6 +1240,7 @@ smBlocks = do !->>
 					for a in blocks when a != @block
 						a.refresh!
 				# done
+				@lock.resolve!
 				@lock = null
 				return true
 			# }}}
@@ -1228,7 +1249,7 @@ smBlocks = do !->>
 				e.preventDefault!
 				e.stopPropagation!
 				# check
-				if not @lock or @lockType != 2
+				if not @lock or @lockType != 3
 					return
 				# prepare
 				d = @dragbox
@@ -1267,7 +1288,7 @@ smBlocks = do !->>
 				e.preventDefault!
 				e.stopPropagation!
 				# unlock
-				if @lock and @lockType == 2
+				if @lock and @lockType in [2 3]
 					@lock.resolve!
 			# }}}
 			@goto = (e) !~> # {{{
@@ -1534,11 +1555,8 @@ smBlocks = do !->>
 					state.master.resolve state
 					for b in blocks when b != @block
 						b.refresh!
-					#await delay 100
-					# complete
-					#@block.focus!
-				# complete
-				# release lock
+				# release lock and complete
+				@lock.resolve!
 				@lock = null
 				return true
 			# }}}
@@ -1793,13 +1811,19 @@ smBlocks = do !->>
 					mode = 2
 				# done
 			# }}}
-			lock: !-> # {{{
+			lock: ->> # {{{
 				if not @locked
+					# terminate activity
+					if @ctrl.lock
+						await @ctrl.lock.spin!
+					# set lock
 					@locked = true
 					@rootBox.classList.add 'locked'
 					if (R = @range) and R.current
 						R.current.parentNode.classList.remove 'current'
 						R.current = null
+				# done
+				return true
 			# }}}
 			unlock: !-> # {{{
 				if @locked

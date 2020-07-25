@@ -309,8 +309,8 @@
     defs = B[name].attributes;
 
     f = function () {
-      var size, columns, columnsMin, order, maxX, maxY, itemSizeBalance, itemImage, itemIcon, itemFeatures, itemPrice, itemControls, fontSize;
-      size = attributes.size, columns = attributes.columns, columnsMin = attributes.columnsMin, order = attributes.order, maxX = attributes.maxX, maxY = attributes.maxY, itemSizeBalance = attributes.itemSizeBalance, itemImage = attributes.itemImage, itemIcon = attributes.itemIcon, itemFeatures = attributes.itemFeatures, itemPrice = attributes.itemPrice, itemControls = attributes.itemControls, fontSize = attributes.fontSize;
+      var size, columns, columnsMin, maxX, maxY, itemSizeBalance, itemImage, itemIcon, itemFeatures, itemPrice, itemControls, fontSize;
+      size = attributes.size, columns = attributes.columns, columnsMin = attributes.columnsMin, maxX = attributes.maxX, maxY = attributes.maxY, itemSizeBalance = attributes.itemSizeBalance, itemImage = attributes.itemImage, itemIcon = attributes.itemIcon, itemFeatures = attributes.itemFeatures, itemPrice = attributes.itemPrice, itemControls = attributes.itemControls, fontSize = attributes.fontSize;
       return /*#__PURE__*/React.createElement(InspectorControls, {
         key: "inspector"
       }, /*#__PURE__*/React.createElement(PanelBody, {
@@ -357,36 +357,6 @@
             columnsMin: x
           });
           return x;
-        }
-      }), SelectOption({
-        label: "sorting (сортировка)",
-        value: order,
-        options: [{
-          label: 'default (по-умолчанию)',
-          value: 'default'
-        }, {
-          label: 'title ascending (наименование по-убыванию)',
-          value: 'title_ASC'
-        }, {
-          label: 'title descending (наименование по-возрастанию)',
-          value: 'title_DESC'
-        }, {
-          label: 'creation date ascending (дата создания, по-убыванию)',
-          value: 'created_ASC'
-        }, {
-          label: 'creation date descending (дата создания, по-возрастанию)',
-          value: 'created_DESC'
-        }, {
-          label: 'modification date ascending (дата изменения, по-убыванию)',
-          value: 'modified_ASC'
-        }, {
-          label: 'modification date descending (дата изменения, по-возрастанию)',
-          value: 'modified_DESC'
-        }],
-        onChange: x => {
-          setAttributes({
-            order: x
-          });
         }
       })), /*#__PURE__*/React.createElement(PanelBody, {
         title: 'card (карточка)',

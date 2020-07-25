@@ -13,3 +13,14 @@
 #sm-demo > .b {
   flex: 1 1 0;
 }
+#sm-demo > .b > .c {
+  display: flex;
+}
+#sm-demo > .b > .c > .sm-orderer {
+  flex: 1 1 auto;
+  max-width: 200px;
+}
+#sm-demo > .b > .c > .sm-paginator {
+  flex: 1 1 0;
+  justify-content: flex-start;
+}

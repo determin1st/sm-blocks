@@ -48,7 +48,10 @@ $o = <<<EOD
       <!-- :sm-blocks/category-filter {"hasEmpty":true,"baseCategory":"инвентарь"} /-->
     </div>
     <div class="b">
-      <!-- wp:sm-blocks/paginator {$po} /-->
+      <div class="c">
+        <!-- wp:sm-blocks/paginator {$po} /-->
+        <!-- wp:sm-blocks/orderer /-->
+      </div>
       <!-- wp:sm-blocks/products {$o} /-->
     </div>
   </div>

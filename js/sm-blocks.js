@@ -21,6 +21,15 @@ smBlocks = async function(){
       p.pending = false;
       r(data);
     };
+    p.spin = function(){
+      var a;
+      a = newPromise();
+      p.pending = false;
+      r();
+      p.resolve = a.resolve;
+      p.spin = a.spin;
+      return a;
+    };
     return p;
   };
   delay = function(ms, f){
@@ -1043,6 +1052,11 @@ smBlocks = async function(){
         this$.lock = newPromise();
         this$.lockType = 2;
         this$.block.focus();
+        (await Promise.race([delay(200), this$.lock]));
+        if (!this$.lock.pending) {
+          this$.lock = null;
+          return true;
+        }
         node = this$.block.rangeBox;
         node.classList.add('active', 'drag');
         if (!node.hasPointerCapture(e.pointerId)) {
@@ -1074,6 +1088,7 @@ smBlocks = async function(){
         d[7] = c;
         d[6] = state.data[1] - d[5] - d[7] - 2;
         a = state.data[0];
+        this$.lockType = 3;
         (await this$.lock);
         if (node.hasPointerCapture(e.pointerId)) {
           node.releasePointerCapture(e.pointerId);
@@ -1088,6 +1103,7 @@ smBlocks = async function(){
             }
           }
         }
+        this$.lock.resolve();
         this$.lock = null;
         return true;
       };
@@ -1095,7 +1111,7 @@ smBlocks = async function(){
         var d, c, b, a;
         e.preventDefault();
         e.stopPropagation();
-        if (!this$.lock || this$.lockType !== 2) {
+        if (!this$.lock || this$.lockType !== 3) {
           return;
         }
         d = this$.dragbox;
@@ -1122,9 +1138,10 @@ smBlocks = async function(){
         this$.block.refresh();
       };
       this.dragStop = function(e){
+        var ref$;
         e.preventDefault();
         e.stopPropagation();
-        if (this$.lock && this$.lockType === 2) {
+        if (this$.lock && ((ref$ = this$.lockType) === 2 || ref$ === 3)) {
           this$.lock.resolve();
         }
       };
@@ -1376,6 +1393,7 @@ smBlocks = async function(){
             }
           }
         }
+        this.lock.resolve();
         this.lock = null;
         return true;
       },
@@ -1607,9 +1625,12 @@ smBlocks = async function(){
           mode = 2;
         }
       },
-      lock: function(){
+      lock: async function(){
         var R;
         if (!this.locked) {
+          if (this.ctrl.lock) {
+            (await this.ctrl.lock.spin());
+          }
           this.locked = true;
           this.rootBox.classList.add('locked');
           if ((R = this.range) && R.current) {
@@ -1617,6 +1638,7 @@ smBlocks = async function(){
             R.current = null;
           }
         }
+        return true;
       },
       unlock: function(){
         if (this.locked) {

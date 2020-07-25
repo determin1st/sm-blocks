@@ -185,6 +185,20 @@ class StorefrontModernBlocks {
         ],
       ],
       # }}}
+      'orderer' => [ # {{{
+        'render_callback' => [null, 'renderOrderer'],
+        'attributes'      => [
+          'options'       => [
+            'type'        => 'string',
+            'default'     => 'featured,new,price_low,price_high',
+          ],
+          'selected'      => [
+            'type'        => 'string',
+            'default'     => 'featured',
+          ],
+        ],
+      ],
+      # }}}
     ],
     $templates = [
       'products' => [ # CSR {{{
@@ -418,6 +432,33 @@ class StorefrontModernBlocks {
         ',
       ],
       # }}}
+      'orderer' => [ # SSR {{{
+        'main' => '
+        <div class="sm-orderer custom inactive">
+          <select>{{options}}</select>
+        </div>
+        ',
+      ],
+      # }}}
+    ],
+    $defaults  = [
+      'orderer' => [ # {{{
+        'en' => [
+          'default'    => 'default',
+          'featured'   => 'featured',
+          'new'        => 'new',
+          'price_low'  => 'price: low',
+          'price_high' => 'price: high',
+        ],
+        'ru' => [
+          'default'    => 'по-умолчанию',
+          'featured'   => 'рекомендуемые',
+          'new'        => 'новые',
+          'price_low'  => 'цена: наименьшая',
+          'price_high' => 'цена: наибольшая',
+        ],
+      ],
+      # }}}
     ],
     $cfg       = [
       'enableDemoShop' => true,
@@ -425,7 +466,8 @@ class StorefrontModernBlocks {
       'cache'          => [],
     ];
   # }}}
-  private function __construct() # {{{
+  # constructor {{{
+  private function __construct()
   {
     global $wpdb;
     # prepare
@@ -527,8 +569,7 @@ class StorefrontModernBlocks {
       }, 11, 1);
     }
   }
-  # }}}
-  public static function init() # {{{
+  public static function init()
   {
     # construct once (singleton)
     if (self::$ref === null) {
@@ -874,6 +915,41 @@ EOD;
     return $this->tidy($content);
   }
   # }}}
+  # orderer {{{
+  public function renderOrderer($attr, $content)
+  {
+    # prepare
+    $T = $this->templates['orderer'];
+    $D = $this->defaults['orderer'][$this->lang];
+    # get options
+    if (($a = $attr['options']) && !empty($a)) {
+      $a = explode(',', $a);
+    }
+    else {
+      $a = ['default'];
+    }
+    # get selected option
+    if (!($b = $attr['selected']) || empty($b) ||
+        (array_search($b, $a) === false))
+    {
+      $b = $a[0];
+    }
+    # compose options
+    $o = '';
+    foreach ($a as $c)
+    {
+      if (array_key_exists($c, $D))
+      {
+        $d  = ($c === $b) ? ' selected' : '';
+        $o .= '<option value="'.$c.'"'.$d.'>'.$D[$c].'</option>';
+      }
+    }
+    # complete
+    return $this->parseTemplate($T['main'], $T, [
+      'options' => $o,
+    ]);
+  }
+  # }}}
   # rest api
   # entry point {{{
   public function apiKiss($request)
@@ -1060,8 +1136,7 @@ EOD;
         $this->apiFail(400, 'incorrect identifier');
       }
       # set cart item
-      if (!$this->setCart($id))
-      {
+      if (!$this->setCart($id)) {
         $this->apiFail(500, 'failed to set cart');
       }
       echo json_encode(true);
@@ -1072,8 +1147,8 @@ EOD;
     }
   }
   # }}}
-  # helper functions
-  # parsers {{{
+  # helpers
+  # parser {{{
   private function parseTemplate($template, $data, $attr = [])
   {
     $depth = 0;
@@ -1163,7 +1238,7 @@ EOD;
     return is_string($json) ? $json : '';
   }
   # }}}
-  # rest api {{{
+  # api {{{
   private function apiFail($code, $msg)
   {
     http_response_code($code);

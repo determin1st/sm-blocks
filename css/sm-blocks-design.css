@@ -2,13 +2,13 @@
 * design
 */
 #sm-products.custom > .main > .item > .box > .head svg {
-  fill: red;
+  fill: #f00;
 }
 #sm-products.custom > .main > .item > .box > .body svg {
-  fill: green;
+  fill: #008000;
 }
 #sm-products.custom > .main > .item > .box > .foot svg {
-  fill: blue;
+  fill: #00f;
 }
 #sm-products.custom > .main > .item.empty > .box > div {
   display: flex;

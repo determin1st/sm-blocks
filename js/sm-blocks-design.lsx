@@ -278,7 +278,7 @@ do !->
 		f = ->
 			# get attributes
 			{
-				size, columns, columnsMin, order,
+				size, columns, columnsMin,
 				maxX, maxY, itemSizeBalance,
 				itemImage, itemIcon, itemFeatures, itemPrice, itemControls,
 				fontSize
@@ -326,22 +326,6 @@ do !->
 						onChange: (x) => {
 							setAttributes({ columnsMin: x });
 							return x;
-						},
-					})}
-					{SelectOption({
-						label: "sorting (сортировка)",
-						value: order,
-						options: [
-							{label: 'default (по-умолчанию)', value: 'default'},
-							{label: 'title ascending (наименование по-убыванию)', value: 'title_ASC'},
-							{label: 'title descending (наименование по-возрастанию)', value: 'title_DESC'},
-							{label: 'creation date ascending (дата создания, по-убыванию)', value: 'created_ASC'},
-							{label: 'creation date descending (дата создания, по-возрастанию)', value: 'created_DESC'},
-							{label: 'modification date ascending (дата изменения, по-убыванию)', value: 'modified_ASC'},
-							{label: 'modification date descending (дата изменения, по-возрастанию)', value: 'modified_DESC'},
-						],
-						onChange: (x) => {
-							setAttributes({ order: x });
 						},
 					})}
 				</PanelBody>
