@@ -2,7 +2,7 @@
 "use strict";
 var smBlocks, slice$ = [].slice, arrayFrom$ = Array.from || function(x){return slice$.call(x);};
 smBlocks = async function(){
-  var BRAND, soFetch, newPromise, delay, newMetaObject, BlockState, smProducts, smCart, smCategoryFilter, smPaginator, smOrderer, smSizer;
+  var BRAND, soFetch, CFG, newPromise, delay, newMetaObject, BlockState, smProducts, smCart, smCategoryFilter, smPaginator, smOrderer, smSizer;
   BRAND = 'sm-blocks';
   soFetch = httpFetch.create({
     baseUrl: '/?rest_route=/' + BRAND + '/kiss',
@@ -10,6 +10,10 @@ smBlocks = async function(){
     notNull: true,
     method: 'POST'
   });
+  CFG = (await soFetch({
+    func: 'config',
+    lang: 'en'
+  }));
   newPromise = function(){
     var r, p;
     r = null;
@@ -178,7 +182,7 @@ smBlocks = async function(){
       return f;
     }();
     gridLoader = function(){
-      var cooldown, state, iFetch, res, req, setState, unloadItems, newMasterPromise;
+      var cooldown, state, iFetch, res, req, initState, setState, unloadItems, newMasterPromise;
       cooldown = 800;
       state = {
         first: true,
@@ -187,7 +191,9 @@ smBlocks = async function(){
         total: 0,
         count: 0,
         pageCount: 0,
-        pageIndex: 0
+        pageIndex: 0,
+        orderOptions: null,
+        order: ['', 0]
       };
       iFetch = httpFetch.create({
         baseUrl: '/?rest_route=/' + BRAND + '/kiss',
@@ -202,8 +208,27 @@ smBlocks = async function(){
         func: 'products',
         limit: gridList.length,
         offset: 0,
-        order: 'default',
-        category: null
+        category: null,
+        order: state.order
+      };
+      initState = function(){
+        var a, b, c, d;
+        a = grid.dataset.order.split(',');
+        if (b = a.length) {
+          state.orderOptions = c = {};
+          d = -1;
+          while (++d < b) {
+            c[a[d]] = CFG.orderOptions[a[d]];
+          }
+          b = parseInt(grid.dataset.index);
+          b = a[b];
+          state.order[0] = b;
+          state.order[1] = CFG.orderOptions[b][1];
+        } else {
+          state.orderOptions = null;
+          state.order[0] = '';
+        }
+        state.first = false;
       };
       setState = function(s){
         var a, b, i$, ref$, len$, c, j$, ref1$, len1$, d;
@@ -243,18 +268,21 @@ smBlocks = async function(){
         case 'page':
           state.pageIndex = s.data[0];
           req.offset = state.pageIndex * req.limit;
+          break;
+        case 'order':
+          state.order[0] = s.data[0];
+          state.order[1] = s.data[1];
         }
         return true;
       };
       unloadItems = function(){
         var c;
-        if (!(c = state.count)) {
-          return;
+        if (c = state.count) {
+          while (--c >= 0) {
+            gridList[c].cls();
+          }
+          state.count = 0;
         }
-        while (--c >= 0) {
-          gridList[c].cls();
-        }
-        state.count = 0;
       };
       newMasterPromise = function(){
         var r, p;
@@ -293,7 +321,7 @@ smBlocks = async function(){
           }
           if (state.first) {
             gridLock.resolve();
-            state.first = false;
+            initState();
           } else {
             (await gridLock);
             unloadItems();
@@ -325,7 +353,7 @@ smBlocks = async function(){
         state.count = b > state.total
           ? state.total
           : (c = state.total - req.offset) < b ? c : b;
-        state.pageCount = Math.ceil(state.total / b);
+        state.pageCount = 20;
         for (i$ = 0, len$ = (ref$ = gridControl).length; i$ < len$; ++i$) {
           c = ref$[i$];
           if (c.ready) {
@@ -652,7 +680,7 @@ smBlocks = async function(){
               return newItem(a);
             });
             gridResizer();
-            root.classList.remove('inactive');
+            grid.classList.add('v');
             active = true;
           }
           for (;;) {
@@ -937,10 +965,10 @@ smBlocks = async function(){
       this.lockType = 0;
       this.rootCS = getComputedStyle(block.root);
       this.rootBoxCS = getComputedStyle(block.rootBox);
+      this.rangeCS = getComputedStyle(block.rangeBox);
       this.rootPads = [0, 0, 0, 0];
-      this.baseSz = [0, 0];
-      this.currentSz = [0, 0];
-      this.pageSz = [0, 0];
+      this.baseSz = [0, 0, 0, 0, 0];
+      this.currentSz = [0, 0, 0, 0, 0];
       this.dragbox = [];
       this.maxSpeed = 10;
       this.brake = 15;
@@ -1073,20 +1101,36 @@ smBlocks = async function(){
           b += 1;
           c += 1;
         }
-        a = this$.pageSz;
-        d = this$.dragbox;
-        d[0] = a[0] + b * a[1];
-        d[1] = d[0] / (b + 1);
-        d[0] = d[0] - d[1];
-        d[1] = d[1] / 2;
-        d[4] = a[0] + c * a[1];
-        d[3] = d[4] / (c + 1);
-        d[4] = d[4] - d[3];
-        d[3] = d[3] / 2;
-        d[2] = node.clientWidth - d[0] - d[1] - d[3] - d[4];
-        d[5] = b;
-        d[7] = c;
-        d[6] = state.data[1] - d[5] - d[7] - 2;
+        if ((a = this$.currentSz)[4]) {
+          d = a = a[4];
+        } else if (a[3]) {
+          d = a[3];
+          a = a[2];
+        } else {
+          d = this$.baseSz[4];
+          a = this$.baseSz[3];
+        }
+        e = this$.dragbox;
+        e[0] = a + b * d;
+        e[1] = e[0] / (b + 1);
+        e[0] = e[0] - e[1];
+        e[4] = a + c * d;
+        e[3] = e[4] / (c + 1);
+        e[4] = e[4] - e[3];
+        e[2] = parseFloat(this$.rangeCS.getPropertyValue('width'));
+        e[2] = e[2] - e[0] - e[4];
+        if (!this$.currentSz[4]) {
+          a = e[2] / (state.data[1] - (b + c));
+          d = e[1] / 2;
+          if (a < d) {
+            e[1] = d + a;
+            e[3] = e[3] / 2 + a;
+          }
+        }
+        e[2] = e[2] - e[1] - e[3];
+        e[5] = b;
+        e[7] = c;
+        e[6] = state.data[1] - e[5] - e[7] - 2;
         a = state.data[0];
         this$.lockType = 3;
         (await this$.lock);
@@ -1123,7 +1167,8 @@ smBlocks = async function(){
         } else if ((b -= d[0]) <= d[1]) {
           a = d[5];
         } else if ((b -= d[1]) <= d[2]) {
-          a = d[5] + 1 + b * d[6] / d[2] | 0;
+          b = b * d[6] / d[2] | 0;
+          a = d[5] + 1 + b;
         } else if ((b -= d[2]) <= d[3]) {
           a = d[5] + d[6] + 1;
         } else if ((b -= d[3]) <= d[4]) {
@@ -1191,14 +1236,88 @@ smBlocks = async function(){
         }
         return a;
       }();
-      this.resize = this.resizeFunc();
+      this.resize = function(e){
+        var w, a, b, c, d;
+        if (e) {
+          w = e[0].contentRect.width;
+        } else {
+          a = this$.rootPads;
+          a = a[1] + a[3];
+          if ((w = this$.block.root.clientWidth - a) < 0) {
+            w = 0;
+          }
+          this$.baseSz[0] = parseFloat(this$.rootBoxCS.getPropertyValue('width'));
+          this$.baseSz[2] = parseFloat(this$.rangeCS.getPropertyValue('width'));
+        }
+        this$.currentSz[0] = w;
+        e = w / this$.baseSz[0];
+        a = this$.baseSz[1];
+        b = this$.currentSz[1];
+        this$.currentSz[1] = c = e > 0.999
+          ? 0
+          : e * a;
+        if (b && !c) {
+          this$.block.root.style.removeProperty('--height');
+          this$.currentSz[2] = 0;
+          this$.currentSz[3] = 0;
+        } else if (c && Math.abs(c - b) > 0.1) {
+          this$.block.root.style.setProperty('--height', c + 'px');
+          this$.currentSz[2] = e * this$.baseSz[3];
+          this$.currentSz[3] = e * this$.baseSz[4];
+        }
+        if (this$.block.mode === 1) {
+          a = this$.baseSz[0] - this$.baseSz[2];
+          a = e > 0.999
+            ? w - a
+            : w - e * a;
+          if ((c = this$.currentSz)[2]) {
+            b = c[3]
+              ? (c[3] + c[2]) / 2
+              : c[2];
+            c = c[4];
+          } else {
+            b = this$.baseSz[3];
+            c = c[4];
+          }
+          if ((d = a / state.data[1]) <= b) {
+            d = 0;
+          }
+          this$.currentSz[4] = d;
+          if (c && !d) {
+            this$.block.rangeBox.style.removeProperty('--page-size');
+          } else if (d && Math.abs(d - b) > 0.1) {
+            this$.block.rangeBox.style.setProperty('--page-size', d + 'px');
+          }
+        }
+      };
       this.observer = new ResizeObserver(this.resize);
     };
     Control.prototype = {
       attach: function(){
-        var B, R, a, i$, ref$, len$, b;
+        var B, R, a, i$, len$, c, b, ref$;
         B = this.block;
         R = B.range;
+        a = ['padding-top', 'padding-right', 'padding-bottom', 'padding-left'];
+        for (i$ = 0, len$ = a.length; i$ < len$; ++i$) {
+          c = i$;
+          b = a[i$];
+          this.rootPads[c] = parseInt(this.rootCS.getPropertyValue(b));
+        }
+        this.baseSz[0] = 0;
+        this.baseSz[1] = parseInt(this.rootCS.getPropertyValue('--height'));
+        this.baseSz[2] = parseFloat(this.rangeCS.getPropertyValue('width'));
+        if (R) {
+          a = getComputedStyle(R.pages[R.index]);
+          this.baseSz[3] = parseFloat(a.getPropertyValue('min-width'));
+          this.baseSz[4] = 0;
+          if (R.pages.length > 1) {
+            a = R.index > 0
+              ? 0
+              : R.index + 1;
+            a = getComputedStyle(R.pages[a]);
+            this.baseSz[4] = parseFloat(a.getPropertyValue('min-width'));
+          }
+        }
         B.root.addEventListener('keydown', this.keyDown, true);
         B.root.addEventListener('keyup', this.keyUp, true);
         B.root.addEventListener('click', this.setFocus);
@@ -1270,53 +1389,6 @@ smBlocks = async function(){
             return b.refresh();
           });
           this$.block.focus();
-        };
-      },
-      resizeFunc: function(){
-        var pads, i$, len$, b, a, cs0, cs1, this$ = this;
-        pads = ['padding-top', 'padding-right', 'padding-bottom', 'padding-left'];
-        for (i$ = 0, len$ = pads.length; i$ < len$; ++i$) {
-          b = i$;
-          a = pads[i$];
-          this.rootPads[b] = parseInt(this.rootCS.getPropertyValue(a));
-        }
-        a = this.block.range;
-        b = this.pageSz;
-        cs0 = getComputedStyle(a.pages[a.index]);
-        b[0] = parseFloat(cs0.getPropertyValue('min-width'));
-        cs1 = null;
-        if (a.pages.length > 1) {
-          cs1 = a.index > 0
-            ? 0
-            : a.index + 1;
-          cs1 = getComputedStyle(a.pages[cs1]);
-          b[1] = parseFloat(cs1.getPropertyValue('min-width'));
-        }
-        this.baseSz[1] = parseInt(this.rootCS.getPropertyValue('--height'));
-        return function(e){
-          var a;
-          if (e) {
-            e = e[0].contentRect.width;
-          } else {
-            a = this$.rootPads;
-            a = a[1] + a[3];
-            if ((e = this$.block.root.clientWidth - a) < 0) {
-              e = 0;
-            }
-            this$.baseSz[0] = parseFloat(this$.rootBoxCS.getPropertyValue('width'));
-          }
-          this$.currentSz[0] = e;
-          if ((e = e / this$.baseSz[0]) > 0.98) {
-            e = 1;
-          }
-          a = e * this$.baseSz[1];
-          if (Math.abs(a - this$.currentSz[1]) > 0.1) {
-            this$.block.root.style.setProperty('--height', a + 'px');
-            this$.currentSz[1] = a;
-            a = this$.pageSz;
-            a[0] = parseFloat(cs0.getPropertyValue('min-width'));
-            a[1] = parseFloat(cs1.getPropertyValue('min-width'));
-          }
         };
       },
       fast: async function(id, node, forward){
@@ -1394,6 +1466,7 @@ smBlocks = async function(){
           }
         }
         this.lock.resolve();
+        (await delay(60));
         this.lock = null;
         return true;
       },
@@ -1700,29 +1773,185 @@ smBlocks = async function(){
     return state;
   }();
   smOrderer = function(){
-    var Block, state, blocks;
-    Block = function(root){
-      this.root = root;
+    var Control, Block, state, blocks;
+    Control = function(block){
+      var this$ = this;
+      this.block = block;
+      this.hovered = 0;
+      this.focused = false;
+      this.hover = function(e){
+        e.preventDefault();
+        if (!this$.block.locked && !this$.hovered) {
+          this$.hovered = 1;
+          this$.block.rootBox.classList.add('hovered');
+        }
+      };
+      this.unhover = function(e){
+        e.preventDefault();
+        if (this$.hovered === 1) {
+          this$.hovered = 0;
+          this$.block.rootBox.classList.remove('hovered');
+        }
+      };
+      this.switchVariant = function(e){
+        var B, D, a, b, i$, ref$, len$;
+        e.preventDefault();
+        e.stopPropagation();
+        B = this$.block;
+        D = state.data;
+        if (!B.locked && (a = B.current[1]) > 0) {
+          state.data[1] = a = a === 1 ? 2 : 1;
+          b = B.select.selectedIndex;
+          b = B.select.options[b];
+          b.value = a;
+          B.select.focus();
+          state.master.resolve(state);
+          for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
+            a = ref$[i$];
+            a.refresh();
+          }
+        }
+      };
+      this.switchFocusIn = function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        if (!this$.block.locked && this$.hovered !== 2) {
+          this$.hovered = 2;
+          this$.block.rootBox.classList.add('hovered');
+        }
+      };
+      this.switchFocusOut = function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        if (!this$.block.locked && this$.hovered === 2) {
+          this$.hovered = 0;
+          this$.block.rootBox.classList.remove('hovered');
+        }
+      };
+      this.selected = function(e){
+        var B, a, i$, ref$, len$;
+        e.preventDefault();
+        e.stopPropagation();
+        B = this$.block;
+        if (!B.locked) {
+          a = B.select.selectedIndex;
+          state.data[0] = B.oList[a];
+          state.data[1] = +B.select.options[a].value;
+          state.master.resolve(state);
+          for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
+            a = ref$[i$];
+            a.refresh();
+          }
+        }
+      };
     };
-    Block.prototype = {
-      init: function(){
-        true;
+    Control.prototype = {
+      attach: function(){
+        var B, this$ = this;
+        B = this.block;
+        B.rootBox.addEventListener('pointerenter', this.hover);
+        B.rootBox.addEventListener('pointerleave', this.unhover);
+        B['switch'].forEach(function(a){
+          a.addEventListener('click', this$.switchVariant);
+          a.addEventListener('focusin', this$.switchFocusIn);
+          a.addEventListener('focusout', this$.switchFocusOut);
+        });
+        B.select.addEventListener('input', this.selected);
       },
-      refresh: function(){
+      detach: function(){
         true;
       }
     };
-    state = new BlockState('order', 1, function(event, data){
+    Block = function(root){
+      var a;
+      this.root = root;
+      this.rootBox = root.firstChild;
+      this.variant = a = arrayFrom$(root.querySelectorAll('.variant'));
+      this['switch'] = a.map(function(a){
+        return a.firstChild;
+      });
+      this.select = root.querySelector('select');
+      this.oMap = null;
+      this.oList = null;
+      this.locked = false;
+      this.current = ['', -1];
+      this.ctrl = new Control(this);
+    };
+    Block.prototype = {
+      init: function(data){
+        var a, b, i$, len$, c, d;
+        if (this.oMap = a = data.orderOptions) {
+          this.oList = b = Object.getOwnPropertyNames(a);
+          for (i$ = 0, len$ = b.length; i$ < len$; ++i$) {
+            c = b[i$];
+            d = document.createElement('option');
+            d.textContent = a[c][0];
+            d.value = a[c][1];
+            this.select.appendChild(d);
+          }
+          this.rootBox.classList.remove('w');
+          this.rootBox.classList.add('v');
+          this.ctrl.attach();
+        } else {
+          this.ctrl.detach();
+          a = this.oList.length;
+          b = this.select;
+          while (--a > 0) {
+            b.removeChild(b.options[a]);
+          }
+          this.oList = null;
+          this.rootBox.classList.add('w');
+        }
+        this.refresh();
+      },
+      refresh: function(){
+        var a, b, c;
+        a = state.data;
+        b = this.current;
+        if (a[0] !== b[0]) {
+          if ((c = this.oList.indexOf(a[0])) !== this.select.selectedIndex) {
+            this.select.selectedIndex = c;
+          }
+          if ((!a[1] && b[1]) || (a[1] && !b[1])) {
+            c = !a[1];
+            this['switch'].forEach(function(d){
+              d.disabled = c;
+            });
+          }
+        }
+        if (a[1] !== b[1]) {
+          if (b[1] >= 0) {
+            c = 'abc'[b[1]];
+            this.variant.forEach(function(d){
+              d.classList.remove(c);
+            });
+          }
+          if (a[1] >= 0) {
+            c = 'abc'[a[1]];
+            this.variant.forEach(function(d){
+              d.classList.add(c);
+            });
+          }
+        }
+        this.current = a.slice();
+      }
+    };
+    state = new BlockState('order', 0, function(event, data){
+      var i$, ref$, len$, a;
       switch (event) {
       case 'init':
-        true;
+        state.data = data.order.slice();
+        for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
+          a = ref$[i$];
+          a.init(data);
+        }
         break;
       case 'change':
         true;
       }
       return true;
     });
-    blocks = arrayFrom$(document.querySelectorAll('.sm-order'));
+    blocks = arrayFrom$(document.querySelectorAll('.sm-orderer'));
     blocks = blocks.map(function(root){
       return new Block(root);
     });
@@ -1763,6 +1992,9 @@ smBlocks = async function(){
     }
     if (smPaginator) {
       smProducts.add(smPaginator);
+    }
+    if (smOrderer) {
+      smProducts.add(smOrderer);
     }
     if (smSizer) {
       smProducts.add(smSizer);

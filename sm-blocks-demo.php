@@ -38,6 +38,18 @@ $po = json_encode([
   #"rangePlus"  => 2,
   #"rangeMinus" => 2,
 ]);
+$oo = json_encode([
+  "switchMode" => 1,
+]);
+/***
+$oo = '';
+$i = -1;
+while (++$i < 50)
+{
+  $j = rand(0, 2);
+  $oo .= '<!-- wp:sm-blocks/orderer {"switchMode":"'.$j.'"} /-->';
+}
+/***/
 # generate and output page content
 $o = <<<EOD
 
@@ -50,7 +62,7 @@ $o = <<<EOD
     <div class="b">
       <div class="c">
         <!-- wp:sm-blocks/paginator {$po} /-->
-        <!-- wp:sm-blocks/orderer /-->
+        <!-- wp:sm-blocks/orderer {$oo} /-->
       </div>
       <!-- wp:sm-blocks/products {$o} /-->
     </div>

@@ -38,9 +38,13 @@ class StorefrontModernBlocks {
             'type'        => 'number',
             'default'     => 1,
           ],
-          'order'         => [
+          'orderOptions' => [
             'type'        => 'string',
-            'default'     => 'default',
+            'default'     => 'featured,new,price',
+          ],
+          'orderIndex'    => [
+            'type'        => 'number',
+            'default'     => 0,
           ],
           'maxX'          => [
             'type'        => 'number',
@@ -188,13 +192,13 @@ class StorefrontModernBlocks {
       'orderer' => [ # {{{
         'render_callback' => [null, 'renderOrderer'],
         'attributes'      => [
-          'options'       => [
-            'type'        => 'string',
-            'default'     => 'featured,new,price_low,price_high',
+          'switchMode'    => [
+            'type'        => 'number',
+            'default'     => 1,
           ],
-          'selected'      => [
-            'type'        => 'string',
-            'default'     => 'featured',
+          'dropOnHover'   => [
+            'type'        => 'boolean',
+            'default'     => true,
           ],
         ],
       ],
@@ -203,6 +207,13 @@ class StorefrontModernBlocks {
     $templates = [
       'products' => [ # CSR {{{
         # base
+        'main' => '
+        <div id="sm-products" class="custom">
+          <div class="{{class}}" style="{{style}}" {{data}}>
+            {{items}}
+          </div>
+        </div>
+        ',
         'item' => '
         <div class="item empty">
           <div class="box">
@@ -432,31 +443,36 @@ class StorefrontModernBlocks {
         ',
       ],
       # }}}
-      'orderer' => [ # SSR {{{
+      'orderer' => [ # CSR {{{
         'main' => '
-        <div class="sm-orderer custom inactive">
-          <select>{{options}}</select>
+        <div class="sm-orderer custom">
+          <div>
+            {{variantLeft}}
+            <select class="{{class}}"></select>
+            {{variantRight}}
+          </div>
         </div>
         ',
-      ],
-      # }}}
-    ],
-    $defaults  = [
-      'orderer' => [ # {{{
-        'en' => [
-          'default'    => 'default',
-          'featured'   => 'featured',
-          'new'        => 'new',
-          'price_low'  => 'price: low',
-          'price_high' => 'price: high',
-        ],
-        'ru' => [
-          'default'    => 'по-умолчанию',
-          'featured'   => 'рекомендуемые',
-          'new'        => 'новые',
-          'price_low'  => 'цена: наименьшая',
-          'price_high' => 'цена: наибольшая',
-        ],
+        'variantLeft' => '
+        <div class="variant left">
+          <button>{{arrow}}</button>
+        </div>
+        ',
+        'variantRight' => '
+        <div class="variant right">
+          <button>{{arrow}}</button>
+        </div>
+        ',
+        'arrow' => '
+        <svg preserveAspectRatio="none" shape-rendering="geometricPrecision" viewBox="0 0 48 48">
+          <path stroke-linejoin="round" d="M11 25l13 13 13-13h-2l-8 5-2-19-1-1-1 1-2 19-8-5z"/>
+        </svg>
+        ',
+        'asc_desc' => '
+        <svg preserveAspectRatio="none" shape-rendering="geometricPrecision" viewBox="0 0 48 48">
+          <path stroke-linejoin="round" d="M11 25l13 13 13-13h-2l-8 5-1-6 1-6 8 5h2L24 10 11 23h2l8-5 1 6-1 6-8-5z"/>
+        </svg>
+        ',
       ],
       # }}}
     ],
@@ -582,38 +598,41 @@ class StorefrontModernBlocks {
   # products {{{
   public function renderProducts($attr, $content)
   {
-    # get template and
-    # assemble main section
-    $temp = $this->templates['products'];
-    $temp = $this->parseTemplate($temp['item'], $temp, $attr);
-    $main = '';
-    $size = $attr['size'];
-    $a = $size + 1;
-    while (--$a) {
-      $main .= $temp;
+    # prepare
+    $T = $this->templates['products'];
+    $D = $this->blocks['products']['attributes'];
+    $class = $style = $data = $items = '';
+    # determine base parameters
+    $size    = $attr['size'];
+    $columns = (($a = $attr['columns']) > $size)
+      ? $size
+      : $a;
+    $rows    = (($a = $size / $columns) % 1)
+      ? ($rows | 0) + 1
+      : $a;
+    # assemble items
+    $a = $this->parseTemplate($T['item'], $T, $attr);
+    $b = 1 + $size;
+    while (--$b) {
+      $items .= $a;
     }
-    # determine column/row count
-    if (($columns = $attr['columns']) > $size) {
-      $columns = $size;
-    }
-    if (($rows = $size / $columns) % 1) {
-      $rows = ($rows | 0) + 1;
-    }
-    # determine grid class name
+    # assemble class name and style
+    # {{{
     $class = $columns === 1
       ? 'main x'
       : 'main';
-    # determne initial style
+    # using default to ssr-preset comparison here,
+    # expands logic into 2 equal mod directions:
+    # CSS class preset and/or SSR inline preset
     $style = "--columns:{$columns};--rows:{$rows};";
-    $block = $this->blocks['products']['attributes'];
-    if ($attr['maxX'] != $block['maxX']['default']) {
+    if ($attr['maxX'] != $D['maxX']['default']) {
       $style .= "--item-max-x:{$attr['maxX']}px;";
     }
-    if ($attr['maxY'] != $block['maxY']['default']) {
+    if ($attr['maxY'] != $D['maxY']['default']) {
       $style .= "--item-max-y:{$attr['maxY']}px;";
     }
     if (($a = trim(substr($attr['itemSizeBalance'], 0, 20))) &&
-        $a !== $block['itemSizeBalance']['default'] &&
+        $a !== $D['itemSizeBalance']['default'] &&
         ($a = explode(':', $a)) && count($a) === 3 &&
         ($a[0] = intval($a[0])) > 0 && $a[0] < 100 &&
         ($a[1] = intval($a[1])) > 0 && $a[1] < 100 &&
@@ -622,27 +641,35 @@ class StorefrontModernBlocks {
     {
       $style .= "--item-sz-1:{$a[0]};--item-sz-2:{$a[1]};--item-sz-3:{$a[2]}";
     }
-    # determine data attributes,
-    # these are controller options which serve
-    # only for script logic, with no effect on style
-    if (!($a = intval($attr['columnsMin'])) ||
-        $a > $columns)
-    {
-      $a = $columns;
-    }
-    $data = 'data-cols="'.$a.'"';
-    # compose everything
-    # into a grid container
-    $content = <<<EOD
-    <div id="sm-products" class="custom inactive">
-      <div class="{$class}" style="{$style}" {$data}>
-        {$main}
-      </div>
-      {$content}
-    </div>
-EOD;
+    # }}}
+    # assemble data attributes
+    # {{{
+    # these are client-controller side options which serve
+    # only the script's logic, with no direct effect on styles
+    # 1: minimal count of columns in the grid
+    $a = (!($b = intval($attr['columnsMin'])) || $b > $columns)
+      ? $columns
+      : $b;
+    $data .= ' data-cols="'.$a.'"';
+    # 2: the order of the records
+    $a = (!($b = $attr['orderOptions']) || empty($b))
+      ? $D['orderOptions']['default']
+      : $b;
+    $data .= ' data-order="'.$a.'"';
+    $a = (!($b = $attr['orderIndex']) || empty($b))
+      ? $D['orderIndex']['default']
+      : $b;
+    $data .= ' data-index="'.$a.'"';
     # complete
-    return $this->tidy($content);
+    $data = trim($data);
+    # }}}
+    # compose everything
+    return $this->parseTemplate($T['main'], $T, [
+      'class' => $class,
+      'style' => $style,
+      'data'  => $data,
+      'items' => $items,
+    ]);
   }
   # }}}
   # category-filter {{{
@@ -920,33 +947,27 @@ EOD;
   {
     # prepare
     $T = $this->templates['orderer'];
-    $D = $this->defaults['orderer'][$this->lang];
-    # get options
-    if (($a = $attr['options']) && !empty($a)) {
-      $a = explode(',', $a);
-    }
-    else {
-      $a = ['default'];
-    }
-    # get selected option
-    if (!($b = $attr['selected']) || empty($b) ||
-        (array_search($b, $a) === false))
-    {
-      $b = $a[0];
-    }
-    # compose options
-    $o = '';
-    foreach ($a as $c)
-    {
-      if (array_key_exists($c, $D))
-      {
-        $d  = ($c === $b) ? ' selected' : '';
-        $o .= '<option value="'.$c.'"'.$d.'>'.$D[$c].'</option>';
-      }
+    # determine class
+    $variantLeft  = true;
+    $variantRight = true;
+    switch ($attr['switchMode']) {
+    case 1:
+      $class = 'left';
+      $variantRight = false;
+      break;
+    case 2:
+      $class = 'right';
+      $variantLeft = false;
+      break;
+    default:
+      $class = 'left right';
+      break;
     }
     # complete
     return $this->parseTemplate($T['main'], $T, [
-      'options' => $o,
+      'class' => $class,
+      'variantLeft' => $variantLeft,
+      'variantRight' => $variantRight,
     ]);
   }
   # }}}
@@ -964,13 +985,30 @@ EOD;
     if (!array_key_exists('func', $request)) {
       $this->apiFail(400, 'missing request function');
     }
-    # handle
+    # operate
     switch ($request['func']) {
     case 'products':
       $this->apiProducts($request);
       break;
     case 'cart':
       $this->apiCart($request);
+      break;
+    case 'config':
+      # {{{
+      # determine language
+      $a = array_key_exists('lang', $request)
+        ? $request['lang']
+        : $this->lang;
+      # load data
+      $b = __DIR__.DIRECTORY_SEPARATOR.$this->name.'-config.php';
+      $b = (include $b);
+      $b = array_key_exists($a, $b)
+        ? $b[$a]
+        : $b['en'];
+      # output
+      header('content-type: application/json');
+      echo json_encode($b);
+      # }}}
       break;
     default:
       $this->apiFail(400, 'unknown request function');
@@ -983,30 +1021,28 @@ EOD;
   # products {{{
   private function apiProducts($request)
   {
-    # check the request
+    # checkout request parameters
     # {{{
+    # check must have
     $a = [
-      'limit'    => '',
-      'offset'   => '',
-      'order'    => '',
-      'category' => '',
+      'limit',
+      'offset',
+      'category',
+      'order',
     ];
-    foreach ($a as $b => $c)
+    foreach ($a as $b)
     {
       if (!array_key_exists($b, $request)) {
         $this->apiFail(400, 'missing "'.$b.'" in the request');
       }
     }
-    # }}}
-    # extract request parameters
-    # {{{
-    # limits
+    # check limit and offset
     $limit  = intval($request['limit']);
     $offset = intval($request['offset']);
     if ($limit < 0 || $limit > 200 || $offset < 0) {
       $this->apiFail(400, 'incorrect limit/offset');
     }
-    # filters
+    # category filter
     if (!($cats = $request['category']) ||
         !is_array($cats) || count($cats) === 0)
     {
@@ -1028,21 +1064,19 @@ EOD;
         }
       }
     }
-    # order
-    if (!($order = strval($request['order'])) ||
-        !preg_match('/^[a-z]{2,16}_(ASC|DESC)$/', $order))
-    {
-      $order = 'default';
+    # check order parameter
+    $a = $request['order'];
+    if (!is_array($a) || !is_string($a[0]) || !is_int($a[1])) {
+      $this->apiFail(400, 'incorrect order parameter');
     }
     # }}}
-    # assemble a query
-    $ids = [
-      'order'    => $order,
-      'category' => $cats,
-      #'status'   => ['publish'],
-      #'type'     => ['external','grouped','simple','variable']
-    ];
     # get product identifiers
+    $ids = [
+      'order'    => $request['order'],
+      'category' => $cats,
+      #'status'  => ['publish'],
+      #'type'    => ['external','grouped','simple','variable']
+    ];
     if (!($ids = $this->getProductIds($ids))) {
       $this->apiFail(500, 'failed to fetch products');
     }
@@ -1148,7 +1182,7 @@ EOD;
   }
   # }}}
   # helpers
-  # parser {{{
+  # parsers {{{
   private function parseTemplate($template, $data, $attr = [])
   {
     $depth = 0;
@@ -1238,7 +1272,7 @@ EOD;
     return is_string($json) ? $json : '';
   }
   # }}}
-  # api {{{
+  # apis {{{
   private function apiFail($code, $msg)
   {
     http_response_code($code);
@@ -1273,43 +1307,65 @@ EOD;
   public function getProductIds($o) # {{{
   {
     # prepare
-    $joins = '';
-    $filts = '';
-    # determine the order
-    $a = explode('_', $o['order']);
-    switch ($a[0]) {
-    case 'title':
-      $order = 'p.post_title '.$a[1];
+    $joins = $filts = $order = '';
+    # compose filters {{{
+    if ($a = $o['category'])
+    {
+      $joins .= <<<EOD
+
+        JOIN {$this->prefix}term_taxonomy AS tCat
+          ON tCat.taxonomy = 'product_cat'
+        JOIN {$this->prefix}term_relationships AS tCatRel
+          ON tCatRel.term_taxonomy_id = tCat.term_taxonomy_id AND
+             tCatRel.object_id = p.ID
+
+EOD;
+      foreach ($a as $b)
+      {
+        $b = implode(',', $b);
+        $filts .= "AND tCatRel.term_taxonomy_id IN ({$b}) ";
+      }
+    }
+    # }}}
+    # compose order {{{
+    switch ($o['order'][0]) {
+    case 'featured':
+      $joins .= <<<EOD
+
+        LEFT JOIN {$this->prefix}terms as tFeatured
+          ON tFeatured.name = 'featured'
+        LEFT JOIN {$this->prefix}term_relationships as tFeatRel
+          ON tFeatRel.term_taxonomy_id = tFeatured.term_id AND
+             tFeatRel.object_id = p.ID
+
+EOD;
+      $order = 'tFeatRel.term_taxonomy_id DESC, p.menu_order, p.post_title';
       break;
-    case 'created':
-      $order = 'p.post_date '.$a[1];
+    case 'new':
+      $order = 'p.post_date DESC, p.post_title';
       break;
-    case 'modified':
-      $order = 'p.post_modified '.$a[1];
+    case 'price':
+      $joins .= <<<EOD
+
+        LEFT JOIN {$this->prefix}postmeta as mPrice
+          ON mPrice.post_id  = p.ID AND
+             mPrice.meta_key = '_price'
+
+EOD;
+      $order = 'CAST(mPrice.meta_value AS SIGNED)';
+      if ($o['order'][1] === 2) {
+        $order .= ' DESC';
+      }
       break;
     default:
       $order = 'p.menu_order, p.ID';
       break;
     }
-    # set category filter
-    if ($a = $o['category'])
-    {
-      $joins .= trim("
-
-      JOIN {$this->prefix}term_relationships AS r
-        ON r.object_id = p.ID
-
-      ");
-      foreach ($a as $b)
-      {
-        $b = implode(',', $b);
-        $filts .= "AND r.term_taxonomy_id IN ({$b}) ";
-      }
-    }
-    # compose a query
+    # }}}
+    # compose database query
     $q = <<<EOD
 
-      SELECT p.ID AS id
+      SELECT DISTINCT p.ID
       FROM {$this->prefix}posts AS p {$joins}
       WHERE p.post_type = 'product' {$filts}
       ORDER BY {$order}

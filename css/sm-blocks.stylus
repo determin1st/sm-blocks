@@ -3,63 +3,82 @@
 */
 #sm-products
 	// {{{
-	// i don't want to write !important here,
 	// don't modify if not sure
-	display: flex;
-	flex-direction: column;// just in case
-	align-items: center;// grid is centered, not stretched
-	width:  100%;// eat all width
-	height: auto;// grid will grow or shrink automatically
-	min-width:  0;// may zap into zero-point
-	min-height: 0;// same
-	overflow: hidden;// no scrollbars please
-	> .main // primary container (grid)
-	{
-		// settings
+	display: flex
+	box-sizing: border-box
+	flex-direction: column // just in case
+	align-items: center // grid is centered, not stretched
+	min-width:  0 // may zap into zero-point
+	min-height: 0 // same
+	width:      100% // eat all width
+	height:     auto // grid will grow/shrink automatically
+	overflow: hidden // no scrollbars please
+	margin:  0
+	padding: 1em 0 1em 0
+	background-color: alpha(ghostwhite, 0.4)
+	> .main
+		// settings {{{
 		// configurable defaults
-		--columns: 4;
-		--column-gap: 4px;
-		--row-gap:    4px;
-		--item-max-x: 304px;
-		--item-max-y: 640px;
-		--item-sz-1: 35;
-		--item-sz-2: 40;
-		--item-sz-3: 25;
-		--font-size: 20px;
-		--font-size-header: calc(var(--font-size) + 4px);
+		--columns: 4
+		--column-gap: 4px
+		--row-gap:    4px
+		--item-max-x: 304px
+		--item-max-y: 640px
+		--item-sz-1: 35
+		--item-sz-2: 40
+		--item-sz-3: 25
+		--font-size: 20px
+		--font-size-header: calc(var(--font-size) + 4px)
 		// non-configurable
-		--rows: 1;
-		--height: calc(var(--rows) * var(--item-max-y));
-		--svg-icon-size: calc(10px + var(--font-size));
+		--rows: 1
+		--height: calc(var(--rows) * var(--item-max-y))
+		--svg-icon-size: calc(10px + var(--font-size))
+		// }}}
+		// guards {{{
+		div, input, svg, img
+			box-sizing: border-box
+			padding: 0
+			margin:  0
+		// }}}
+		// container setup
+		display: grid
+		box-sizing: border-box
+		grid-template-columns: repeat(var(--columns), 1fr)
+		grid-column-gap: var(--column-gap)
+		grid-row-gap: var(--row-gap)
+		justify-content: center
+		background-color: alpha(ghostwhite, 0.6)
+		margin:  0
+		padding: 0
 		////
-		width:  100%;
-		height: var(--height);
-		max-width:  calc(var(--columns) * var(--item-max-x));
-		max-height: calc(var(--rows) * var(--item-max-y));
-		display: grid;
-		grid-template-columns: repeat(var(--columns), 1fr);
-		grid-column-gap: var(--column-gap);
-		grid-row-gap: var(--row-gap);
-		justify-content: center;
-		////
-		> .item // vertical
-		{
-			width:  100%;
-			height: 100%;
-			display: flex;
-			justify-content: center;
+		// size & visibility {{{
+		width:  100%
+		height: var(--height)
+		max-width:  calc(var(--columns) * var(--item-max-x))
+		max-height: calc(var(--rows) * var(--item-max-y))
+		opacity: 0
+		pointer-events: none
+		&.v
+			opacity: 1
+			pointer-events: auto
+		// }}}
+		> .item // vertical {{{
+			width:  100%
+			height: 100%
+			display: flex
+			justify-content: center
 			> .box
 			{
-				width:  100%;
-				height: 100%;
-				min-width:  0;
-				min-height: 0;
-				display: flex;
-				flex-direction: column;
-				align-items: stretch;
-				justify-content: flex-start;
-				max-width:  var(--item-max-x);
-				max-height: var(--item-max-y);
+				width:  100%
+				height: 100%
+				min-width:  0
+				min-height: 0
+				display: flex
+				flex-direction: column
+				align-items: stretch
+				justify-content: flex-start
+				max-width:  var(--item-max-x)
+				max-height: var(--item-max-y)
 				// data is placed into this block,
 				// it displays svg placeholder by default
 				.ph
@@ -305,11 +324,11 @@
 				> .box
 				{
 					// display a small border
-					border-style: dotted;
-					border-color: slategray;
-					border-width: 0;
-					border-right-width:  1px;
-					border-bottom-width: 1px;
+					border-style: solid;
+					border-color: gainsboro;
+					border-width: 1px;
+					//border-right-width:  1px;
+					//border-bottom-width: 1px;
 					> div
 					{
 						// don't display anything else
@@ -317,9 +336,8 @@
 					}
 				}
 			}
-		}
-		&.x > .item // horizontal
-		{
+		// }}}
+		&.x > .item // horizontal {{{
 			> .box
 			{
 				flex-direction: row;
@@ -340,19 +358,7 @@
 					max-height: 100%;
 				}
 			}
-		}
-	}
-	&.inactive // initial state
-	{
-		visibility: hidden;
-		pointer-events: none;
-	}
-	// guards
-	div, input, svg, img
-	{
-		box-sizing: border-box;
-		margin: 0;
-	}
+		// }}}
 // }}}
 div.sm-category-filter
 	// {{{
@@ -596,13 +602,15 @@ div.sm-paginator
 		box-sizing: border-box
 		padding: 0
 		margin:  0
+		touch-action: none
 		// size and visibility {{{
 		// these are for maximal size calculation
 		min-width: 0
 		max-width: 10000px
 		width:     auto
 		// non-visible by default
-		opacity:   0
+		opacity: 0
+		background-color: alpha(ghostwhite, 0.6)
 		&.v
 			opacity: 1
 			&.flexy
@@ -630,6 +638,7 @@ div.sm-paginator
 				line-height: 0
 				white-space: nowrap
 				font-size: 1em
+				font-weight: bold
 				text-decoration: none
 				border-width: 1px
 				border-style: solid
@@ -643,9 +652,14 @@ div.sm-paginator
 				touch-action: none // pointer events only
 				&:hover
 					border-color: darkslategray
+					color: slategray
+					font-weight: bolder
+				&:active,
 				&:focus
 					background-color: silver
 					border-color: darkslategray
+					color: slategray
+					font-weight: bolder
 					box-shadow: inset 0 0 0 1px white
 			svg
 				width:  100%
@@ -657,7 +671,7 @@ div.sm-paginator
 			padding-top:    4px
 			padding-bottom: 4px
 			> button > svg
-				fill: darkslategray
+				fill: slategray
 			// variants
 			&.prev
 				padding-left: 2px
@@ -690,13 +704,25 @@ div.sm-paginator
 			////
 			--count: 0
 			--max-width: calc(2px + (1 + var(--count)) * var(--width))
+			--page-size: var(--width)
 			////
 			flex: 1 0 0
 			justify-content: center
 			min-width: 0
 			max-width: var(--max-width)
 			width:     10000px
-			////
+			// states {{{
+			&.nogaps
+				// range without gaps
+				// reduced size
+				--max-width: calc(2px + var(--count) * var(--width))
+				// dragging is not possible
+				> .page.current > button
+					cursor: default
+			&.active.drag
+				// current page is being dragged
+				cursor: grabbing
+			// }}}
 			> .gap // {{{
 				flex: 0 100 0
 				min-width: calc(0.25 * var(--width))
@@ -711,7 +737,7 @@ div.sm-paginator
 			> .page // {{{
 				flex: 0 0 0
 				overflow: hidden
-				min-width: var(--width)
+				min-width: var(--page-size)
 				padding-top:    4px
 				padding-bottom: 4px
 				padding-left:   1px
@@ -722,30 +748,21 @@ div.sm-paginator
 					display: flex
 				// selected page
 				&.current
-					min-width: calc(2px + var(--width))
+					min-width: calc(2px + var(--page-size))
 					padding-top:    2px
 					padding-bottom: 2px
 					> button
 						font-size: 1.4em
-						font-weight: bold
 						border-color: black
 						background-color: black
 						color: white
 						cursor: grab
+						&:hover
+							color: lightslategray
+						&:active,
 						&:focus
 							box-shadow: inset 0 0 1px 1px white
 			// }}}
-			////
-			// range without gaps
-			&.nogaps
-				// reduced size
-				--max-width: calc(2px + var(--count) * var(--width))
-				// dragging is not possible
-				> .page.current > button
-					cursor: default
-			// current page is being dragged
-			&.active.drag
-				cursor: grabbing
 		// }}}
 		////
 		&.flexy // {{{
@@ -807,62 +824,152 @@ div.sm-paginator
 // }}}
 div.sm-orderer
 	// {{{
-	// configuration
+	// settings {{{
 	--height:    48px
 	--font-size: calc(0.35 * var(--height))
+	// }}}
+	// guards {{{
+	div, button, svg, select
+		box-sizing: border-box
+		padding: 0
+		margin:  0
+	// }}}
 	// container
 	box-sizing: border-box
 	width:   100%
 	height:  calc(8px + var(--height))
-	padding: 4px 0 4px 0
 	margin:  0
+	padding: 4px 0 4px 0
+	background-color: alpha(ghostwhite, 0.6)
 	// content
-	select
-		-webkit-appearance: none
-		-moz-appearance: none
-		appearance: none
-		display: block
-		box-sizing: border-box
-		width:  100%
-		height: 100%
-		padding: 0 0 0 8px
-		margin: 0
-		font-size: var(--font-size)
-		font-weight: bold
-		//line-height: 1.3
-		//box-shadow: 0 1px 0 1px rgba(0,0,0,.04)
-		border: 1px solid silver
-		border-radius: 2px
-		background-color: gainsboro
-		box-shadow: inset 0 0 10px 0 silver
-		color: black
-		cursor: pointer
-		outline: none
-		//background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23007CB2%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E'),
-		//	linear-gradient(to bottom, #ffffff 0%,#e5e5e5 100%)
-		//background-repeat: no-repeat, repeat
-		//background-position: right .7em top 50%, 0 0
-		//background-size: .65em auto, 100%
-		////
-		> option
+	> div
+		position: relative
+		// size and visibility {{{
+		min-width:  0
+		min-height: 0
+		width:      100%
+		height:     100%
+		pointer-events: none
+		&.v
+			pointer-events: auto
+			> .variant
+				opacity: 1
+			&.hovered
+				> select
+					border-color: darkslategray
+		// }}}
+		> .variant // {{{
+			opacity: 0
+			position: absolute
+			width:  auto
+			height: 100%
+			&.left
+				top:  0
+				left: 0
+				padding-top:    4px
+				padding-bottom: 4px
+				padding-left:   1px
+				padding-right:  0
+			&.right
+				top:   0
+				right: 0
+				padding-top:    4px
+				padding-bottom: 4px
+				padding-left:   0
+				padding-right:  1px
+			&.a
+				pointer-events: none
+				&.left > button > svg
+					transform: rotate(-90deg)
+				&.right > button > svg
+					transform: rotate(90deg)
+			&.b
+				> button > svg
+					transform: rotate(0deg)
+			&.c
+				&.left > button > svg
+					transform: rotate(-180deg)
+				&.right > button > svg
+					transform: rotate(180deg)
+			////
+			> button
+				width:  var(--height)
+				height: 100%
+				background-color: transparent
+				outline: 0
+				cursor: pointer
+				padding-left:  4px
+				padding-right: 4px
+				> svg
+					display: block
+					width:  100%
+					height: 100%
+					stroke-width: 1
+					fill: slategray
+					stroke: darkslategray
+				&:hover,
+				&:active,
+				&:focus
+					> svg
+						fill: black
+						stroke: slategray
+		// }}}
+		> select // {{{
+			-webkit-appearance: none
+			-moz-appearance: none
+			appearance: none
+			display: block
+			width:  100%
+			height: 100%
+			font-size: var(--font-size)
 			font-weight: bold
+			text-align: left
+			text-overflow: ellipsis
+			white-space: nowrap
+			overflow: hidden
+			border: 1px solid silver
+			border-radius: 2px
 			background-color: gainsboro
-		////
-		&:hover
-			border-color: darkslategray
-		&:focus
-			background-color: silver
-			border-color: darkslategray
-			box-shadow: inset 0 0 0 1px white
-		&:-ms-expand
-			display: none
-		/***
-		&:disabled
-			color: graytext
-			background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22graytext%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E'),
-				linear-gradient(to bottom, #ffffff 0%,#e5e5e5 100%)
+			box-shadow: inset 0 0 10px 0 silver
+			color: darkslategray
+			outline: none
+			cursor: pointer
+			&.left
+				padding-left:  calc(2px + var(--height))
+				padding-right: var(--font-size)
+			&.right
+				padding-left:  var(--font-size)
+				padding-right: calc(2px + var(--height))
+			&.left.right
+				padding-left:  calc(2px + var(--height))
+				text-align: center
+			////
+			> option
+				font-weight: bold
+				background-color: gainsboro
+				&:checked
+					color: silver
+				&:hover
+					background-color: black
+					color: white
+			////
 			&:hover
-				border-color: #aaa
-		/***/
+				color black
+			&:focus
+				color: black
+				background-color: silver
+				border-color: darkslategray
+				box-shadow: inset 0 0 0 1px white
+			&:-ms-expand
+				display: none
+			/***
+			&:disabled
+				color: graytext
+				background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22graytext%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E'),
+					linear-gradient(to bottom, #ffffff 0%,#e5e5e5 100%)
+				&:hover
+					border-color: #aaa
+			/***/
+		// }}}
 // }}}
 

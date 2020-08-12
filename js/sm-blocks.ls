@@ -1,9 +1,8 @@
 "use strict"
 smBlocks = do !->>
-	# TODO: orderer
-	# TODO: expanded paginator page enlargement (when count is low)
-	# TODO: fixed paginator max width
-	# TODO: paginator placeholder
+	# TODO: add size-fixed paginator max-width auto-calc
+	# TODO: remove paginator placeholder/initial intro
+	# TODO: products grid goto next page button
 	# prepare
 	# {{{
 	# constants
@@ -14,6 +13,13 @@ smBlocks = do !->>
 		mounted: true
 		notNull: true
 		method: 'POST'
+	}
+	# WordPress-like SSR engines related:
+	# load initial configuration
+	#CFG = await soFetch {func: 'config'}
+	CFG = await soFetch {
+		func: 'config'
+		lang: 'en'
 	}
 	# }}}
 	newPromise = -> # {{{
@@ -220,6 +226,8 @@ smBlocks = do !->>
 				count: 0      # displayed items
 				pageCount: 0  # calculated total/count
 				pageIndex: 0  # current page
+				orderOptions: null  # orderbox content
+				order: ['', 0]
 			}
 			# create items fetcher
 			iFetch = httpFetch.create {
@@ -235,9 +243,29 @@ smBlocks = do !->>
 				func: 'products'
 				limit: gridList.length
 				offset: 0
-				order: 'default'
 				category: null
+				order: state.order
 			}
+			# }}}
+			initState = !-> # {{{
+				# prepare
+				a = grid.dataset.order.split ','
+				if b = a.length
+					# set order options
+					state.orderOptions = c = {}
+					d = -1
+					while ++d < b
+						c[a[d]] = CFG.orderOptions[a[d]]
+					# set default order
+					b = parseInt grid.dataset.index
+					b = a[b]
+					state.order.0 = b
+					state.order.1 = CFG.orderOptions[b].1
+				else
+					state.orderOptions = null
+					state.order.0 = ''
+				# done
+				state.first = false
 			# }}}
 			setState = (s) -> # {{{
 				# manage update priority
@@ -281,18 +309,21 @@ smBlocks = do !->>
 					state.pageIndex = s.data.0
 					req.offset = state.pageIndex * req.limit
 					# }}}
+				case 'order'
+					# {{{
+					state.order.0 = s.data.0
+					state.order.1 = s.data.1
+					# }}}
 				# done
 				return true
 			# }}}
 			unloadItems = !-> # {{{
-				# check
-				if not (c = state.count)
-					return
-				# discard items in the reverse order
-				while --c >= 0
-					gridList[c].cls!
-				# reset
-				state.count = 0
+				if c = state.count
+					# clear product cards in the reverse order
+					while --c >= 0
+						gridList[c].cls!
+					# reset
+					state.count = 0
 			# }}}
 			newMasterPromise = -> # {{{
 				# create custom promise
@@ -337,7 +368,7 @@ smBlocks = do !->>
 					if state.first
 						# first load is instantaneous
 						gridLock.resolve!
-						state.first = false
+						initState!
 					else
 						# wait for the update
 						await gridLock
@@ -379,7 +410,8 @@ smBlocks = do !->>
 						then c
 						else b
 				# determine count of pages
-				state.pageCount = Math.ceil (state.total / b)
+				#state.pageCount = Math.ceil (state.total / b)
+				state.pageCount = 20
 				# base processing finished,
 				# dispatch init/unlock/refresh events
 				for c in gridControl
@@ -730,7 +762,7 @@ smBlocks = do !->>
 						# force first resize
 						gridResizer!
 						# remove class
-						root.classList.remove 'inactive'
+						grid.classList.add 'v'
 						active := true
 					# loop forever
 					loop
@@ -1041,10 +1073,18 @@ smBlocks = do !->>
 			@lockType  = 0
 			@rootCS    = getComputedStyle block.root
 			@rootBoxCS = getComputedStyle block.rootBox
+			@rangeCS   = getComputedStyle block.rangeBox
 			@rootPads  = [0, 0, 0, 0]
-			@baseSz    = [0, 0]
-			@currentSz = [0, 0]
-			@pageSz    = [0, 0]
+			@baseSz    = [ # initial sizes
+				0, 0, # 0/1: root-x, root-y
+				0,    #   2: range-x
+				0, 0  # 3/4: current-page-x, page-x
+			]
+			@currentSz = [ # calculated sizes
+				0, 0, # 0/1: root-x, root-y
+				0, 0, # 2/3: current-page-x, page-x
+				0     #   4: optimal-page-x
+			]
 			@dragbox   = []
 			@maxSpeed  = 10
 			@brake     = 15
@@ -1111,7 +1151,7 @@ smBlocks = do !->>
 				# fulfil event
 				e.preventDefault!
 				e.stopPropagation!
-				# hover
+				# operate
 				if e = e.currentTarget
 					e.classList.remove 'hovered'
 			# }}}
@@ -1197,6 +1237,7 @@ smBlocks = do !->>
 				node.classList.add 'active', 'drag'
 				if not node.hasPointerCapture e.pointerId
 					node.setPointerCapture e.pointerId
+				# PIXEL PERFECT:
 				# calculate dragbox parameters
 				# {{{
 				# determine first-last page counts (excluding current)
@@ -1209,22 +1250,46 @@ smBlocks = do !->>
 				if a.first
 					b += 1
 					c += 1
-				# calculate drag area sizes
-				a   = @pageSz
-				d   = @dragbox
-				d.0 = a.0 + b * a.1
-				d.1 = d.0 / (b + 1)
-				d.0 = d.0 - d.1
-				d.1 = d.1 / 2
-				d.4 = a.0 + c * a.1
-				d.3 = d.4 / (c + 1)
-				d.4 = d.4 - d.3
-				d.3 = d.3 / 2
-				d.2 = node.clientWidth - d.0 - d.1 - d.3 - d.4
-				# drag area page counts
-				d.5 = b
-				d.7 = c
-				d.6 = state.data.1 - d.5 - d.7 - 2 # >0
+				# determine page-button sizes
+				if (a = @currentSz).4
+					# enlarged mode (optimal current)
+					d = a = a.4
+				else if a.3
+					# reduced mode (current)
+					d = a.3 # page-x
+					a = a.2 # current-page-x
+				else
+					# default (base)
+					d = @baseSz.4
+					a = @baseSz.3
+				# calculate offsets
+				# first
+				e = @dragbox
+				e.0 = a + b * d     # total space
+				e.1 = e.0 / (b + 1) # average size of the button
+				e.0 = e.0 - e.1     # size of the drag area
+				# last
+				e.4 = a + c * d
+				e.3 = e.4 / (c + 1)
+				e.4 = e.4 - e.3
+				# middle
+				e.2 = parseFloat @rangeCS.getPropertyValue 'width'
+				e.2 = e.2 - e.0 - e.4 # - e.1 - e.3
+				# determine first/last jump runways
+				if not @currentSz.4
+					# for proper drag granularity in the middle area,
+					# determine penetration quantifier
+					a = e.2 / (state.data.1 - (b + c))
+					d = e.1 / 2 # limit
+					if a < d
+						e.1 = d + a
+						e.3 = e.3 / 2 + a
+				# tune middle
+				e.2 = e.2 - e.1 - e.3
+				# page counts in the areas
+				e.5 = b
+				e.7 = c
+				e.6 = state.data.1 - e.5 - e.7 - 2 # >=0
 				# }}}
 				# wait released
 				a = state.data.0
@@ -1252,7 +1317,7 @@ smBlocks = do !->>
 				if not @lock or @lockType != 3
 					return
 				# prepare
-				d = @dragbox
+				d = @dragbox # 0-1-2-3-4 | 5-6-7
 				c = state.data.1
 				# calculate page index
 				if (b = e.offsetX) <= 0
@@ -1262,13 +1327,20 @@ smBlocks = do !->>
 					# first
 					a = (b*d.5 / d.0) .|. 0
 				else if (b -= d.0) <= d.1
-					# first-end
+					# first-jump
 					a = d.5
 				else if (b -= d.1) <= d.2
 					# middle
-					a = d.5 + 1 + (b*d.6 / d.2) .|. 0
+					# {{{
+					# determine relative offset and
+					# make value discrete
+					b = (b*d.6 / d.2) .|. 0
+					# add previous counts
+					# to determine exact page index
+					a = d.5 + 1 + b
+					# }}}
 				else if (b -= d.2) <= d.3
-					# last-end
+					# last-jump
 					a = d.5 + d.6 + 1
 				else if (b -= d.3) <= d.4
 					# last
@@ -1336,8 +1408,87 @@ smBlocks = do !->>
 				# done
 				return a
 			# }}}
-			# initialize resizer
-			@resize   = @resizeFunc!
+			@resize = (e) !~>
+				# dynamic axis {{{
+				# check operation mode and
+				# determine current
+				if e
+					# observed
+					# get current
+					w = e.0.contentRect.width
+				else
+					# forced
+					# determine current
+					a = @rootPads
+					a = a.1 + a.3
+					if (w = @block.root.clientWidth - a) < 0
+						w = 0
+					# determine base
+					@baseSz.0 = parseFloat (@rootBoxCS.getPropertyValue 'width')
+					@baseSz.2 = parseFloat (@rangeCS.getPropertyValue 'width')
+				# update
+				@currentSz.0 = w
+				# }}}
+				# static axis {{{
+				# determine deviation from the base
+				e = w / @baseSz.0
+				# calculate current size
+				a = @baseSz.1
+				b = @currentSz.1
+				@currentSz.1 = c = if e > 0.999
+					then 0
+					else e * a
+				# update style only if required
+				# also, to avoid layout reflows (by accessing min-width),
+				# re-calculate page-button sizes using base multiplier
+				if b and not c
+					@block.root.style.removeProperty '--height'
+					@currentSz.2 = 0
+					@currentSz.3 = 0
+				else if c and (Math.abs (c - b)) > 0.1
+					@block.root.style.setProperty '--height', c+'px'
+					@currentSz.2 = e * @baseSz.3
+					@currentSz.3 = e * @baseSz.4
+				# check widget mode and
+				# determine page-button size
+				if @block.mode == 1
+					###
+					# the drag problem:
+					# when flexy paginator has plenty of space at dynamic axis,
+					# the middle area (gaps) may fit all pages,
+					# especially when the count is low,
+					# which makes button's drag area bigger
+					# than the button size and it makes drag "jump",
+					# which looks and feels unnatural.
+					# that's why size of page-buttons must be controlled.
+					###
+					# determine current range size
+					# (it's proportional, because it may be
+					#  modified to preserve aspect ratio)
+					a = @baseSz.0 - @baseSz.2
+					a = if e > 0.999
+						then w - a
+						else w - e * a
+					# determine current, optimal page-button size
+					if (c = @currentSz).2
+						b = if c.3
+							then (c.3 + c.2) / 2
+							else c.2
+						c = c.4
+					else
+						b = @baseSz.3
+						c = c.4
+					# update value
+					if (d = a / state.data.1) <= b
+						d = 0
+					@currentSz.4 = d
+					# update style only if required
+					if c and not d
+						@block.rangeBox.style.removeProperty '--page-size'
+					else if d and (Math.abs (d - b)) > 0.1
+						@block.rangeBox.style.setProperty '--page-size', d+'px'
+				# }}}
+			###
 			@observer = new ResizeObserver @resize
 		###
 		Control.prototype = {
@@ -1345,6 +1496,34 @@ smBlocks = do !->>
 				# prepare
 				B = @block
 				R = B.range
+				# initialize data
+				# {{{
+				# determine root pads
+				a = [
+					'padding-top'
+					'padding-right'
+					'padding-bottom'
+					'padding-left'
+				]
+				for b,c in a
+					@rootPads[c] = parseInt (@rootCS.getPropertyValue b)
+				# determine base sizes
+				@baseSz.0 = 0
+				@baseSz.1 = parseInt (@rootCS.getPropertyValue '--height')
+				@baseSz.2 = parseFloat (@rangeCS.getPropertyValue 'width')
+				# determine range and page-buttons
+				if R
+					a = getComputedStyle R.pages[R.index]
+					@baseSz.3 = parseFloat (a.getPropertyValue 'min-width')
+					@baseSz.4 = 0
+					if R.pages.length > 1
+						a = if R.index > 0
+							then 0
+							else R.index + 1
+						a = getComputedStyle R.pages[a]
+						@baseSz.4 = parseFloat (a.getPropertyValue 'min-width')
+				# }}}
+				# attach event handlers
 				# base
 				# keyboard controls
 				B.root.addEventListener 'keydown', @keyDown, true
@@ -1419,66 +1598,6 @@ smBlocks = do !->>
 				blocks.forEach (b) -> b.refresh!
 				# done
 				@block.focus!
-			# }}}
-			resizeFunc: -> # {{{
-				# determine root pads
-				pads = [
-					'padding-top'
-					'padding-right'
-					'padding-bottom'
-					'padding-left'
-				]
-				for a,b in pads
-					@rootPads[b] = parseInt (@rootCS.getPropertyValue a)
-				# determine page container sizes (current & normal)
-				a   = @block.range
-				b   = @pageSz
-				cs0 = getComputedStyle a.pages[a.index]
-				b.0 = parseFloat (cs0.getPropertyValue 'min-width')
-				cs1 = null
-				if a.pages.length > 1
-					cs1 = if a.index > 0
-						then 0
-						else a.index + 1
-					cs1 = getComputedStyle a.pages[cs1]
-					b.1 = parseFloat (cs1.getPropertyValue 'min-width')
-				# determine initial static axis size
-				@baseSz.1 = parseInt (@rootCS.getPropertyValue '--height')
-				# create resize handler
-				return (e) !~>
-					# operate on dynamic axis
-					# check mode
-					if e
-						# observed
-						# get current
-						e = e.0.contentRect.width
-					else
-						# forced
-						# determine current
-						a = @rootPads
-						a = a.1 + a.3
-						if (e = @block.root.clientWidth - a) < 0
-							e = 0
-						# determine base
-						@baseSz.0 = parseFloat (@rootBoxCS.getPropertyValue 'width')
-					# update current
-					@currentSz.0 = e
-					# determine deviation from the base
-					if (e = e / @baseSz.0) > 0.98
-						e = 1
-					# operate on static axis
-					# determine ideal
-					a = e * @baseSz.1
-					# compare against current
-					if (Math.abs (a - @currentSz.1)) > 0.1
-						# update current
-						@block.root.style.setProperty '--height', a+'px'
-						@currentSz.1 = a
-						# update page container sizes
-						a   = @pageSz
-						a.0 = parseFloat (cs0.getPropertyValue 'min-width')
-						a.1 = parseFloat (cs1.getPropertyValue 'min-width')
-					# done
 			# }}}
 			fast: (id, node, forward) ->> # {{{
 				# get final index
@@ -1557,6 +1676,7 @@ smBlocks = do !->>
 						b.refresh!
 				# release lock and complete
 				@lock.resolve!
+				await delay 60 # omit click event
 				@lock = null
 				return true
 			# }}}
@@ -1837,7 +1957,7 @@ smBlocks = do !->>
 		state = new BlockState 'page', 1, (event, data) !->
 			switch event
 			case 'init'
-				# create widget's data storage
+				# create widget's data
 				state.data = [data.pageIndex, data.pageCount]
 				for a in blocks
 					a.init!
@@ -1875,32 +1995,199 @@ smBlocks = do !->>
 	# }}}
 	smOrderer = do -> # {{{
 		# constructors
-		Block = (root) !-> # {{{
-			# {{{
+		Control = (block) !-> # {{{
 			# create object shape
-			@root = root
+			# data
+			@block   = block
+			@hovered = 0
+			@focused = false
+			# bound handlers
+			@hover = (e) !~> # {{{
+				# fulfil event
+				e.preventDefault!
+				# operate
+				if not @block.locked and not @hovered
+					@hovered = 1
+					@block.rootBox.classList.add 'hovered'
 			# }}}
-		Block.prototype =
-			init: !-> # {{{
+			@unhover = (e) !~> # {{{
+				# fulfil event
+				e.preventDefault!
+				# operate
+				if @hovered == 1
+					@hovered = 0
+					@block.rootBox.classList.remove 'hovered'
+			# }}}
+			@switchVariant = (e) !~> # {{{
+				# fulfil event
+				e.preventDefault!
+				e.stopPropagation!
+				# operate
+				B = @block
+				D = state.data
+				if not B.locked and (a = B.current.1) > 0
+					# set variant
+					state.data.1 = a = if a == 1
+						then 2
+						else 1
+					# update DOM
+					b = B.select.selectedIndex
+					b = B.select.options[b]
+					b.value = a
+					# move focus
+					B.select.focus!
+					# update state
+					state.master.resolve state
+					for a in blocks
+						a.refresh!
+			# }}}
+			@switchFocusIn = (e) !~> # {{{
+				# fulfil event
+				e.preventDefault!
+				e.stopPropagation!
+				# operate
+				if not @block.locked and @hovered != 2
+					@hovered = 2
+					@block.rootBox.classList.add 'hovered'
+			# }}}
+			@switchFocusOut = (e) !~> # {{{
+				# fulfil event
+				e.preventDefault!
+				e.stopPropagation!
+				# operate
+				if not @block.locked and @hovered == 2
+					@hovered = 0
+					@block.rootBox.classList.remove 'hovered'
+			# }}}
+			@selected = (e) !~> # {{{
+				# fulfil event
+				e.preventDefault!
+				e.stopPropagation!
+				# operate
+				B = @block
+				if not B.locked
+					# set new index and variant
+					a = B.select.selectedIndex
+					state.data.0 = B.oList[a]
+					state.data.1 = +B.select.options[a].value
+					# update state
+					state.master.resolve state
+					for a in blocks
+						a.refresh!
+			# }}}
+		###
+		Control.prototype = {
+			attach: !-> # {{{
+				B = @block
+				B.rootBox.addEventListener 'pointerenter', @hover
+				B.rootBox.addEventListener 'pointerleave', @unhover
+				B.switch.forEach (a) !~>
+					a.addEventListener 'click', @switchVariant
+					a.addEventListener 'focusin', @switchFocusIn
+					a.addEventListener 'focusout', @switchFocusOut
+				B.select.addEventListener 'input', @selected
+			# }}}
+			detach: !-> # {{{
 				true
+			# }}}
+		}
+		# }}}
+		Block = (root) !-> # {{{
+			# containers
+			@root    = root
+			@rootBox = root.firstChild
+			@variant = a = [...(root.querySelectorAll '.variant')]
+			# controls
+			@switch  = a.map (a) -> a.firstChild
+			@select  = root.querySelector 'select'
+			# state
+			@oMap    = null
+			@oList   = null
+			@locked  = false
+			@current = ['' -1]
+			@ctrl    = new Control @
+		###
+		Block.prototype =
+			init: (data) !-> # {{{
+				# check
+				if @oMap = a = data.orderOptions
+					# activation
+					# create new options
+					@oList = b = Object.getOwnPropertyNames a
+					for c in b
+						d = document.createElement 'option'
+						d.textContent = a[c].0
+						d.value = a[c].1
+						@select.appendChild d
+					# set base style
+					@rootBox.classList.remove 'w'
+					@rootBox.classList.add 'v'
+					# set controller
+					@ctrl.attach!
+				else
+					# deactivation
+					# clear event handlers
+					@ctrl.detach!
+					# clear current options
+					a = @oList.length
+					b = @select
+					while --a > 0
+						b.removeChild b.options[a]
+					@oList = null
+					# set base style
+					@rootBox.classList.add 'w'
+				# done
+				@refresh!
 			# }}}
 			refresh: !-> # {{{
-				true
+				# prepare
+				a = state.data
+				b = @current
+				# sync current
+				if a.0 != b.0
+					# set current index
+					if (c = @oList.indexOf a.0) != @select.selectedIndex
+						@select.selectedIndex = c
+					# set switch state
+					if (not a.1 and b.1) or \
+					   (a.1 and not b.1)
+						###
+						c = !a.1
+						@switch.forEach (d) !->
+							d.disabled = c
+				# sync variants
+				if a.1 != b.1
+					if b.1 >= 0
+						c = ('abc')[b.1]
+						@variant.forEach (d) !->
+							d.classList.remove c
+					if a.1 >= 0
+						c = ('abc')[a.1]
+						@variant.forEach (d) !->
+							d.classList.add c
+				# complete
+				@current = a.slice!
 			# }}}
 		# }}}
 		# initialize
 		# {{{
 		# create common state
-		state = new BlockState 'order', 1, (event, data) ->
+		state = new BlockState 'order', 0, (event, data) ->
 			switch event
 			case 'init'
-				true
+				# create widget's data by
+				# cloning the default
+				state.data = data.order.slice!
+				# initialize
+				for a in blocks
+					a.init data
+				# done, initial state determined
 			case 'change'
 				true
 			# done
 			return true
 		# create individual blocks
-		blocks = [...(document.querySelectorAll '.sm-order')]
+		blocks = [...(document.querySelectorAll '.sm-orderer')]
 		blocks = blocks.map (root) -> new Block root
 		# }}}
 		return state
@@ -1942,6 +2229,8 @@ smBlocks = do !->>
 			smProducts.add smCategoryFilter
 		if smPaginator
 			smProducts.add smPaginator
+		if smOrderer
+			smProducts.add smOrderer
 		if smSizer
 			smProducts.add smSizer
 		# start main loader
