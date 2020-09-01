@@ -2,7 +2,7 @@
 "use strict";
 var smBlocks, slice$ = [].slice, arrayFrom$ = Array.from || function(x){return slice$.call(x);};
 smBlocks = async function(){
-  var BRAND, soFetch, CFG, newPromise, delay, newMetaObject, BlockState, smProducts, smCart, smCategoryFilter, smPaginator, smOrderer, smSizer;
+  var BRAND, soFetch, newPromise, delay, newMetaObject, BlockState, smCart, smGrid, smCategoryFilter, smPaginator, smOrderer;
   BRAND = 'sm-blocks';
   soFetch = httpFetch.create({
     baseUrl: '/?rest_route=/' + BRAND + '/kiss',
@@ -10,10 +10,6 @@ smBlocks = async function(){
     notNull: true,
     method: 'POST'
   });
-  CFG = (await soFetch({
-    func: 'config',
-    lang: 'en'
-  }));
   newPromise = function(){
     var r, p;
     r = null;
@@ -86,7 +82,6 @@ smBlocks = async function(){
     this.event = handler;
     this.data = null;
     this.master = null;
-    this.ready = false;
   };
   BlockState.prototype = {
     set: function(data){
@@ -94,17 +89,97 @@ smBlocks = async function(){
       this.master.resolve(this);
     }
   };
-  smProducts = function(){
-    var root, grid, gridList, gridControl, gridLock, gridResizer, gridLoader, Block, Data, newImageBlock, newTitleBlock, newPriceBlock, newControlBlock, newItem;
-    if (!(root = document.querySelector('#sm-products'))) {
+  smCart = function(){
+    var data;
+    data = null;
+    return {
+      add: async function(id){
+        var a;
+        a = (await soFetch({
+          func: 'cart',
+          op: 'set',
+          id: id
+        }));
+        if (a instanceof Error) {
+          return false;
+        }
+        a = wc_add_to_cart_params.wc_ajax_url.replace('%%endpoint%%', 'get_refreshed_fragments');
+        a = (await httpFetch({
+          url: a,
+          notNull: true
+        }));
+        if (a instanceof Error) {
+          return true;
+        }
+        jQuery(document.body).trigger('added_to_cart', [a.fragments, a.cart_hash, null]);
+        return true;
+      },
+      get: function(id){
+        var a, ref$, b;
+        if (!data) {
+          return null;
+        }
+        for (a in ref$ = data) {
+          b = ref$[a];
+          if (b.product_id === id) {
+            return b;
+          }
+        }
+        return null;
+      },
+      load: async function(){
+        var a;
+        a = (await soFetch({
+          func: 'cart',
+          op: 'get'
+        }));
+        if (a instanceof Error) {
+          return null;
+        }
+        return data = a;
+      }
+    };
+  }();
+  smGrid = function(){
+    var root, grid, gridList, gridControl, gridState, gridLock, gridResizer, gridLoader, Block, State, Box, Data, newImageBlock, newTitleBlock, newPriceBlock, newControlBlock, newItem;
+    if (!(root = document.querySelector('.sm-blocks.grid'))) {
       return null;
     }
-    if (!(grid = root.querySelector('.main'))) {
-      return null;
-    }
+    grid = root.firstChild;
     gridList = arrayFrom$(grid.children);
     gridControl = [];
-    gridLock = null;
+    gridState = {
+      dirty: false,
+      level: 0,
+      total: 0,
+      count: 0,
+      pageCount: 0,
+      pageIndex: 0,
+      orderOptions: null,
+      order: ['', 0]
+    };
+    gridLock = async function(){
+      var a, b, c, CFG, d;
+      a = smCart.load();
+      b = soFetch({
+        func: 'config'
+      });
+      c = (await Promise.all([a, b]));
+      CFG = c[1];
+      a = grid.dataset.order.split(',');
+      if (b = a.length) {
+        gridState.orderOptions = c = {};
+        d = -1;
+        while (++d < b) {
+          c[a[d]] = CFG.orderOptions[a[d]];
+        }
+        b = parseInt(grid.dataset.index);
+        b = a[b];
+        gridState.order[0] = b;
+        gridState.order[1] = CFG.orderOptions[b][1];
+      }
+      return true;
+    }();
     gridResizer = function(){
       var style, state, f;
       style = getComputedStyle(grid);
@@ -182,19 +257,8 @@ smBlocks = async function(){
       return f;
     }();
     gridLoader = function(){
-      var cooldown, state, iFetch, res, req, initState, setState, unloadItems, newMasterPromise;
+      var cooldown, iFetch, res, req, setState, unloadItems, newMasterPromise;
       cooldown = 800;
-      state = {
-        first: true,
-        dirty: false,
-        level: 0,
-        total: 0,
-        count: 0,
-        pageCount: 0,
-        pageIndex: 0,
-        orderOptions: null,
-        order: ['', 0]
-      };
       iFetch = httpFetch.create({
         baseUrl: '/?rest_route=/' + BRAND + '/kiss',
         mounted: true,
@@ -205,38 +269,19 @@ smBlocks = async function(){
       });
       res = null;
       req = {
-        func: 'products',
+        func: 'grid',
         limit: gridList.length,
         offset: 0,
         category: null,
-        order: state.order
-      };
-      initState = function(){
-        var a, b, c, d;
-        a = grid.dataset.order.split(',');
-        if (b = a.length) {
-          state.orderOptions = c = {};
-          d = -1;
-          while (++d < b) {
-            c[a[d]] = CFG.orderOptions[a[d]];
-          }
-          b = parseInt(grid.dataset.index);
-          b = a[b];
-          state.order[0] = b;
-          state.order[1] = CFG.orderOptions[b][1];
-        } else {
-          state.orderOptions = null;
-          state.order[0] = '';
-        }
-        state.first = false;
+        order: gridState.order
       };
       setState = function(s){
         var a, b, i$, ref$, len$, c, j$, ref1$, len1$, d;
-        if (state.level > s.level) {
+        if (gridState.level > s.level) {
           return false;
         }
-        if (state.level < s.level) {
-          state.level = s.level;
+        if (gridState.level < s.level) {
+          gridState.level = s.level;
         }
         switch (s.name) {
         case 'category':
@@ -263,25 +308,25 @@ smBlocks = async function(){
             a[a.length] = b;
           }
           req.category = a.length ? a : null;
-          req.offset = state.pageIndex = 0;
+          req.offset = gridState.pageIndex = 0;
           break;
         case 'page':
-          state.pageIndex = s.data[0];
-          req.offset = state.pageIndex * req.limit;
+          gridState.pageIndex = s.data[0];
+          req.offset = gridState.pageIndex * req.limit;
           break;
         case 'order':
-          state.order[0] = s.data[0];
-          state.order[1] = s.data[1];
+          gridState.order[0] = s.data[0];
+          gridState.order[1] = s.data[1];
         }
         return true;
       };
       unloadItems = function(){
         var c;
-        if (c = state.count) {
+        if (c = gridState.count) {
           while (--c >= 0) {
             gridList[c].cls();
           }
-          state.count = 0;
+          gridState.count = 0;
         }
       };
       newMasterPromise = function(){
@@ -298,8 +343,8 @@ smBlocks = async function(){
           if (p.pending) {
             p.pending = false;
             r();
-          } else if (!state.dirty) {
-            state.dirty = true;
+          } else if (!gridState.dirty) {
+            gridState.dirty = true;
             if (res) {
               res.cancel();
             }
@@ -309,35 +354,27 @@ smBlocks = async function(){
       };
       return async function(){
         var i$, ref$, len$, c, a, b;
-        if (state.dirty) {
-          state.dirty = false;
-          unloadItems();
-          (await delay(cooldown));
-        } else {
+        if (gridState.dirty) {
+          gridState.dirty = false;
+          gridLock = delay(cooldown);
+        } else if (!gridLock) {
           gridLock = newMasterPromise();
           for (i$ = 0, len$ = (ref$ = gridControl).length; i$ < len$; ++i$) {
             c = ref$[i$];
             c.master = gridLock;
           }
-          if (state.first) {
-            gridLock.resolve();
-            initState();
-          } else {
-            (await gridLock);
-            unloadItems();
-          }
         }
-        if (state.dirty) {
+        (await gridLock);
+        unloadItems();
+        if (gridState.dirty) {
           return true;
         }
         for (i$ = 0, len$ = (ref$ = gridControl).length; i$ < len$; ++i$) {
           c = ref$[i$];
-          if (c.ready) {
-            if (c.level < state.level) {
-              c.event('lock');
-            } else if (!c.event('change', state)) {
-              return true;
-            }
+          if (c.level < gridState.level) {
+            c.event('lock');
+          } else if (!c.event('change', gridState)) {
+            return true;
           }
         }
         a = (await (res = iFetch(req)));
@@ -345,38 +382,30 @@ smBlocks = async function(){
         if (a instanceof Error) {
           return a.id === 4 ? true : false;
         }
-        if ((state.total = (await a.readInt())) === null) {
+        if ((gridState.total = (await a.readInt())) === null) {
           a.cancel();
           return false;
         }
         b = gridList.length;
-        state.count = b > state.total
-          ? state.total
-          : (c = state.total - req.offset) < b ? c : b;
-        state.pageCount = 20;
+        gridState.count = b > gridState.total
+          ? gridState.total
+          : (c = gridState.total - req.offset) < b ? c : b;
+        gridState.pageCount = Math.ceil(gridState.total / b);
         for (i$ = 0, len$ = (ref$ = gridControl).length; i$ < len$; ++i$) {
           c = ref$[i$];
-          if (c.ready) {
-            if (c.level < state.level) {
-              c.event('unlock');
-            }
-            c.event('refresh', state);
-          } else {
-            c.event('init', state);
-            c.ready = true;
-          }
+          c.event('load', gridState);
         }
-        state.level = 0;
+        gridState.level = 0;
         c = -1;
-        while (++c < state.count && !state.dirty) {
+        while (++c < gridState.count && !gridState.dirty) {
           if ((b = (await a.readJSON())) === null) {
             a.cancel();
             return false;
           }
           gridList[c].set(b);
         }
-        if (c !== state.count) {
-          state.count = c;
+        if (c !== gridState.count) {
+          gridState.count = c;
         } else {
           (await a.read());
         }
@@ -384,8 +413,25 @@ smBlocks = async function(){
         return true;
       };
     }();
-    Block = function(box){
-      this.box = box;
+    Block = function(root){
+      this.root = root;
+      this.rootBox = root.firstChild;
+      this.state = new State(this);
+    };
+    State = function(block){
+      this.block = block;
+      this.lock = null;
+      this.dirty = false;
+      this.level = 0;
+      this.total = 0;
+      this.count = 0;
+      this.pageCount = 0;
+      this.pageIndex = 0;
+      this.orderOptions = null;
+      this.orderTag = ['', 0];
+    };
+    Box = function(node){
+      this.box = node;
       this.data = null;
       this.set = null;
       this.cls = null;
@@ -434,7 +480,7 @@ smBlocks = async function(){
       };
       return function(node){
         var a, img;
-        a = new Block(node);
+        a = new Box(node);
         img = node.querySelector('img');
         img.addEventListener('load', loaded(a));
         a.data = new Data(node, img);
@@ -457,7 +503,7 @@ smBlocks = async function(){
       };
       return function(node){
         var a;
-        a = new Block(node);
+        a = new Box(node);
         a.data = new Data(node, null);
         a.set = set;
         a.cls = cls;
@@ -526,7 +572,7 @@ smBlocks = async function(){
       };
       return function(node){
         var a, e;
-        a = new Block(node);
+        a = new Box(node);
         e = map.map(function(e){
           e = arrayFrom$(node.querySelectorAll(e));
           return e.length ? e : null;
@@ -599,7 +645,7 @@ smBlocks = async function(){
       };
       return function(node){
         var a, e;
-        a = new Block(node);
+        a = new Box(node);
         e = map.map(function(e){
           e = arrayFrom$(node.querySelectorAll(e));
           return e.length ? e : null;
@@ -663,165 +709,48 @@ smBlocks = async function(){
     }();
     return {
       resize: gridResizer,
-      load: function(){
-        var started, active;
-        started = false;
-        active = false;
-        return async function(){
-          if (started) {
-            if (gridLock) {
-              gridLock.resolve();
-            }
-            return true;
+      load: async function(c){
+        var i$, ref$, len$, b, a;
+        if (!grid.classList.contains('v')) {
+          for (i$ = 0, len$ = (ref$ = gridList).length; i$ < len$; ++i$) {
+            b = i$;
+            a = ref$[i$];
+            gridList[b] = newItem(a);
           }
-          started = true;
-          if (!active) {
-            gridList = gridList.map(function(a){
-              return newItem(a);
-            });
-            gridResizer();
-            grid.classList.add('v');
-            active = true;
-          }
-          for (;;) {
-            if (!(await gridLoader())) {
-              console.log('FATAL ERROR');
-              break;
-            }
-          }
-          return started = false;
-        };
-      }(),
-      add: function(s){
-        gridControl[gridControl.length] = s;
-      }
-    };
-  }();
-  smCart = function(){
-    var data;
-    data = null;
-    return {
-      add: async function(id){
-        var a;
-        a = (await soFetch({
-          func: 'cart',
-          op: 'set',
-          id: id
-        }));
-        if (a instanceof Error) {
-          return false;
+          gridResizer();
+          root.classList.add('v');
         }
-        a = wc_add_to_cart_params.wc_ajax_url.replace('%%endpoint%%', 'get_refreshed_fragments');
-        a = (await httpFetch({
-          url: a,
-          notNull: true
-        }));
-        if (a instanceof Error) {
-          return true;
+        (await gridLock);
+        for (i$ = 0, len$ = c.length; i$ < len$; ++i$) {
+          a = c[i$];
+          if (a && a instanceof BlockState) {
+            gridControl[gridControl.length] = a;
+            a.event('init', gridState);
+          }
         }
-        jQuery(document.body).trigger('added_to_cart', [a.fragments, a.cart_hash, null]);
+        /***
+        # check loop is running
+        if gridLock
+        	# force unlock
+        	if gridLock.pending
+        		gridLock.resolve!
+        	# done
+        	return true
+        /***/
+        if ((await gridLoader())) {
+          grid.classList.add('v');
+          gridLock = null;
+          while ((await gridLoader())) {
+            gridLock = null;
+          }
+        }
+        console.log('FATAL ERROR?');
         return true;
-      },
-      get: function(id){
-        var a, ref$, b;
-        if (!data) {
-          return null;
-        }
-        for (a in ref$ = data) {
-          b = ref$[a];
-          if (b.product_id === id) {
-            return b;
-          }
-        }
-        return null;
-      },
-      load: async function(){
-        var a;
-        a = (await soFetch({
-          func: 'cart',
-          op: 'get'
-        }));
-        if (a instanceof Error) {
-          return null;
-        }
-        return data = a;
       }
     };
   }();
   smCategoryFilter = function(){
-    var Block, Item, ItemState, ItemEvents, state, blocks;
-    Block = function(root){
-      var item, sect, list, i$, len$, a, b, c, ref$, d;
-      this.root = root;
-      this.op = root.dataset.op;
-      this.index = 0;
-      this.item = item = {};
-      this.sect = sect = {};
-      list = arrayFrom$(root.querySelectorAll('.item'));
-      for (i$ = 0, len$ = list.length; i$ < len$; ++i$) {
-        a = list[i$];
-        b = new Item(this, a);
-        item[b.id] = b;
-        if (b.sect) {
-          sect[b.id] = b;
-        }
-      }
-      for (a in sect) {
-        b = sect[a];
-        b.children = c = [];
-        for (i$ = 0, len$ = (ref$ = b.sect.children).length; i$ < len$; ++i$) {
-          a = ref$[i$];
-          d = item[a.dataset.id];
-          d.parent = b;
-          c[c.length] = item[a.dataset.id];
-        }
-      }
-    };
-    Block.prototype = {
-      init: function(index){
-        var a, item;
-        this.index = index;
-        state.data[index] = [this.op, []];
-        for (a in this.item) {
-          item = this.item[a];
-          item.events.attach();
-        }
-        this.root.classList.remove('inactive');
-      },
-      refresh: function(list){
-        var i$, len$, a, b, ref$;
-        for (i$ = 0, len$ = list.length; i$ < len$; ++i$) {
-          a = list[i$];
-          a = this.item[a];
-          if (b = a.state._checked) {
-            a.checkbox.classList.remove(b === 2 ? 'indeterminated' : 'checked');
-          }
-          if (b = a.state.checked) {
-            a.checkbox.classList.add(b === 2 ? 'indeterminated' : 'checked');
-          }
-        }
-        list = [];
-        for (a in ref$ = this.item) {
-          b = ref$[a];
-          a = b.id;
-          b = b.state;
-          if (b.checked === 1 && b.count > 0) {
-            list[list.length] = a;
-          }
-        }
-        b = state.data[this.index][1];
-        if (b.length === list.length) {
-          a = list.every(function(a){
-            return b.indexOf(a) !== -1;
-          });
-          if (a) {
-            return;
-          }
-        }
-        state.data[this.index][1] = list;
-        state.master.resolve(state);
-      }
-    };
+    var Item, ItemState, ItemEvents, Block, state, blocks;
     Item = function(block, node){
       var name;
       this.block = block;
@@ -937,20 +866,105 @@ smBlocks = async function(){
         item.nameBox.removeEventListener('click', this.toggleCheckbox, true);
       }
     };
+    Block = function(root){
+      var rootBox, item, sect, list, i$, len$, a, b, c, ref$, d;
+      this.root = root;
+      this.rootBox = rootBox = root.firstChild;
+      this.op = rootBox.dataset.op;
+      this.index = 0;
+      this.item = item = {};
+      this.sect = sect = {};
+      this.locked = true;
+      list = arrayFrom$(root.querySelectorAll('.item'));
+      for (i$ = 0, len$ = list.length; i$ < len$; ++i$) {
+        a = list[i$];
+        b = new Item(this, a);
+        item[b.id] = b;
+        if (b.sect) {
+          sect[b.id] = b;
+        }
+      }
+      for (a in sect) {
+        b = sect[a];
+        b.children = c = [];
+        for (i$ = 0, len$ = (ref$ = b.sect.children).length; i$ < len$; ++i$) {
+          a = ref$[i$];
+          d = item[a.dataset.id];
+          d.parent = b;
+          c[c.length] = item[a.dataset.id];
+        }
+      }
+      for (a in item) {
+        a = item[a];
+        a.events.attach();
+      }
+      root.classList.add('v');
+    };
+    Block.prototype = {
+      init: function(index){
+        this.index = index;
+        state.data[index] = [this.op, []];
+      },
+      refresh: function(list){
+        var i$, len$, a, b, ref$;
+        for (i$ = 0, len$ = list.length; i$ < len$; ++i$) {
+          a = list[i$];
+          a = this.item[a];
+          if (b = a.state._checked) {
+            a.checkbox.classList.remove(b === 2 ? 'indeterminated' : 'checked');
+          }
+          if (b = a.state.checked) {
+            a.checkbox.classList.add(b === 2 ? 'indeterminated' : 'checked');
+          }
+        }
+        list = [];
+        for (a in ref$ = this.item) {
+          b = ref$[a];
+          a = b.id;
+          b = b.state;
+          if (b.checked === 1 && b.count > 0) {
+            list[list.length] = a;
+          }
+        }
+        b = state.data[this.index][1];
+        if (b.length === list.length) {
+          a = list.every(function(a){
+            return b.indexOf(a) !== -1;
+          });
+          if (a) {
+            return;
+          }
+        }
+        state.data[this.index][1] = list;
+        state.master.resolve(state);
+      },
+      unlock: function(){
+        this.rootBox.classList.add('v');
+        this.locked = false;
+      }
+    };
     state = new BlockState('category', 2, function(event, data){
       var i$, ref$, len$, b, a;
       switch (event) {
       case 'init':
-        state.data = [];
         for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
           b = i$;
           a = ref$[i$];
           a.init(b);
         }
+        break;
+      case 'load':
+        for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
+          a = ref$[i$];
+          if (a.locked) {
+            a.unlock();
+          }
+        }
       }
       return true;
     });
-    blocks = arrayFrom$(document.querySelectorAll('.sm-category-filter'));
+    state.data = [];
+    blocks = arrayFrom$(document.querySelectorAll('.sm-blocks.category-filter'));
     blocks = blocks.map(function(root){
       return new Block(root);
     });
@@ -972,6 +986,7 @@ smBlocks = async function(){
       this.dragbox = [];
       this.maxSpeed = 10;
       this.brake = 15;
+      this.observer = null;
       this.keyDown = function(e){
         var a;
         if (this$.lock || this$.block.locked || !this$.block.range || !this$.block.mode) {
@@ -1265,7 +1280,7 @@ smBlocks = async function(){
           this$.currentSz[2] = e * this$.baseSz[3];
           this$.currentSz[3] = e * this$.baseSz[4];
         }
-        if (this$.block.mode === 1) {
+        if (this$.block.flexy && this$.block.mode === 1) {
           a = this$.baseSz[0] - this$.baseSz[2];
           a = e > 0.999
             ? w - a
@@ -1290,7 +1305,6 @@ smBlocks = async function(){
           }
         }
       };
-      this.observer = new ResizeObserver(this.resize);
     };
     Control.prototype = {
       attach: function(){
@@ -1356,12 +1370,15 @@ smBlocks = async function(){
           a.addEventListener('pointerdown', this.dragStart);
           B.rangeBox.addEventListener('pointermove', this.drag);
           B.rangeBox.addEventListener('pointerup', this.dragStop);
-          this.observer.observe(B.root);
+          this.observer = a = new ResizeObserver(this.resize);
+          a.observe(B.root);
         }
       },
       detach: function(){
-        if (R) {
-          this.observer.disconnect();
+        var a;
+        if (a = this.observer) {
+          a.disconnect();
+          this.observer = null;
         }
       },
       rangeGotoFunc: function(i){
@@ -1428,7 +1445,7 @@ smBlocks = async function(){
         }
         this.block.focus();
         this.block.rangeBox.classList.add('active');
-        node.parentNode.classList.add('fast');
+        node.parentNode.classList.add('active');
         if (id !== null && !node.hasPointerCapture(id)) {
           node.setPointerCapture(id);
         }
@@ -1454,7 +1471,7 @@ smBlocks = async function(){
             node.releasePointerCapture(id);
           }
         }
-        node.parentNode.classList.remove('fast');
+        node.parentNode.classList.remove('active');
         this.block.rangeBox.classList.remove('active');
         if (!this.block.locked) {
           state.master.resolve(state);
@@ -1513,10 +1530,10 @@ smBlocks = async function(){
       this.nLast = 0;
       this.nCount = 0;
     };
-    Block = function(root){
-      var a, b;
+    Block = function(root, state){
+      var rootBox, a, b;
       this.root = root;
-      this.rootBox = root.firstChild;
+      this.rootBox = rootBox = root.firstChild;
       a = arrayFrom$(root.querySelectorAll('.goto.a'));
       b = arrayFrom$(root.querySelectorAll('.goto.b'));
       this.gotoF = (a.length && a[0]) || null;
@@ -1525,21 +1542,15 @@ smBlocks = async function(){
       this.gotoN = (b.length && b[1]) || null;
       this.rangeBox = a = root.querySelector('.range');
       this.range = (a && new BlockRange(a)) || null;
-      this.locked = false;
+      this.state = state;
+      this.locked = true;
+      this.flexy = rootBox.classList.contains('flexy');
       this.mode = 0;
       this.ctrl = new Control(this);
+      this.ctrl.attach();
+      this.refresh();
     };
     Block.prototype = {
-      init: function(){
-        var c;
-        c = state.data[1];
-        if (c && !this.mode) {
-          this.ctrl.attach();
-        } else if (!c && this.mode) {
-          this.ctrl.detach();
-        }
-        this.refresh();
-      },
       focus: function(){
         var a;
         if (!this.locked && this.range && (a = this.range.current) && document.activeElement !== a) {
@@ -1547,155 +1558,153 @@ smBlocks = async function(){
         }
       },
       refresh: function(){
-        var R, index, count, nPages, nGap1, nGap2, nFirst, nLast, nCount, mode, current, a, b, c, d, i$, len$;
-        if (R = this.range) {
-          index = state.data[0];
-          count = state.data[1];
-          nPages = R.nPages.slice().fill(0);
-          nGap1 = 0;
-          nGap2 = 0;
-          nFirst = 0;
-          nLast = 0;
-          nCount = 0;
-          if (!count) {
-            mode = 0;
-            current = null;
-            nCount = 0;
-          } else if (count > R.size) {
-            mode = 1;
-            current = R.buttons[R.index];
-            nCount = R.size;
-            if ((a = R.index - index) < 0) {
-              nFirst = 1;
-              nGap1 = 0 - a - 1;
-              a = 0;
-            }
-            b = nPages.length - R.index - 1;
-            c = count - index - 2;
-            if (b > c) {
-              b = R.index + c + 2;
-            } else {
-              nLast = count;
-              nGap2 = c - b;
-              b = nPages.length;
-            }
-            c = a - 1;
-            d = index - R.index + a;
-            while (++c < b) {
-              nPages[c] = ++d;
-            }
-            if (a = nGap1 + nGap2) {
-              a = 100 * nGap1 / a;
-              if (a > 0 && a < 1) {
-                a = 1;
-              } else if (a > 99 && a < 100) {
-                a = 99;
-              } else {
-                a = Math.round(a);
-              }
-              nGap1 = a;
-              nGap2 = 100 - a;
-            }
+        var R, index, count, nCount, nPages, nGap1, nGap2, nFirst, nLast, mode, current, i$, to$, a, b, c, d, len$;
+        if (!(R = this.range)) {
+          return;
+        }
+        index = this.state.data[0];
+        count = this.state.data[1];
+        nCount = 0;
+        nPages = R.nPages.slice().fill(0);
+        nGap1 = 0;
+        nGap2 = 0;
+        nFirst = 0;
+        nLast = 0;
+        if (!count) {
+          mode = 0;
+          current = null;
+          nCount = R.size;
+          for (i$ = R.index, to$ = nPages.length; i$ < to$; ++i$) {
+            a = i$;
+            nPages[a] = 1;
+          }
+          nGap2 = 100;
+          nLast = 1;
+        } else if (count > R.size) {
+          mode = 1;
+          current = R.buttons[R.index];
+          nCount = R.size;
+          if ((a = R.index - index) < 0) {
+            nFirst = 1;
+            nGap1 = 0 - a - 1;
+            a = 0;
+          }
+          b = nPages.length - R.index - 1;
+          c = count - index - 2;
+          if (b > c) {
+            b = R.index + c + 2;
           } else {
-            mode = 2;
-            nCount = count;
-            nFirst = a = (R.first && 1) || 0;
-            b = -1;
-            c = nPages.length;
-            while (++b < c && a < count) {
-              nPages[b] = ++a;
-            }
-            nLast = R.last && a < count ? count : 0;
-            a = index + 1;
-            current = a === nFirst
-              ? R.first.firstChild
-              : a === nLast
-                ? R.last.firstChild
-                : R.buttons[nPages.indexOf(a)];
+            nLast = count;
+            nGap2 = c - b;
+            b = nPages.length;
           }
-          if (mode !== this.mode) {
-            if (!this.mode) {
-              this.root.classList.remove('inactive');
-            }
-            if (!mode) {
-              this.rootBox.classList.remove('v');
-              this.root.classList.add('inactive');
-            } else if (mode === 1) {
-              this.rangeBox.classList.remove('nogaps');
+          c = a - 1;
+          d = index - R.index + a;
+          while (++c < b) {
+            nPages[c] = ++d;
+          }
+          if (a = nGap1 + nGap2) {
+            a = 100 * nGap1 / a;
+            if (a > 0 && a < 1) {
+              a = 1;
+            } else if (a > 99 && a < 100) {
+              a = 99;
             } else {
-              this.rangeBox.classList.add('nogaps');
+              a = Math.round(a);
             }
-            this.mode = mode;
-          }
-          if (R.nCount !== nCount) {
-            this.rangeBox.style.setProperty('--count', nCount);
-            R.nCount = nCount;
-            if (nCount) {
-              this.rootBox.classList.remove('v');
-              this.ctrl.resize();
-              this.rootBox.classList.add('v');
-            }
-          }
-          if (R.nFirst !== nFirst) {
-            if (!R.nFirst) {
-              R.first.classList.add('v');
-            } else if (!nFirst) {
-              R.first.classList.remove('v');
-            }
-            R.nFirst = nFirst;
-          }
-          if (R.nGap1 !== nGap1) {
-            if (!R.nGap1) {
-              R.gap1.classList.add('v');
-            } else if (!nGap1) {
-              R.gap1.classList.remove('v');
-            }
-            R.gap1.style.flexGrow = R.nGap1 = nGap1;
-          }
-          c = R.nPages;
-          for (i$ = 0, len$ = nPages.length; i$ < len$; ++i$) {
-            b = i$;
-            a = nPages[i$];
-            if (a !== c[b]) {
-              if (!c[b]) {
-                R.pages[b].classList.add('v');
-              } else if (!a) {
-                R.pages[b].classList.remove('v');
-              }
-              R.buttons[b].textContent = c[b] = a;
-            }
-          }
-          if (R.nGap2 !== nGap2) {
-            if (!R.nGap2) {
-              R.gap2.classList.add('v');
-            } else if (!nGap2) {
-              R.gap2.classList.remove('v');
-            }
-            R.gap2.style.flexGrow = R.nGap2 = nGap2;
-          }
-          if ((c = this.last) && x.last !== y.last) {
-            c.classList.toggle('v', !!x.last);
-            c.firstChild.textContent = x.last;
-          }
-          if (R.nLast !== nLast) {
-            if (!R.nLast) {
-              R.last.classList.add('v');
-            } else if (!nLast) {
-              R.last.classList.remove('v');
-            }
-            R.last.firstChild.textContent = R.nLast = nLast;
-          }
-          if (R.current !== current) {
-            if (R.current) {
-              R.current.parentNode.classList.remove('current');
-            }
-            if (current) {
-              current.parentNode.classList.add('current');
-            }
-            R.current = current;
+            nGap1 = a;
+            nGap2 = 100 - a;
           }
         } else {
           mode = 2;
+          nCount = count;
+          nFirst = a = (R.first && 1) || 0;
+          b = -1;
+          c = nPages.length;
+          while (++b < c && a < count) {
+            nPages[b] = ++a;
+          }
+          nLast = R.last && a < count ? count : 0;
+          a = index + 1;
+          current = a === nFirst
+            ? R.first.firstChild
+            : a === nLast
+              ? R.last.firstChild
+              : R.buttons[nPages.indexOf(a)];
+        }
+        if (mode !== this.mode) {
+          if (!this.mode) {
+            this.rootBox.classList.add('v');
+          }
+          if (!mode) {
+            this.rootBox.classList.remove('v');
+          } else if (mode === 1) {
+            this.rangeBox.classList.remove('nogap');
+          } else {
+            this.rangeBox.classList.add('nogap');
+          }
+          this.mode = mode;
+        }
+        if (R.nCount !== nCount) {
+          this.rangeBox.style.setProperty('--count', nCount);
+          R.nCount = nCount;
+          this.root.classList.remove('v');
+          this.ctrl.resize();
+          this.root.classList.add('v');
+        }
+        if (R.nFirst !== nFirst) {
+          if (!R.nFirst) {
+            R.first.classList.add('v');
+          } else if (!nFirst) {
+            R.first.classList.remove('v');
+          }
+          R.nFirst = nFirst;
+        }
+        if (R.nGap1 !== nGap1) {
+          if (!R.nGap1) {
+            R.gap1.classList.add('v');
+          } else if (!nGap1) {
+            R.gap1.classList.remove('v');
+          }
+          R.gap1.style.flexGrow = R.nGap1 = nGap1;
+        }
+        c = R.nPages;
+        for (i$ = 0, len$ = nPages.length; i$ < len$; ++i$) {
+          b = i$;
+          a = nPages[i$];
+          if (a !== c[b]) {
+            if (!c[b]) {
+              R.pages[b].classList.add('v');
+            } else if (!a) {
+              R.pages[b].classList.remove('v');
+            }
+            R.buttons[b].textContent = c[b] = a;
+          }
+        }
+        if (R.nGap2 !== nGap2) {
+          if (!R.nGap2) {
+            R.gap2.classList.add('v');
+          } else if (!nGap2) {
+            R.gap2.classList.remove('v');
+          }
+          R.gap2.style.flexGrow = R.nGap2 = nGap2;
+        }
+        if (R.nLast !== nLast) {
+          if (!R.nLast) {
+            R.last.classList.add('v');
+          } else if (!nLast) {
+            R.last.classList.remove('v');
+          }
+          R.last.firstChild.textContent = R.nLast = nLast;
+        }
+        if (R.current !== current) {
+          if (R.current) {
+            R.current.parentNode.classList.remove('current');
+          }
+          if (current) {
+            current.parentNode.classList.add('current');
+          }
+          R.current = current;
         }
       },
       lock: async function(){
@@ -1705,7 +1714,7 @@ smBlocks = async function(){
             (await this.ctrl.lock.spin());
           }
           this.locked = true;
-          this.rootBox.classList.add('locked');
+          this.rootBox.classList.remove('v');
           if ((R = this.range) && R.current) {
             R.current.parentNode.classList.remove('current');
             R.current = null;
@@ -1714,22 +1723,13 @@ smBlocks = async function(){
         return true;
       },
       unlock: function(){
-        if (this.locked) {
-          this.rootBox.classList.remove('locked');
-          this.locked = false;
-        }
+        this.rootBox.classList.add('v');
+        this.locked = false;
       }
     };
     state = new BlockState('page', 1, function(event, data){
       var i$, ref$, len$, a;
       switch (event) {
-      case 'init':
-        state.data = [data.pageIndex, data.pageCount];
-        for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
-          a = ref$[i$];
-          a.init();
-        }
-        break;
       case 'lock':
         for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
           a = ref$[i$];
@@ -1744,15 +1744,12 @@ smBlocks = async function(){
           }
         }
         break;
-      case 'unlock':
+      case 'load':
         for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
           a = ref$[i$];
-          a.unlock();
-        }
-        break;
-      case 'refresh':
-        for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
-          a = ref$[i$];
+          if (a.locked) {
+            a.unlock();
+          }
           if (a.ctrl.lock) {
             return true;
           }
@@ -1766,9 +1763,10 @@ smBlocks = async function(){
       }
       return true;
     });
-    blocks = arrayFrom$(document.querySelectorAll('.sm-paginator'));
+    state.data = [0, 0];
+    blocks = arrayFrom$(document.querySelectorAll('.sm-blocks.paginator'));
     blocks = blocks.map(function(root){
-      return new Block(root);
+      return new Block(root, state);
     });
     return state;
   }();
@@ -1862,7 +1860,7 @@ smBlocks = async function(){
         true;
       }
     };
-    Block = function(root){
+    Block = function(root, state){
       var a;
       this.root = root;
       this.rootBox = root.firstChild;
@@ -1873,40 +1871,40 @@ smBlocks = async function(){
       this.select = root.querySelector('select');
       this.oMap = null;
       this.oList = null;
-      this.locked = false;
+      this.state = state;
+      this.locked = true;
       this.current = ['', -1];
       this.ctrl = new Control(this);
+      this.ctrl.attach();
+      this.root.classList.add('v');
     };
     Block.prototype = {
-      init: function(data){
-        var a, b, i$, len$, c, d;
-        if (this.oMap = a = data.orderOptions) {
-          this.oList = b = Object.getOwnPropertyNames(a);
+      init: function(options, current){
+        var b, i$, len$, a, c;
+        if (this.oMap = options) {
+          this.oList = b = Object.getOwnPropertyNames(options);
           for (i$ = 0, len$ = b.length; i$ < len$; ++i$) {
-            c = b[i$];
-            d = document.createElement('option');
-            d.textContent = a[c][0];
-            d.value = a[c][1];
-            this.select.appendChild(d);
+            a = b[i$];
+            c = document.createElement('option');
+            c.textContent = options[a][0];
+            c.value = options[a][1];
+            this.select.appendChild(c);
           }
-          this.rootBox.classList.remove('w');
-          this.rootBox.classList.add('v');
-          this.ctrl.attach();
+          this.state.data = current;
         } else {
-          this.ctrl.detach();
           a = this.oList.length;
           b = this.select;
           while (--a > 0) {
             b.removeChild(b.options[a]);
           }
           this.oList = null;
-          this.rootBox.classList.add('w');
         }
         this.refresh();
+        /***/
       },
       refresh: function(){
         var a, b, c;
-        a = state.data;
+        a = this.state.data;
         b = this.current;
         if (a[0] !== b[0]) {
           if ((c = this.oList.indexOf(a[0])) !== this.select.selectedIndex) {
@@ -1918,6 +1916,7 @@ smBlocks = async function(){
               d.disabled = c;
             });
           }
+          b[0] = a[0];
         }
         if (a[1] !== b[1]) {
           if (b[1] >= 0) {
@@ -1932,76 +1931,42 @@ smBlocks = async function(){
               d.classList.add(c);
             });
           }
+          b[1] = a[1];
         }
-        this.current = a.slice();
+      },
+      unlock: function(){
+        this.rootBox.classList.add('v');
+        this.locked = false;
       }
     };
     state = new BlockState('order', 0, function(event, data){
       var i$, ref$, len$, a;
       switch (event) {
       case 'init':
-        state.data = data.order.slice();
         for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
           a = ref$[i$];
-          a.init(data);
+          a.init(data.orderOptions, data.order);
         }
         break;
-      case 'change':
-        true;
+      case 'load':
+        for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
+          a = ref$[i$];
+          if (a.locked) {
+            a.unlock();
+          }
+          a.refresh();
+        }
       }
       return true;
     });
-    blocks = arrayFrom$(document.querySelectorAll('.sm-orderer'));
+    blocks = arrayFrom$(document.querySelectorAll('.sm-blocks.orderer'));
     blocks = blocks.map(function(root){
-      return new Block(root);
+      return new Block(root, state);
     });
     return state;
   }();
-  smSizer = function(){
-    var Block, state, blocks;
-    Block = function(root){
-      this.root = root;
-    };
-    Block.prototype = {
-      refresh: function(data){
-        this.root.style.setProperty('--sm-width', data.width + 'px');
-        this.root.style.setProperty('--sm-height', data.height + 'px');
-      }
-    };
-    state = new BlockState('sizer', 0, function(event, data){
-      switch (event) {
-      case 'resize':
-        blocks.forEach(function(b){
-          b.refresh(data);
-        });
-      }
-      return true;
-    });
-    blocks = arrayFrom$(document.querySelectorAll('.sm-sizer'));
-    blocks = blocks.map(function(root){
-      return new Block(root);
-    });
-    return state;
-  }();
-  if (smProducts) {
-    if (!(await smCart.load())) {
-      return null;
-    }
-    if (smCategoryFilter) {
-      smProducts.add(smCategoryFilter);
-    }
-    if (smPaginator) {
-      smProducts.add(smPaginator);
-    }
-    if (smOrderer) {
-      smProducts.add(smOrderer);
-    }
-    if (smSizer) {
-      smProducts.add(smSizer);
-    }
-    smProducts.load();
-  }
-  return smProducts;
+  smGrid && smGrid.load([smCategoryFilter, smPaginator, smOrderer]);
+  return smGrid;
 }();
 function import$(obj, src){
   var own = {}.hasOwnProperty;

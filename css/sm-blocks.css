@@ -1,21 +1,89 @@
 /**
-* widgets
+* storefront modern styles
 */
-#sm-products {
-  display: flex;
+.sm-blocks {
+  position: relative;
   box-sizing: border-box;
-  flex-direction: column;
-  align-items: center;
   min-width: 0;
   min-height: 0;
+  overflow: hidden;
+}
+.sm-blocks div,
+.sm-blocks button,
+.sm-blocks select,
+.sm-blocks input,
+.sm-blocks label,
+.sm-blocks svg,
+.sm-blocks img,
+.sm-blocks hr,
+.sm-blocks h1,
+.sm-blocks h2,
+.sm-blocks h3 {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  outline: 0;
+}
+.sm-blocks button,
+.sm-blocks select,
+.sm-blocks label {
+  font-size: 1em;
+  font-weight: bold;
+  line-height: 1;
+  outline: 0;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  word-break: keep-all;
+}
+.sm-blocks svg {
+  width: 100%;
+  height: 100%;
+}
+.sm-blocks button {
+  cursor: pointer;
+  color: transparent;
+}
+.sm-blocks button > svg {
+  fill: transparent;
+  stroke: transparent;
+}
+.sm-blocks > div {
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+  pointer-events: none;
+  opacity: 0;
+}
+.sm-blocks > svg {
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  fill: rgba(192,192,192,0.2);
+}
+.sm-blocks.v > div {
+  opacity: 0.6;
+}
+.sm-blocks.v > div.v {
+  pointer-events: auto;
+  opacity: 1;
+}
+.sm-blocks.v > svg {
+  display: none;
+}
+.sm-blocks.grid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   width: 100%;
   height: auto;
-  overflow: hidden;
-  margin: 0;
   padding: 1em 0 1em 0;
-  background-color: rgba(248,248,255,0.4);
 }
-#sm-products > .main {
+.sm-blocks.grid > div {
   --columns: 4;
   --column-gap: 4px;
   --row-gap: 4px;
@@ -30,40 +98,22 @@
   --height: calc(var(--rows) * var(--item-max-y));
   --svg-icon-size: calc(10px + var(--font-size));
   display: grid;
-  box-sizing: border-box;
   grid-template-columns: repeat(var(--columns), 1fr);
   grid-column-gap: var(--column-gap);
   grid-row-gap: var(--row-gap);
   justify-content: center;
-  background-color: rgba(248,248,255,0.6);
-  margin: 0;
-  padding: 0;
   width: 100%;
   height: var(--height);
   max-width: calc(var(--columns) * var(--item-max-x));
   max-height: calc(var(--rows) * var(--item-max-y));
-  opacity: 0;
-  pointer-events: none;
 }
-#sm-products > .main div,
-#sm-products > .main input,
-#sm-products > .main svg,
-#sm-products > .main img {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
-}
-#sm-products > .main.v {
-  opacity: 1;
-  pointer-events: auto;
-}
-#sm-products > .main > .item {
+.sm-blocks.grid > div > .item {
   width: 100%;
   height: 100%;
   display: flex;
   justify-content: center;
 }
-#sm-products > .main > .item > .box {
+.sm-blocks.grid > div > .item > .box {
   width: 100%;
   height: 100%;
   min-width: 0;
@@ -74,66 +124,67 @@
   justify-content: flex-start;
   max-width: var(--item-max-x);
   max-height: var(--item-max-y);
+  background-color: #dcdcdc;
 }
-#sm-products > .main > .item > .box .ph {
+.sm-blocks.grid > div > .item > .box .ph {
   position: relative;
 }
-#sm-products > .main > .item > .box .ph > * {
+.sm-blocks.grid > div > .item > .box .ph > * {
   position: absolute;
   left: 0;
   top: 0;
   width: 100%;
   height: 100%;
 }
-#sm-products > .main > .item > .box .ph > div {
+.sm-blocks.grid > div > .item > .box .ph > div {
   display: none;
 }
-#sm-products > .main > .item > .box .ph.loaded > div {
+.sm-blocks.grid > div > .item > .box .ph.loaded > div {
   display: flex;
 }
-#sm-products > .main > .item > .box .ph.loaded > svg {
+.sm-blocks.grid > div > .item > .box .ph.loaded > svg {
   display: none;
 }
-#sm-products > .main > .item > .box > div {
+.sm-blocks.grid > div > .item > .box > div {
   flex-shrink: 100;
   display: flex;
   flex-direction: column;
 }
-#sm-products > .main > .item > .box > div > div {
+.sm-blocks.grid > div > .item > .box > div > div {
   flex-grow: 100;
   flex-shrink: 100;
   display: flex;
 }
-#sm-products > .main > .item > .box > .head {
+.sm-blocks.grid > div > .item > .box > .head {
   flex-grow: var(--item-sz-1);
 }
-#sm-products > .main > .item > .box > .head > div {
+.sm-blocks.grid > div > .item > .box > .head > div {
   flex-direction: column;
   align-items: stretch;
   justify-content: center;
 }
-#sm-products > .main > .item > .box > .head > div > img {
+.sm-blocks.grid > div > .item > .box > .head > div > img {
   max-width: 100%;
   max-height: 100%;
 }
-#sm-products > .main > .item > .box > .body {
+.sm-blocks.grid > div > .item > .box > .body {
   flex-grow: var(--item-sz-2);
 }
-#sm-products > .main > .item > .box > .body > .icon {
+.sm-blocks.grid > div > .item > .box > .body > .icon {
   max-height: calc(2 * var(--font-size-header));
   display: flex;
 }
-#sm-products > .main > .item > .box > .body > .icon > .a {
+.sm-blocks.grid > div > .item > .box > .body > .icon > .a {
   flex: 1 1 30%;
 }
-#sm-products > .main > .item > .box > .body > .icon > .b {
+.sm-blocks.grid > div > .item > .box > .body > .icon > .b {
   flex: 1 1 70%;
 }
-#sm-products > .main > .item > .box > .body > .title {
+.sm-blocks.grid > div > .item > .box > .body > .title {
   max-height: calc(3 * var(--font-size-header));
 }
-#sm-products > .main > .item > .box > .body > .title > div,
-#sm-products > .main > .item > .box > .body > .title > div > button {
+.sm-blocks.grid > div > .item > .box > .body > .title > div,
+.sm-blocks.grid > div > .item > .box > .body > .title > div > button {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -144,64 +195,64 @@
   word-break: keep-all;
   overflow: hidden;
 }
-#sm-products > .main > .item > .box > .foot {
+.sm-blocks.grid > div > .item > .box > .foot {
   flex-grow: var(--item-sz-3);
 }
-#sm-products > .main > .item > .box > .foot > .price {
+.sm-blocks.grid > div > .item > .box > .foot > .price {
   max-height: calc(3 * var(--font-size));
   font-size: var(--font-size-header);
 }
-#sm-products > .main > .item > .box > .foot > .price > div {
+.sm-blocks.grid > div > .item > .box > .foot > .price > div {
   flex-direction: column;
   align-items: center;
   justify-content: center;
 }
-#sm-products > .main > .item > .box > .foot > .price > div > .old {
+.sm-blocks.grid > div > .item > .box > .foot > .price > div > .old {
   display: none;
   line-height: 0.65em;
   opacity: 0.7;
 }
-#sm-products > .main > .item > .box > .foot > .price > div > .old > span {
+.sm-blocks.grid > div > .item > .box > .foot > .price > div > .old > span {
   text-decoration: line-through;
   font-size: 0.65em;
 }
-#sm-products > .main > .item > .box > .foot > .price > div > .current {
+.sm-blocks.grid > div > .item > .box > .foot > .price > div > .current {
   display: flex;
   line-height: 0.9em;
 }
-#sm-products > .main > .item > .box > .foot > .price > div > .current > .currency {
+.sm-blocks.grid > div > .item > .box > .foot > .price > div > .current > .currency {
   font-size: 1em;
   padding-right: 0.2em;
 }
-#sm-products > .main > .item > .box > .foot > .price > div > .current > .value {
+.sm-blocks.grid > div > .item > .box > .foot > .price > div > .current > .value {
   font-size: 1em;
   font-weight: bold;
 }
-#sm-products > .main > .item > .box > .foot > .price > div > .current > .mantissa {
+.sm-blocks.grid > div > .item > .box > .foot > .price > div > .current > .mantissa {
   font-size: 0.7em;
   padding-top: 0.1em;
   display: flex;
 }
-#sm-products > .main > .item > .box > .foot > .price > div.none {
+.sm-blocks.grid > div > .item > .box > .foot > .price > div.none {
   display: none;
 }
-#sm-products > .main > .item > .box > .foot > .price > div.lower > .old {
+.sm-blocks.grid > div > .item > .box > .foot > .price > div.lower > .old {
   display: block;
 }
-#sm-products > .main > .item > .box > .foot > .price > div.right > .current > .currency {
+.sm-blocks.grid > div > .item > .box > .foot > .price > div.right > .current > .currency {
   order: 2;
   padding-left: 0.2em;
   padding-right: 0;
 }
-#sm-products > .main > .item > .box > .foot > .controls {
+.sm-blocks.grid > div > .item > .box > .foot > .controls {
   max-height: calc(3 * var(--font-size));
 }
-#sm-products > .main > .item > .box > .foot > .controls > div {
+.sm-blocks.grid > div > .item > .box > .foot > .controls > div {
   padding-left: 4px;
   padding-right: 4px;
 }
-#sm-products > .main > .item > .box > .foot > .controls > div a,
-#sm-products > .main > .item > .box > .foot > .controls > div button {
+.sm-blocks.grid > div > .item > .box > .foot > .controls > div a,
+.sm-blocks.grid > div > .item > .box > .foot > .controls > div button {
   flex: 1 1 auto;
   display: flex;
   align-items: center;
@@ -218,93 +269,96 @@
   outline: 0;
   cursor: pointer;
 }
-#sm-products > .main > .item > .box > .foot > .controls > div a:focus,
-#sm-products > .main > .item > .box > .foot > .controls > div button:focus {
+.sm-blocks.grid > div > .item > .box > .foot > .controls > div a:focus,
+.sm-blocks.grid > div > .item > .box > .foot > .controls > div button:focus {
   border-width: 1px;
   background-color: #c0c0c0;
 }
-#sm-products > .main > .item > .box > .foot > .controls > div a:hover,
-#sm-products > .main > .item > .box > .foot > .controls > div button:hover {
+.sm-blocks.grid > div > .item > .box > .foot > .controls > div a:hover,
+.sm-blocks.grid > div > .item > .box > .foot > .controls > div button:hover {
   background-color: #c0c0c0;
 }
-#sm-products > .main > .item > .box > .foot > .controls > div .cart {
+.sm-blocks.grid > div > .item > .box > .foot > .controls > div .cart {
   max-width: calc(30px + var(--svg-icon-size));
 }
-#sm-products > .main > .item > .box > .foot > .controls > div .cart > svg {
+.sm-blocks.grid > div > .item > .box > .foot > .controls > div .cart > svg {
   width: var(--svg-icon-size);
   height: auto;
   fill: #000;
 }
-#sm-products > .main > .item > .box > .foot > .controls > div .cart.none {
+.sm-blocks.grid > div > .item > .box > .foot > .controls > div .cart.none {
   display: none;
 }
-#sm-products > .main > .item.empty > .box {
+.sm-blocks.grid > div > .item.empty > .box {
   border-style: solid;
   border-color: #dcdcdc;
   border-width: 1px;
 }
-#sm-products > .main > .item.empty > .box > div {
+.sm-blocks.grid > div > .item.empty > .box > div {
   display: none;
 }
-#sm-products > .main.x > .item > .box {
+.sm-blocks.grid > div.x > .item > .box {
   flex-direction: row;
   max-width: 100%;
   max-height: var(--item-max-x);
 }
-#sm-products > .main.x > .item > .box .ph {
+.sm-blocks.grid > div.x > .item > .box .ph {
   max-height: 100%;
 }
-#sm-products > .main.x > .item > .box > .image {
+.sm-blocks.grid > div.x > .item > .box > .image {
   max-width: var(--item-max-x);
   max-height: 100%;
 }
-#sm-products > .main.x > .item > .box > .controls {
+.sm-blocks.grid > div.x > .item > .box > .controls {
   max-width: calc(1.5 * var(--item-C));
   max-height: 100%;
 }
-div.sm-category-filter {
+.sm-blocks.grid > div.v > .item > .box {
+  background-color: transparent;
+}
+.sm-blocks.category-filter > div {
   display: flex;
   flex-direction: column;
 }
-div.sm-category-filter > .title {
+.sm-blocks.category-filter > div > .title {
   display: flex;
 }
-div.sm-category-filter > .title > h3 {
+.sm-blocks.category-filter > div > .title > h3 {
   flex: 1 1 0;
   font-size: 36px;
-  font-weight: 700;
+  font-weight: bold;
   margin: 0;
 }
-div.sm-category-filter > hr {
+.sm-blocks.category-filter > div > hr {
   height: 1px;
   margin: 0;
   color: #d3d3d3;
 }
-div.sm-category-filter > .section {
+.sm-blocks.category-filter > div > .section {
   padding-top: 4px;
   padding-bottom: 4px;
   padding-left: 4px;
   padding-right: 0;
 }
-div.sm-category-filter > .section .item > .name {
+.sm-blocks.category-filter > div > .section .item > .name {
   padding-top: 0;
   padding-bottom: 0;
   display: flex;
   flex-direction: row;
 }
-div.sm-category-filter > .section .item > .name > div {
+.sm-blocks.category-filter > div > .section .item > .name > div {
   display: flex;
   flex-direction: row;
   align-items: center;
 }
-div.sm-category-filter > .section .item > .name > .box {
+.sm-blocks.category-filter > div > .section .item > .name > .box {
   flex: 1 1 0;
   min-width: 0;
   padding-top: 8px;
   padding-bottom: 8px;
   cursor: pointer;
 }
-div.sm-category-filter > .section .item > .name > .box > input {
+.sm-blocks.category-filter > div > .section .item > .name > .box > input {
   flex: 0 0 0;
   width: 0;
   height: 0;
@@ -318,10 +372,10 @@ div.sm-category-filter > .section .item > .name > .box > input {
   position: static;
   outline: none;
 }
-div.sm-category-filter > .section .item > .name > .box > input:focus ~ .check {
+.sm-blocks.category-filter > div > .section .item > .name > .box > input:focus ~ .check {
   border-width: 2px;
 }
-div.sm-category-filter > .section .item > .name > .box > .check {
+.sm-blocks.category-filter > div > .section .item > .name > .box > .check {
   flex: 0 0 0;
   min-width: 20px;
   min-height: 20px;
@@ -330,7 +384,7 @@ div.sm-category-filter > .section .item > .name > .box > .check {
   background-color: #fff;
   position: relative;
 }
-div.sm-category-filter > .section .item > .name > .box > .check > svg {
+.sm-blocks.category-filter > div > .section .item > .name > .box > .check > svg {
   position: absolute;
   top: 0;
   left: 0;
@@ -340,22 +394,22 @@ div.sm-category-filter > .section .item > .name > .box > .check > svg {
   fill: #fff;
   stroke: #c0c0c0;
 }
-div.sm-category-filter > .section .item > .name > .box > .check.checked {
+.sm-blocks.category-filter > div > .section .item > .name > .box > .check.checked {
   background-color: #000;
 }
-div.sm-category-filter > .section .item > .name > .box > .check.checked > svg:nth-child(1) {
+.sm-blocks.category-filter > div > .section .item > .name > .box > .check.checked > svg:nth-child(1) {
   opacity: 1;
 }
-div.sm-category-filter > .section .item > .name > .box > .check.indeterminated {
+.sm-blocks.category-filter > div > .section .item > .name > .box > .check.indeterminated {
   background-color: #000;
 }
-div.sm-category-filter > .section .item > .name > .box > .check.indeterminated > svg:nth-child(2) {
+.sm-blocks.category-filter > div > .section .item > .name > .box > .check.indeterminated > svg:nth-child(2) {
   opacity: 1;
 }
-div.sm-category-filter > .section .item > .name > .box > .check.disabled {
+.sm-blocks.category-filter > div > .section .item > .name > .box > .check.disabled {
   background-color: #dcdcdc;
 }
-div.sm-category-filter > .section .item > .name > .box > label {
+.sm-blocks.category-filter > div > .section .item > .name > .box > label {
   flex: 1 1 0;
   padding-top: 1px;
   padding-bottom: 0;
@@ -372,24 +426,24 @@ div.sm-category-filter > .section .item > .name > .box > label {
   font-weight: normal;
   color: #000;
 }
-div.sm-category-filter > .section .item > .name > .box:hover {
+.sm-blocks.category-filter > div > .section .item > .name > .box:hover {
   padding-left: 1px;
 }
-div.sm-category-filter > .section .item > .name > .box:hover > .check {
+.sm-blocks.category-filter > div > .section .item > .name > .box:hover > .check {
   border-width: 2px;
 }
-div.sm-category-filter > .section .item > .name > .count {
+.sm-blocks.category-filter > div > .section .item > .name > .count {
   flex: 0 0 auto;
   white-space: nowrap;
 }
-div.sm-category-filter > .section .item > .name > .arrow {
+.sm-blocks.category-filter > div > .section .item > .name > .arrow {
   flex: 1 1 0;
   min-width: 20px;
   max-width: 48px;
   justify-content: flex-end;
   cursor: pointer;
 }
-div.sm-category-filter > .section .item > .name > .arrow > svg {
+.sm-blocks.category-filter > div > .section .item > .name > .arrow > svg {
   width: auto;
   height: 100%;
   max-height: 24px;
@@ -397,338 +451,241 @@ div.sm-category-filter > .section .item > .name > .arrow > svg {
   fill: #c0c0c0;
   stroke: #000;
 }
-div.sm-category-filter > .section .item > .name > .arrow:hover > svg {
+.sm-blocks.category-filter > div > .section .item > .name > .arrow:hover > svg {
   fill: #000;
   stroke: #c0c0c0;
 }
-div.sm-category-filter > .section .item > .name > .arrow.opened > svg {
+.sm-blocks.category-filter > div > .section .item > .name > .arrow.opened > svg {
   transform: rotate(0deg);
   fill: #000;
 }
-div.sm-category-filter > .section .item > .section {
+.sm-blocks.category-filter > div > .section .item > .section {
   display: none;
   opacity: 0;
   padding-left: 20px;
 }
-div.sm-category-filter > .section .item > .section.opened {
+.sm-blocks.category-filter > div > .section .item > .section.opened {
   display: block;
   opacity: 1;
 }
-div.sm-category-filter.inactive {
-  pointer-events: none;
-}
-div.sm-category-filter.inactive svg {
-  opacity: 0.4;
-}
-div.sm-category-filter.inactive .item > .name > .box > .check {
-  background-color: #dcdcdc;
-}
-div.sm-category-filter div,
-div.sm-category-filter hr,
-div.sm-category-filter input,
-div.sm-category-filter label {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-div.sm-paginator {
+.sm-blocks.paginator {
   --height: 48px;
   --width: calc(1.35 * var(--height));
   --font-size: calc(0.35 * var(--height));
-  display: flex;
-  flex-direction: row;
-  align-items: stretch;
-  justify-content: center;
-  position: relative;
-  overflow: hidden;
-  box-sizing: border-box;
-  min-width: 0;
-  min-height: 0;
   width: 100%;
   height: calc(8px + var(--height));
-  margin: 0;
-  padding: 0;
-}
-div.sm-paginator > div {
-  flex: 0 0 auto;
-  display: flex;
-  flex-direction: row;
-  overflow: hidden;
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
-  touch-action: none;
-  min-width: 0;
-  max-width: 10000px;
-  width: auto;
-  opacity: 0;
-  background-color: rgba(248,248,255,0.6);
-}
-div.sm-paginator > div.v {
-  opacity: 1;
-}
-div.sm-paginator > div.v.flexy {
-  width: 100%;
-}
-div.sm-paginator > div.v.flexy > .range {
-  width: 100%;
-  max-width: 100%;
-}
-div.sm-paginator > div.v.flexy > .range.nogaps > .page {
-  flex-grow: 1;
-}
-div.sm-paginator > div > div {
-  display: flex;
-  flex-direction: row;
   font-size: var(--font-size);
-  padding: 0;
-  margin: 0;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
 }
-div.sm-paginator > div > div button {
+.sm-blocks.paginator > div {
+  flex: 0 0 auto;
+  width: auto;
+  max-width: 10000px;
+  display: flex;
+  flex-direction: row;
+  touch-action: none;
+}
+.sm-blocks.paginator > div > .goto {
+  flex: 1 1 0;
+  max-width: calc(2px + var(--width));
+  padding: 4px 0 4px 0;
+}
+.sm-blocks.paginator > div > .goto.prev {
+  padding-left: 2px;
+}
+.sm-blocks.paginator > div > .goto.next {
+  padding-right: 2px;
+}
+.sm-blocks.paginator > div > .goto > button {
+  width: 100%;
+  height: 100%;
+  border: 1px solid #c0c0c0;
+  border-radius: 2px;
+  background-color: #dcdcdc;
+  box-shadow: inset 0 0 10px 0 #c0c0c0;
+  touch-action: none;
+}
+.sm-blocks.paginator > div > .goto > button:hover {
+  border-color: #2f4f4f;
+}
+.sm-blocks.paginator > div > .goto > button:active,
+.sm-blocks.paginator > div > .goto > button:focus {
+  background-color: #c0c0c0;
+  border-color: #2f4f4f;
+  box-shadow: inset 0 0 0 1px #fff;
+}
+.sm-blocks.paginator > div > .goto.active {
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+.sm-blocks.paginator > div > .goto.active > button {
+  background-color: #000;
+  padding: 4px;
+}
+.sm-blocks.paginator > div > .goto.active > button > svg {
+  fill: #fff;
+}
+.sm-blocks.paginator > div > .sep {
+  flex: 1 1 0;
+  max-width: 8px;
+  padding: 2px 0 2px 0;
+}
+.sm-blocks.paginator > div > .sep.first {
+  padding-left: 0;
+}
+.sm-blocks.paginator > div > .sep.last {
+  padding-right: 0;
+}
+.sm-blocks.paginator > div > .sep > svg {
+  fill: #c0c0c0;
+}
+.sm-blocks.paginator > div > .range {
+  --count: 0;
+  --max-width: calc(2px + (1 + var(--count)) * var(--width));
+  --page-size: var(--width);
+  flex: 1 0 0;
+  width: 10000px;
+  max-width: var(--max-width);
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+}
+.sm-blocks.paginator > div > .range > div {
+  display: none;
+}
+.sm-blocks.paginator > div > .range > div.v {
+  display: flex;
+}
+.sm-blocks.paginator > div > .range > .gap {
+  flex: 0 100 0;
+  min-width: calc(0.25 * var(--width));
+  padding: 4px 0 4px 0;
+}
+.sm-blocks.paginator > div > .range > .gap > svg {
+  fill: #c0c0c0;
+}
+.sm-blocks.paginator > div > .range > .page {
+  flex: 0 0 0;
+  min-width: var(--page-size);
+  padding: 4px 1px 4px 1px;
+}
+.sm-blocks.paginator > div > .range > .page > button {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
   height: 100%;
-  padding: 0;
-  margin: 0;
-  line-height: 0;
-  white-space: nowrap;
-  font-size: 1em;
-  font-weight: bold;
-  text-decoration: none;
   border-width: 1px;
   border-style: solid;
   border-color: #c0c0c0;
   border-radius: 2px;
   background-color: #dcdcdc;
   box-shadow: inset 0 0 10px 0 #c0c0c0;
-  color: #000;
-  outline: 0;
-  cursor: pointer;
   touch-action: none;
 }
-div.sm-paginator > div > div button:hover {
+.sm-blocks.paginator > div > .range > .page > button:hover {
+  font-weight: bolder;
   border-color: #2f4f4f;
   color: #708090;
-  font-weight: bolder;
 }
-div.sm-paginator > div > div button:active,
-div.sm-paginator > div > div button:focus {
+.sm-blocks.paginator > div > .range > .page > button:active,
+.sm-blocks.paginator > div > .range > .page > button:focus {
+  font-weight: bolder;
   background-color: #c0c0c0;
   border-color: #2f4f4f;
   color: #708090;
-  font-weight: bolder;
   box-shadow: inset 0 0 0 1px #fff;
 }
-div.sm-paginator > div > div svg {
-  width: 100%;
-  height: 100%;
-}
-div.sm-paginator > div > .goto {
-  flex: 1 1 0;
-  max-width: calc(2px + var(--width));
-  padding-top: 4px;
-  padding-bottom: 4px;
-}
-div.sm-paginator > div > .goto > button > svg {
-  fill: #708090;
-}
-div.sm-paginator > div > .goto.prev {
-  padding-left: 2px;
-}
-div.sm-paginator > div > .goto.next {
-  padding-right: 2px;
-}
-div.sm-paginator > div > .goto.fast {
-  padding-top: 2px;
-  padding-bottom: 2px;
-}
-div.sm-paginator > div > .goto.fast > button {
-  border-width: 1px;
-  background-color: #000;
-  padding: 4px;
-}
-div.sm-paginator > div > .goto.fast > button > svg {
-  fill: #fff;
-}
-div.sm-paginator > div > .sep {
-  max-width: 8px;
-  padding-top: 2px;
-  padding-bottom: 2px;
-}
-div.sm-paginator > div > .sep > svg {
-  fill: #c0c0c0;
-}
-div.sm-paginator > div > .sep.first {
-  padding-left: 0;
-}
-div.sm-paginator > div > .sep.last {
-  padding-right: 0;
-}
-div.sm-paginator > div > .range {
-  --count: 0;
-  --max-width: calc(2px + (1 + var(--count)) * var(--width));
-  --page-size: var(--width);
-  flex: 1 0 0;
-  justify-content: center;
-  min-width: 0;
-  max-width: var(--max-width);
-  width: 10000px;
-}
-div.sm-paginator > div > .range.nogaps {
-  --max-width: calc(2px + var(--count) * var(--width));
-}
-div.sm-paginator > div > .range.nogaps > .page.current > button {
-  cursor: default;
-}
-div.sm-paginator > div > .range.active.drag {
-  cursor: grabbing;
-}
-div.sm-paginator > div > .range > .gap {
-  flex: 0 100 0;
-  min-width: calc(0.25 * var(--width));
-  padding: 4px 0 4px 0;
-  display: none;
-}
-div.sm-paginator > div > .range > .gap.v {
-  display: flex;
-}
-div.sm-paginator > div > .range > .gap > svg {
-  fill: #c0c0c0;
-}
-div.sm-paginator > div > .range > .page {
-  flex: 0 0 0;
-  overflow: hidden;
-  min-width: var(--page-size);
-  padding-top: 4px;
-  padding-bottom: 4px;
-  padding-left: 1px;
-  padding-right: 1px;
-  display: none;
-}
-div.sm-paginator > div > .range > .page.v {
-  display: flex;
-}
-div.sm-paginator > div > .range > .page.current {
+.sm-blocks.paginator > div > .range > .page.current {
   min-width: calc(2px + var(--page-size));
   padding-top: 2px;
   padding-bottom: 2px;
 }
-div.sm-paginator > div > .range > .page.current > button {
+.sm-blocks.paginator > div > .range > .page.current > button {
   font-size: 1.4em;
   border-color: #000;
   background-color: #000;
-  color: #fff;
   cursor: grab;
 }
-div.sm-paginator > div > .range > .page.current > button:hover {
+.sm-blocks.paginator > div > .range > .page.current > button:hover {
   color: #789;
 }
-div.sm-paginator > div > .range > .page.current > button:active,
-div.sm-paginator > div > .range > .page.current > button:focus {
+.sm-blocks.paginator > div > .range > .page.current > button:active,
+.sm-blocks.paginator > div > .range > .page.current > button:focus {
   box-shadow: inset 0 0 1px 1px #fff;
 }
-div.sm-paginator > div.flexy > .range > .gap {
+.sm-blocks.paginator > div > .range.nogap {
+  --max-width: calc(2px + var(--count) * var(--width));
+}
+.sm-blocks.paginator > div > .range.nogap > .page.current > button {
+  cursor: default;
+}
+.sm-blocks.paginator > div > .range.active.drag {
+  cursor: grabbing;
+}
+.sm-blocks.paginator.v > div.flexy {
+  width: 100%;
+}
+.sm-blocks.paginator.v > div.flexy > .range {
+  width: 100%;
+  max-width: 100%;
+}
+.sm-blocks.paginator.v > div.flexy > .range > .gap {
   padding: 4px 1px 4px 1px;
 }
-div.sm-paginator > div.flexy > .range > .gap > svg {
-  fill: #dcdcdc;
-}
-div.sm-paginator > div.flexy > .range.active > .gap > svg {
+.sm-blocks.paginator.v > div.flexy > .range.active > .gap > svg {
   fill: #c0c0c0;
 }
-div.sm-paginator > div.hovered > .sep {
-  max-width: 8px;
+.sm-blocks.paginator.v > div.flexy > .range.nogap > .page {
+  flex-grow: 1;
 }
-div.sm-paginator > div.hovered > .sep > svg {
-  fill: #708090;
-}
-div.sm-paginator > div.locked {
-  opacity: 0.8;
-  pointer-events: none;
-}
-div.sm-paginator > div.locked > .goto > button > svg {
-  fill: rgba(0,0,0,0);
-}
-div.sm-paginator > div.locked > .range > .page > button {
-  color: rgba(0,0,0,0);
-}
-div.sm-paginator > div.nosep > .goto.prev {
+.sm-blocks.paginator.v > div.nosep > .goto.prev {
   padding-right: 1px;
 }
-div.sm-paginator > div.nosep > .goto.next {
+.sm-blocks.paginator.v > div.nosep > .goto.next {
   padding-left: 1px;
 }
-div.sm-paginator > svg {
-  display: none;
-  position: absolute;
-  box-sizing: border-box;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  padding: 4px 8px 4px 8px;
-  margin: 0;
-  stroke: #dcdcdc;
+.sm-blocks.paginator.v > div.v > .goto > button > svg {
+  fill: #708090;
+}
+.sm-blocks.paginator.v > div.v > .range > .gap > svg {
+  fill: #c0c0c0;
+}
+.sm-blocks.paginator.v > div.v > .range > .page > button {
+  color: #000;
+}
+.sm-blocks.paginator.v > div.v > .range > .page.current > button {
+  color: #fff;
+}
+.sm-blocks.paginator.v > div.v.flexy > .range > .gap > svg {
   fill: #dcdcdc;
 }
-div.sm-paginator.inactive {
-  pointer-events: none;
+.sm-blocks.paginator.v > div.v.flexy > .range.active > .gap > svg {
+  fill: #c0c0c0;
 }
-div.sm-paginator.inactive > div {
-  display: none;
+.sm-blocks.paginator.v > div.v.hovered > .sep > svg {
+  fill: #708090;
 }
-div.sm-paginator.inactive > svg {
-  display: block;
-}
-div.sm-paginator div,
-div.sm-paginator button,
-div.sm-paginator svg {
-  box-sizing: border-box;
-}
-div.sm-orderer {
+.sm-blocks.orderer {
   --height: 48px;
   --font-size: calc(0.35 * var(--height));
-  box-sizing: border-box;
   width: 100%;
   height: calc(8px + var(--height));
-  margin: 0;
   padding: 4px 0 4px 0;
-  background-color: rgba(248,248,255,0.6);
 }
-div.sm-orderer div,
-div.sm-orderer button,
-div.sm-orderer svg,
-div.sm-orderer select {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
-}
-div.sm-orderer > div {
-  position: relative;
-  min-width: 0;
-  min-height: 0;
+.sm-blocks.orderer > div {
   width: 100%;
   height: 100%;
-  pointer-events: none;
 }
-div.sm-orderer > div.v {
-  pointer-events: auto;
-}
-div.sm-orderer > div.v > .variant {
-  opacity: 1;
-}
-div.sm-orderer > div.v.hovered > select {
-  border-color: #2f4f4f;
-}
-div.sm-orderer > div > .variant {
-  opacity: 0;
+.sm-blocks.orderer > div > .variant {
   position: absolute;
   width: auto;
   height: 100%;
+  opacity: 0;
 }
-div.sm-orderer > div > .variant.left {
+.sm-blocks.orderer > div > .variant.left {
   top: 0;
   left: 0;
   padding-top: 4px;
@@ -736,7 +693,7 @@ div.sm-orderer > div > .variant.left {
   padding-left: 1px;
   padding-right: 0;
 }
-div.sm-orderer > div > .variant.right {
+.sm-blocks.orderer > div > .variant.right {
   top: 0;
   right: 0;
   padding-top: 4px;
@@ -744,34 +701,32 @@ div.sm-orderer > div > .variant.right {
   padding-left: 0;
   padding-right: 1px;
 }
-div.sm-orderer > div > .variant.a {
+.sm-blocks.orderer > div > .variant.a {
   pointer-events: none;
 }
-div.sm-orderer > div > .variant.a.left > button > svg {
+.sm-blocks.orderer > div > .variant.a.left > button > svg {
   transform: rotate(-90deg);
 }
-div.sm-orderer > div > .variant.a.right > button > svg {
+.sm-blocks.orderer > div > .variant.a.right > button > svg {
   transform: rotate(90deg);
 }
-div.sm-orderer > div > .variant.b > button > svg {
+.sm-blocks.orderer > div > .variant.b > button > svg {
   transform: rotate(0deg);
 }
-div.sm-orderer > div > .variant.c.left > button > svg {
+.sm-blocks.orderer > div > .variant.c.left > button > svg {
   transform: rotate(-180deg);
 }
-div.sm-orderer > div > .variant.c.right > button > svg {
+.sm-blocks.orderer > div > .variant.c.right > button > svg {
   transform: rotate(180deg);
 }
-div.sm-orderer > div > .variant > button {
+.sm-blocks.orderer > div > .variant > button {
   width: var(--height);
   height: 100%;
   background-color: transparent;
-  outline: 0;
-  cursor: pointer;
   padding-left: 4px;
   padding-right: 4px;
 }
-div.sm-orderer > div > .variant > button > svg {
+.sm-blocks.orderer > div > .variant > button > svg {
   display: block;
   width: 100%;
   height: 100%;
@@ -779,13 +734,13 @@ div.sm-orderer > div > .variant > button > svg {
   fill: #708090;
   stroke: #2f4f4f;
 }
-div.sm-orderer > div > .variant > button:hover > svg,
-div.sm-orderer > div > .variant > button:active > svg,
-div.sm-orderer > div > .variant > button:focus > svg {
+.sm-blocks.orderer > div > .variant > button:hover > svg,
+.sm-blocks.orderer > div > .variant > button:active > svg,
+.sm-blocks.orderer > div > .variant > button:focus > svg {
   fill: #000;
   stroke: #708090;
 }
-div.sm-orderer > div > select {
+.sm-blocks.orderer > div > select {
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
@@ -801,8 +756,8 @@ div.sm-orderer > div > select {
   border: 1px solid #c0c0c0;
   border-radius: 2px;
   background-color: #dcdcdc;
+  color: transparent;
   box-shadow: inset 0 0 10px 0 #c0c0c0;
-  color: #2f4f4f;
   outline: none;
   cursor: pointer;
 /***
@@ -814,38 +769,47 @@ div.sm-orderer > div > select {
 					border-color: #aaa
 			/***/
 }
-div.sm-orderer > div > select.left {
+.sm-blocks.orderer > div > select.left {
   padding-left: calc(2px + var(--height));
   padding-right: var(--font-size);
 }
-div.sm-orderer > div > select.right {
+.sm-blocks.orderer > div > select.right {
   padding-left: var(--font-size);
   padding-right: calc(2px + var(--height));
 }
-div.sm-orderer > div > select.left.right {
+.sm-blocks.orderer > div > select.left.right {
   padding-left: calc(2px + var(--height));
   text-align: center;
 }
-div.sm-orderer > div > select > option {
+.sm-blocks.orderer > div > select > option {
   font-weight: bold;
   background-color: #dcdcdc;
 }
-div.sm-orderer > div > select > option:checked {
+.sm-blocks.orderer > div > select > option:checked {
   color: #c0c0c0;
 }
-div.sm-orderer > div > select > option:hover {
+.sm-blocks.orderer > div > select > option:hover {
   background-color: #000;
   color: #fff;
 }
-div.sm-orderer > div > select:hover {
+.sm-blocks.orderer > div > select:hover {
   color: #000;
 }
-div.sm-orderer > div > select:focus {
+.sm-blocks.orderer > div > select:focus {
   color: #000;
   background-color: #c0c0c0;
   border-color: #2f4f4f;
   box-shadow: inset 0 0 0 1px #fff;
 }
-div.sm-orderer > div > select:-ms-expand {
+.sm-blocks.orderer > div > select:-ms-expand {
   display: none;
+}
+.sm-blocks.orderer > div.v > .variant {
+  opacity: 1;
+}
+.sm-blocks.orderer > div.v > select {
+  color: #2f4f4f;
+}
+.sm-blocks.orderer > div.v.hovered > select {
+  border-color: #2f4f4f;
 }

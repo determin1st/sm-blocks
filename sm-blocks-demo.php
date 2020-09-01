@@ -33,8 +33,7 @@ $o = json_encode([
   "itemControls" => true,
 ]);
 $po = json_encode([
-  #"expansion"  => false,
-  "expansion"  => true,
+  "rangeMode" => 2,
   #"rangePlus"  => 2,
   #"rangeMinus" => 2,
 ]);
@@ -53,20 +52,20 @@ while (++$i < 50)
 # generate and output page content
 $o = <<<EOD
 
-  <div id="sm-demo">
-    <div class="a">
-      <!-- wp:sm-blocks/category-filter /-->
-      <!-- :sm-blocks/category-filter {"hasEmpty":true,"baseCategory":"санки"} /-->
-      <!-- :sm-blocks/category-filter {"hasEmpty":true,"baseCategory":"инвентарь"} /-->
-    </div>
-    <div class="b">
-      <div class="c">
-        <!-- wp:sm-blocks/paginator {$po} /-->
-        <!-- wp:sm-blocks/orderer {$oo} /-->
-      </div>
-      <!-- wp:sm-blocks/products {$o} /-->
-    </div>
+<div id="sm-demo">
+  <div class="a">
+    <!-- wp:sm-blocks/category-filter /-->
+    <!-- :sm-blocks/category-filter {"hasEmpty":true,"baseCategory":"санки"} /-->
+    <!-- :sm-blocks/category-filter {"hasEmpty":true,"baseCategory":"инвентарь"} /-->
   </div>
+  <div class="b">
+    <div class="c">
+      <!-- wp:sm-blocks/paginator {$po} /-->
+      <!-- wp:sm-blocks/orderer {$oo} /-->
+    </div>
+    <!-- wp:sm-blocks/grid {$o} /-->
+  </div>
+</div>
 
 EOD;
 echo apply_filters('the_content', $o);

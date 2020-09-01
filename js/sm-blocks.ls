@@ -1,8 +1,9 @@
 "use strict"
 smBlocks = do !->>
-	# TODO: add size-fixed paginator max-width auto-calc
-	# TODO: remove paginator placeholder/initial intro
-	# TODO: products grid goto next page button
+	# TODO: restructuring, (1)=>(2)=>(3)
+	# TODO: price filter
+	# TODO: grid's goto next page + scroll up
+	# TODO: static paginator max-width auto-calc
 	# prepare
 	# {{{
 	# constants
@@ -13,13 +14,6 @@ smBlocks = do !->>
 		mounted: true
 		notNull: true
 		method: 'POST'
-	}
-	# WordPress-like SSR engines related:
-	# load initial configuration
-	#CFG = await soFetch {func: 'config'}
-	CFG = await soFetch {
-		func: 'config'
-		lang: 'en'
 	}
 	# }}}
 	newPromise = -> # {{{
@@ -101,7 +95,6 @@ smBlocks = do !->>
 		@event  = handler
 		@data   = null
 		@master = null
-		@ready  = false
 	###
 	BlockState.prototype = {
 		set: (data) !->
@@ -110,19 +103,109 @@ smBlocks = do !->>
 	}
 	# }}}
 	# widgets
-	smProducts = do -> # (singleton) {{{
+	smCart = do -> # {{{
 		# prepare
-		# base {{{
+		data = null
+		# create api
+		return {
+			add: (id) ->> # {{{
+				# fetch
+				a = await soFetch {
+						func: 'cart'
+						op: 'set'
+						id: id
+				}
+				# check
+				if a instanceof Error
+					return false
+				# TODO: optional, back-compat
+				# send woo-notification
+				# get cart data
+				a = wc_add_to_cart_params.wc_ajax_url.replace '%%endpoint%%', 'get_refreshed_fragments'
+				a = await httpFetch {
+					url: a
+					notNull: true
+				}
+				# check
+				if a instanceof Error
+					return true
+				# notify
+				jQuery document.body .trigger 'added_to_cart', [
+					a.fragments
+					a.cart_hash
+					null
+				]
+				# done
+				return true
+			# }}}
+			get: (id) -> # {{{
+				# check
+				if not data
+					return null
+				# search
+				for a,b of data when b.product_id == id
+					return b
+				# not found
+				return null
+			# }}}
+			load: ->> # {{{
+				# get cart contents
+				a = await soFetch {
+					func: 'cart'
+					op: 'get'
+				}
+				# check
+				if a instanceof Error
+					return null
+				# done
+				return data := a
+			# }}}
+		}
+	# }}}
+	smGrid = do -> # {{{
+		# prepare
+		# {{{
 		# get container
-		if not root = document.querySelector '#sm-products'
-			return null
-		# get grid
-		if not grid = root.querySelector '.main'
+		if not root = document.querySelector '.sm-blocks.grid'
 			return null
 		# create control vars
+		grid        = root.firstChild
 		gridList    = [...grid.children]
 		gridControl = []
-		gridLock    = null
+		gridState   = {
+			dirty: false # resolved-in-process flag
+			level: 0     # update priority level
+			total: 0     # items in the set
+			count: 0     # displayed items
+			pageCount: 0 # calculated total/count
+			pageIndex: 0 # current page
+			orderOptions: null # orderer content
+			order: ['', 0]
+		}
+		gridLock = do ->>
+			# load configuration and cart contents
+			a = smCart.load!
+			b = soFetch {
+				func: 'config'
+				#lang: 'en'
+			}
+			c = await Promise.all [a, b]
+			CFG = c.1
+			# initialize order tags
+			a = grid.dataset.order.split ','
+			if b = a.length
+				# set order options
+				gridState.orderOptions = c = {}
+				d = -1
+				while ++d < b
+					c[a[d]] = CFG.orderOptions[a[d]]
+				# set default order
+				b = parseInt grid.dataset.index
+				b = a[b]
+				gridState.order.0 = b
+				gridState.order.1 = CFG.orderOptions[b].1
+			# done
+			return true
 		# }}}
 		gridResizer = do -> # {{{
 			# resize controller
@@ -218,17 +301,6 @@ smBlocks = do !->>
 		gridLoader = do -> # {{{
 			# {{{
 			cooldown = 800  # update timeout
-			state = {
-				first: true   # first loader run
-				dirty: false  # resolved-in-process flag
-				level: 0      # update priority level
-				total: 0      # items in the set
-				count: 0      # displayed items
-				pageCount: 0  # calculated total/count
-				pageIndex: 0  # current page
-				orderOptions: null  # orderbox content
-				order: ['', 0]
-			}
 			# create items fetcher
 			iFetch = httpFetch.create {
 				baseUrl: '/?rest_route=/'+BRAND+'/kiss'
@@ -240,41 +312,21 @@ smBlocks = do !->>
 			}
 			res = null
 			req = {
-				func: 'products'
+				func: 'grid'
 				limit: gridList.length
 				offset: 0
 				category: null
-				order: state.order
+				order: gridState.order
 			}
-			# }}}
-			initState = !-> # {{{
-				# prepare
-				a = grid.dataset.order.split ','
-				if b = a.length
-					# set order options
-					state.orderOptions = c = {}
-					d = -1
-					while ++d < b
-						c[a[d]] = CFG.orderOptions[a[d]]
-					# set default order
-					b = parseInt grid.dataset.index
-					b = a[b]
-					state.order.0 = b
-					state.order.1 = CFG.orderOptions[b].1
-				else
-					state.orderOptions = null
-					state.order.0 = ''
-				# done
-				state.first = false
 			# }}}
 			setState = (s) -> # {{{
 				# manage update priority
 				# prevent changes from lower levels
-				if state.level > s.level
+				if gridState.level > s.level
 					return false
 				# rise current
-				if state.level < s.level
-					state.level = s.level
+				if gridState.level < s.level
+					gridState.level = s.level
 				# change state
 				switch s.name
 				case 'category'
@@ -300,30 +352,30 @@ smBlocks = do !->>
 						then a
 						else null
 					# reset offset & page index
-					req.offset = state.pageIndex = 0
+					req.offset = gridState.pageIndex = 0
 					# }}}
 				case 'page'
 					# {{{
 					# set new page index and
 					# determine first record offset
-					state.pageIndex = s.data.0
-					req.offset = state.pageIndex * req.limit
+					gridState.pageIndex = s.data.0
+					req.offset = gridState.pageIndex * req.limit
 					# }}}
 				case 'order'
 					# {{{
-					state.order.0 = s.data.0
-					state.order.1 = s.data.1
+					gridState.order.0 = s.data.0
+					gridState.order.1 = s.data.1
 					# }}}
 				# done
 				return true
 			# }}}
 			unloadItems = !-> # {{{
-				if c = state.count
+				if c = gridState.count
 					# clear product cards in the reverse order
 					while --c >= 0
 						gridList[c].cls!
 					# reset
-					state.count = 0
+					gridState.count = 0
 			# }}}
 			newMasterPromise = -> # {{{
 				# create custom promise
@@ -341,9 +393,9 @@ smBlocks = do !->>
 						# resolve clean
 						p.pending = false
 						r!
-					else if not state.dirty
+					else if not gridState.dirty
 						# set dirty
-						state.dirty = true
+						gridState.dirty = true
 						# terminate fetcher
 						res.cancel! if res
 				# done
@@ -351,41 +403,34 @@ smBlocks = do !->>
 			# }}}
 			return ->>
 				# check
-				if state.dirty
-					# reset everything
-					state.dirty = false
-					unloadItems!
+				if gridState.dirty
+					# reset
+					gridState.dirty = false
 					# to guard against excessive load calls
 					# caused by multiple user actions,
 					# it's important to do a short cooldown..
-					await delay cooldown
-				else
+					gridLock := delay cooldown
+				else if not gridLock
 					# set master lock
 					gridLock := newMasterPromise!
 					for c in gridControl
 						c.master = gridLock
-					# check
-					if state.first
-						# first load is instantaneous
-						gridLock.resolve!
-						initState!
-					else
-						# wait for the update
-						await gridLock
-						# unload everything
-						unloadItems!
+				# wait for the update
+				await gridLock
+				# unload grid items
+				unloadItems!
 				# multiple updates may not squeeze in here,
 				# otherwise, restart early..
-				if state.dirty
+				if gridState.dirty
 					return true
 				# new update arrived,
 				# dispatch lock/change events
-				for c in gridControl when c.ready
-					if c.level < state.level
+				for c in gridControl
+					if c.level < gridState.level
 						# widget operation level is lower,
 						# so lock it up until initialized
 						c.event 'lock'
-					else if not (c.event 'change', state)
+					else if not (c.event 'change', gridState)
 						# widget is about to change again,
 						# dont rush, just restart
 						return true
@@ -399,34 +444,27 @@ smBlocks = do !->>
 						then true   # dirty update, cancelled
 						else false  # fatal failure
 				# get total items count
-				if (state.total = await a.readInt!) == null
+				if (gridState.total = await a.readInt!) == null
 					a.cancel!
 					return false
 				# determine count of displayed items
 				b = gridList.length
-				state.count = if b > state.total
-					then state.total
-					else if (c = state.total - req.offset) < b
+				gridState.count = if b > gridState.total
+					then gridState.total
+					else if (c = gridState.total - req.offset) < b
 						then c
 						else b
 				# determine count of pages
-				#state.pageCount = Math.ceil (state.total / b)
-				state.pageCount = 20
-				# base processing finished,
-				# dispatch init/unlock/refresh events
+				gridState.pageCount = Math.ceil (gridState.total / b)
+				#gridState.pageCount = 15
+				# dispatch load event
 				for c in gridControl
-					if c.ready
-						if c.level < state.level
-							c.event 'unlock'
-						c.event 'refresh', state
-					else
-						c.event 'init', state
-						c.ready = true
+					c.event 'load', gridState
 				# reset
-				state.level = 0
+				gridState.level = 0
 				# async loop
 				c = -1
-				while ++c < state.count and not state.dirty
+				while ++c < gridState.count and not gridState.dirty
 					# get item data
 					if (b = await a.readJSON!) == null
 						a.cancel!
@@ -434,9 +472,9 @@ smBlocks = do !->>
 					# apply
 					gridList[c].set b
 				# check the loop aborted
-				if c != state.count
+				if c != gridState.count
 					# fix display count
-					state.count = c
+					gridState.count = c
 				else
 					# satisfy chrome browser (2020-04),
 					# as it produces unnecessary console error
@@ -445,9 +483,39 @@ smBlocks = do !->>
 				a.cancel!
 				return true
 		# }}}
+		# TODO
+		Block = (root) !-> # {{{
+			# root
+			@root    = root
+			@rootBox = root.firstChild
+			# controller
+			@state = new State @
+		# }}}
+		State = (block) !-> # {{{
+			# grid
+			@block = block
+			@lock  = null  # master lock
+			@dirty = false # resolved-in-process flag
+			@level = 0     # update priority level
+			@total = 0     # items in the set
+			@count = 0     # displayed items
+			# paginator
+			@pageCount = 0 # calculated total/count
+			@pageIndex = 0 # current page
+			# orderer
+			@orderOptions = null
+			@orderTag = ['', 0]
+			# cart
+			# ...
+			# initialize
+			# ...
+		# }}}
+		####
+		# CARD handler
+		# {{{
 		# constructors
-		Block = (box) !-> # {{{
-			@box  = box
+		Box = (node) !-> # {{{
+			@box  = node
 			@data = null
 			@set  = null
 			@cls  = null
@@ -493,7 +561,7 @@ smBlocks = do !->>
 			# }}}
 			return (node) ->
 				# create a block
-				a = new Block node
+				a = new Box node
 				# get the image and
 				# set event handlers
 				img = node.querySelector 'img'
@@ -521,7 +589,7 @@ smBlocks = do !->>
 			# }}}
 			return (node) ->
 				# create a block
-				a = new Block node
+				a = new Box node
 				# initialize
 				a.data = new Data node, null
 				a.set  = set
@@ -597,7 +665,7 @@ smBlocks = do !->>
 			# }}}
 			return (node) ->
 				# create a block
-				a = new Block node
+				a = new Box node
 				# get elements
 				e = map.map (e) ->
 					e = [...node.querySelectorAll e]
@@ -679,7 +747,7 @@ smBlocks = do !->>
 			# }}}
 			return (node) ->
 				# create a block
-				a = new Block node
+				a = new Box node
 				# get elements
 				e = map.map (e) ->
 					e = [...node.querySelectorAll e]
@@ -739,187 +807,49 @@ smBlocks = do !->>
 				# done
 				return a
 		# }}}
-		# create api
-		return
-			resize: gridResizer
-			load: do -> # {{{
-				# TODO
-				started = false
-				active  = false
-				return ->>
-					# check
-					if started
-						# unleash loader
-						gridLock.resolve! if gridLock
-						# done
-						return true
-					# lock
-					started := true
-					# activate
-					if not active
-						# construct grid items
-						gridList := gridList.map (a) -> newItem a
-						# force first resize
-						gridResizer!
-						# remove class
-						grid.classList.add 'v'
-						active := true
-					# loop forever
-					loop
-						if not await gridLoader!
-							# ...
-							console.log 'FATAL ERROR'
-							break
-					# unlock
-					return started := false
-			# }}}
-			add: (s) !-> # {{{
-				# append control
-				gridControl[*] = s
-			# }}}
-		###
-	# }}}
-	smCart = do -> # (singleton) {{{
-		# prepare
-		data = null
-		# create api
+		# }}}
+		# api
 		return {
-			add: (id) ->> # {{{
-				# fetch
-				a = await soFetch {
-						func: 'cart'
-						op: 'set'
-						id: id
-				}
-				# check
-				if a instanceof Error
-					return false
-				# TODO: optional, back-compat
-				# send woo-notification
-				# get cart data
-				a = wc_add_to_cart_params.wc_ajax_url.replace '%%endpoint%%', 'get_refreshed_fragments'
-				a = await httpFetch {
-					url: a
-					notNull: true
-				}
-				# check
-				if a instanceof Error
+			resize: gridResizer
+			load: (c) ->> # {{{
+				# construct and activate grid
+				if not grid.classList.contains 'v'
+					for a,b in gridList
+						gridList[b] = newItem a
+					gridResizer!
+					root.classList.add 'v'
+				# wait until state is ready to use
+				await gridLock
+				# add new controllers
+				for a in c
+					if a and a instanceof BlockState
+						gridControl[*] = a
+						a.event 'init', gridState
+				/***
+				# check loop is running
+				if gridLock
+					# force unlock
+					if gridLock.pending
+						gridLock.resolve!
+					# done
 					return true
-				# notify
-				jQuery document.body .trigger 'added_to_cart', [
-					a.fragments
-					a.cart_hash
-					null
-				]
-				# done
+				/***/
+				# enter the dragon
+				if await gridLoader!
+					# activate
+					grid.classList.add 'v'
+					gridLock := null
+					# loop forever
+					while await gridLoader!
+						gridLock := null
+				# terminate
+				console.log 'FATAL ERROR?'
 				return true
-			# }}}
-			get: (id) -> # {{{
-				# check
-				if not data
-					return null
-				# search
-				for a,b of data when b.product_id == id
-					return b
-				# not found
-				return null
-			# }}}
-			load: ->> # {{{
-				# get cart contents
-				a = await soFetch {
-					func: 'cart'
-					op: 'get'
-				}
-				# check
-				if a instanceof Error
-					return null
-				# done
-				return data := a
 			# }}}
 		}
 	# }}}
 	smCategoryFilter = do -> # {{{
 		# constructors
-		Block = (root) !-> # {{{
-			# {{{
-			# create object shape
-			@root  = root
-			@op    = root.dataset.op
-			@index = 0
-			@item  = item = {} # all
-			@sect  = sect = {} # parents
-			# initialize
-			# create items map
-			list = [...root.querySelectorAll '.item']
-			for a in list
-				# set item
-				b = new Item @, a
-				item[b.id] = b
-				# set section
-				sect[b.id] = b if b.sect
-			# set parent-child relations
-			for a,b of sect
-				# create array
-				b.children = c = []
-				# aggregate children items
-				# in the order rendered
-				for a in b.sect.children
-					# get child
-					d = item[a.dataset.id]
-					# set parent
-					d.parent = b
-					# add to the parent
-					c[*] = item[a.dataset.id]
-			# }}}
-		Block.prototype =
-			init: (index) !-> # {{{
-				# create block's data
-				@index = index
-				state.data[index] = [@op, []]
-				# iterate items
-				for a of @item
-					# get the item
-					item = @item[a]
-					# attach event handlers
-					item.events.attach!
-				# activate
-				@root.classList.remove 'inactive'
-			# }}}
-			refresh: (list) !-> # {{{
-				# iterate changed items
-				for a in list
-					# get item
-					a = @item[a]
-					# set visual state
-					if b = a.state._checked
-						a.checkbox.classList.remove if b == 2
-							then 'indeterminated'
-							else 'checked'
-					if b = a.state.checked
-						a.checkbox.classList.add if b == 2
-							then 'indeterminated'
-							else 'checked'
-				# determine new filter
-				list = []
-				for a,b of @item
-					# get state
-					a = b.id
-					b = b.state
-					# collect non-empty category identifiers
-					if b.checked == 1 and b.count > 0
-						list[*] = a
-				# get old filter's data and
-				# check the difference exists
-				b = state.data[@index][1]
-				if b.length == list.length
-					a = list.every (a) -> (b.indexOf a) != -1
-					return if a
-				# set new filter
-				state.data[@index][1] = list
-				state.master.resolve state
-				# done
-			# }}}
-		# }}}
 		Item = (block, node) !-> # {{{
 			# {{{
 			@block    = block
@@ -1045,29 +975,117 @@ smBlocks = do !->>
 				item.nameBox.removeEventListener 'click', @toggleCheckbox, true
 			# }}}
 		# }}}
+		Block = (root) !-> # {{{
+			# {{{
+			# create object shape
+			@root    = root
+			@rootBox = rootBox = root.firstChild
+			@op      = rootBox.dataset.op
+			@index   = 0
+			@item    = item = {} # all
+			@sect    = sect = {} # parents
+			@locked  = true
+			# initialize
+			# create items map
+			list = [...root.querySelectorAll '.item']
+			for a in list
+				# set item and section
+				b = new Item @, a
+				item[b.id] = b
+				sect[b.id] = b if b.sect
+			# set parent-child relations
+			for a,b of sect
+				# create array
+				b.children = c = []
+				# aggregate children items
+				# in the order rendered
+				for a in b.sect.children
+					# get child
+					d = item[a.dataset.id]
+					# set parent
+					d.parent = b
+					# add to the parent
+					c[*] = item[a.dataset.id]
+			# complete
+			# set event handlers
+			for a of item
+				a = item[a]
+				a.events.attach!
+			# set ready
+			root.classList.add 'v'
+			# }}}
+		Block.prototype =
+			init: (index) !-> # {{{
+				# create block's data
+				@index = index
+				state.data[index] = [@op, []]
+			# }}}
+			refresh: (list) !-> # {{{
+				# iterate changed items
+				for a in list
+					# get item
+					a = @item[a]
+					# set visual state
+					if b = a.state._checked
+						a.checkbox.classList.remove if b == 2
+							then 'indeterminated'
+							else 'checked'
+					if b = a.state.checked
+						a.checkbox.classList.add if b == 2
+							then 'indeterminated'
+							else 'checked'
+				# determine new filter
+				list = []
+				for a,b of @item
+					# get state
+					a = b.id
+					b = b.state
+					# collect non-empty category identifiers
+					if b.checked == 1 and b.count > 0
+						list[*] = a
+				# get old filter's data and
+				# check the difference exists
+				b = state.data[@index][1]
+				if b.length == list.length
+					a = list.every (a) -> (b.indexOf a) != -1
+					return if a
+				# set new filter
+				state.data[@index][1] = list
+				state.master.resolve state
+				# done
+			# }}}
+			unlock: !-> # {{{
+				@rootBox.classList.add 'v'
+				@locked = false
+			# }}}
+		# }}}
 		# initialize
 		# {{{
 		# create common state
 		state = new BlockState 'category', 2, (event, data) ->
 			switch event
 			case 'init'
-				# create widget's data storage
-				state.data = []
+				# initialize
 				for a,b in blocks
 					a.init b
+			case 'load'
+				# check locked
+				for a in blocks when a.locked
+					a.unlock!
 			# done
 			return true
+		# create widget's data
+		state.data = []
 		# create individual blocks
-		blocks = [...(document.querySelectorAll '.sm-category-filter')]
+		blocks = [...(document.querySelectorAll '.sm-blocks.category-filter')]
 		blocks = blocks.map (root) -> new Block root
 		# }}}
-		# done
 		return state
 	# }}}
 	smPaginator = do -> # {{{
 		# constructors
 		Control = (block) !-> # {{{
-			# create object shape
+			# data {{{
 			@block     = block
 			@lock      = null
 			@lockType  = 0
@@ -1088,7 +1106,9 @@ smBlocks = do !->>
 			@dragbox   = []
 			@maxSpeed  = 10
 			@brake     = 15
-			# create bound handlers
+			@observer  = null # resize observer
+			# }}}
+			# handlers
 			@keyDown = (e) !~> # {{{
 				# check requirements
 				if @lock or @block.locked or \
@@ -1408,7 +1428,7 @@ smBlocks = do !->>
 				# done
 				return a
 			# }}}
-			@resize = (e) !~>
+			@resize = (e) !~> # {{{
 				# dynamic axis {{{
 				# check operation mode and
 				# determine current
@@ -1449,12 +1469,12 @@ smBlocks = do !->>
 					@block.root.style.setProperty '--height', c+'px'
 					@currentSz.2 = e * @baseSz.3
 					@currentSz.3 = e * @baseSz.4
-				# check widget mode and
+				# check flexy dualgap mode and
 				# determine page-button size
-				if @block.mode == 1
+				if @block.flexy and @block.mode == 1
 					###
 					# the drag problem:
-					# when flexy paginator has plenty of space at dynamic axis,
+					# when paginator has plenty of space at dynamic axis,
 					# the middle area (gaps) may fit all pages,
 					# especially when the count is low,
 					# which makes button's drag area bigger
@@ -1488,8 +1508,7 @@ smBlocks = do !->>
 					else if d and (Math.abs (d - b)) > 0.1
 						@block.rangeBox.style.setProperty '--page-size', d+'px'
 				# }}}
-			###
-			@observer = new ResizeObserver @resize
+			# }}}
 		###
 		Control.prototype = {
 			attach: !-> # {{{
@@ -1566,14 +1585,14 @@ smBlocks = do !->>
 					a.addEventListener 'pointerdown', @dragStart
 					B.rangeBox.addEventListener 'pointermove', @drag
 					B.rangeBox.addEventListener 'pointerup', @dragStop
-					# resizer
-					@observer.observe B.root
+					# resize observer
+					@observer = a = new ResizeObserver @resize
+					a.observe B.root
 			# }}}
 			detach: !-> # {{{
-				# range
-				if R
-					# resizer
-					@observer.disconnect!
+				if a = @observer
+					a.disconnect!
+					@observer = null
 			# }}}
 			rangeGotoFunc: (i) -> (e) !~> # {{{
 				# fulfil event
@@ -1640,7 +1659,7 @@ smBlocks = do !->>
 				# set capture
 				@block.focus!
 				@block.rangeBox.classList.add 'active'
-				node.parentNode.classList.add 'fast'
+				node.parentNode.classList.add 'active'
 				if id != null and not node.hasPointerCapture id
 					node.setPointerCapture id
 				# start
@@ -1667,7 +1686,7 @@ smBlocks = do !->>
 				# release capture
 				if id != null and node.hasPointerCapture id
 					node.releasePointerCapture id if id != null
-				node.parentNode.classList.remove 'fast'
+				node.parentNode.classList.remove 'active'
 				@block.rangeBox.classList.remove 'active'
 				# update global state
 				if not @block.locked
@@ -1724,12 +1743,11 @@ smBlocks = do !->>
 			@nLast  = 0
 			@nCount = 0
 		# }}}
-		Block = (root) !-> # {{{
+		Block = (root, state) !-> # {{{
 			# {{{
-			# create object shape
 			# base container
 			@root    = root
-			@rootBox = root.firstChild
+			@rootBox = rootBox = root.firstChild
 			# outer gotos
 			a = [...(root.querySelectorAll '.goto.a')]
 			b = [...(root.querySelectorAll '.goto.b')]
@@ -1741,22 +1759,16 @@ smBlocks = do !->>
 			@rangeBox = a = root.querySelector '.range'
 			@range    = (a and new BlockRange a) or null
 			# controller
-			@locked = false
+			@state  = state
+			@locked = true
+			@flexy  = rootBox.classList.contains 'flexy'
 			@mode   = 0
 			@ctrl   = new Control @
+			# set event handlers and refresh
+			@ctrl.attach!
+			@refresh!
 			# }}}
 		Block.prototype =
-			init: !-> # {{{
-				# get count
-				c = state.data.1
-				# set controller
-				if c and not @mode
-					@ctrl.attach!
-				else if not c and @mode
-					@ctrl.detach!
-				# done
-				@refresh!
-			# }}}
 			focus: !-> # {{{
 				# set focus to the current node
 				if not @locked and \
@@ -1766,169 +1778,165 @@ smBlocks = do !->>
 					a.focus!
 			# }}}
 			refresh: !-> # {{{
+				# check range doesn't exist
+				if not (R = @range)
+					return
+				# determine current state
+				# {{{
+				# prepare
+				index  = @state.data.0
+				count  = @state.data.1
+				nCount = 0
+				nPages = R.nPages.slice!fill 0
+				nGap1  = 0
+				nGap2  = 0
+				nFirst = 0
+				nLast  = 0
 				# check
-				if R = @range
-					# update range
-					# prepare
-					index  = state.data.0
-					count  = state.data.1
-					nPages = R.nPages.slice!fill 0
-					nGap1  = 0
-					nGap2  = 0
-					nFirst = 0
-					nLast  = 0
-					nCount = 0
-					# determine current state
-					# {{{
-					if not count
-						# empty
-						mode    = 0
-						current = null
-						nCount  = 0
-					else if count > R.size
-						# flexy (with gaps)
-						mode    = 1
-						current = R.buttons[R.index]
-						nCount  = R.size
-						# determine start position
-						if (a = R.index - index) < 0
-							# first page is visible,
-							# calculate gap size
-							nFirst = 1
-							nGap1  = 0 - a - 1
-							# full backward range
-							a = 0
-						# determine end position
-						b = nPages.length - R.index - 1
-						c = count - index - 2
-						if b > c
-							# forward range is bigger than required,
-							# both last page and gap are hidden..
-							# truncate range size
-							b = R.index + c + 2
-						else
-							# last page is visible,
-							# calculate gap size
-							nLast = count
-							nGap2 = c - b
-							# full forward range
-							b = nPages.length
-						# set range numbers
-						c = a - 1
-						d = index - R.index + a
-						while ++c < b
-							nPages[c] = ++d
-						# determine total gap
-						if a = nGap1 + nGap2
-							# calculate relative gap size (%)
-							a = 100 * nGap1 / a
-							# prevent edge case fails
-							if a > 0 and a < 1
-								a = 1
-							else if a > 99 and a < 100
-								a = 99
-							else
-								a = Math.round a
-							# set
-							nGap1 = a
-							nGap2 = 100 - a
+				if not count
+					# empty
+					mode    = 0
+					current = null
+					nCount  = R.size
+					for a from R.index til nPages.length
+						nPages[a] = 1
+					nGap2 = 100
+					nLast = 1
+				else if count > R.size
+					# dualgap
+					mode    = 1
+					current = R.buttons[R.index]
+					nCount  = R.size
+					# determine start position
+					if (a = R.index - index) < 0
+						# first page is visible,
+						# calculate gap size
+						nFirst = 1
+						nGap1  = 0 - a - 1
+						# full backward range
+						a = 0
+					# determine end position
+					b = nPages.length - R.index - 1
+					c = count - index - 2
+					if b > c
+						# forward range is bigger than required,
+						# both last page and gap are hidden..
+						# truncate range size
+						b = R.index + c + 2
 					else
-						# static (no gaps)
-						mode   = 2
-						nCount = count
-						# set first
-						nFirst = a = (R.first and 1) or 0
-						# set range numbers
-						b = -1
-						c = nPages.length
-						while ++b < c and a < count
-							nPages[b] = ++a
-						# set last
-						nLast = if R.last and a < count
-							then count
-							else 0
-						# set current
-						a = index + 1
-						current = if a == nFirst
-							then R.first.firstChild
-							else if a == nLast
-								then R.last.firstChild
-								else R.buttons[(nPages.indexOf a)]
-					# }}}
-					# apply changes
-					# {{{
-					# operation mode
-					if mode != @mode
-						if not @mode
-							@root.classList.remove 'inactive'
-						if not mode
-							@rootBox.classList.remove 'v'
-							@root.classList.add 'inactive'
-						else if mode == 1
-							@rangeBox.classList.remove 'nogaps'
+						# last page is visible,
+						# calculate gap size
+						nLast = count
+						nGap2 = c - b
+						# full forward range
+						b = nPages.length
+					# set range numbers
+					c = a - 1
+					d = index - R.index + a
+					while ++c < b
+						nPages[c] = ++d
+					# determine total gap
+					if a = nGap1 + nGap2
+						# calculate relative gap size (%)
+						a = 100 * nGap1 / a
+						# prevent edge case fails
+						if a > 0 and a < 1
+							a = 1
+						else if a > 99 and a < 100
+							a = 99
 						else
-							@rangeBox.classList.add 'nogaps'
-						@mode = mode
-					# range capacity
-					if R.nCount != nCount
-						@rangeBox.style.setProperty '--count', nCount
-						R.nCount = nCount
-						# re-calculate range size
-						if nCount
-							@rootBox.classList.remove 'v'
-							@ctrl.resize!
-							@rootBox.classList.add 'v'
-					# first page
-					if R.nFirst != nFirst
-						if not R.nFirst
-							R.first.classList.add 'v'
-						else if not nFirst
-							R.first.classList.remove 'v'
-						R.nFirst = nFirst
-					# first gap
-					if R.nGap1 != nGap1
-						if not R.nGap1
-							R.gap1.classList.add 'v'
-						else if not nGap1
-							R.gap1.classList.remove 'v'
-						R.gap1.style.flexGrow = R.nGap1 = nGap1
-					# pages
-					c = R.nPages
-					for a,b in nPages when a != c[b]
-						if not c[b]
-							R.pages[b].classList.add 'v'
-						else if not a
-							R.pages[b].classList.remove 'v'
-						R.buttons[b].textContent = c[b] = a
-					# last gap
-					if R.nGap2 != nGap2
-						if not R.nGap2
-							R.gap2.classList.add 'v'
-						else if not nGap2
-							R.gap2.classList.remove 'v'
-						R.gap2.style.flexGrow = R.nGap2 = nGap2
-					# last page
-					if (c = @last) and x.last != y.last
-						c.classList.toggle 'v', !!x.last
-						c.firstChild.textContent = x.last
-					if R.nLast != nLast
-						if not R.nLast
-							R.last.classList.add 'v'
-						else if not nLast
-							R.last.classList.remove 'v'
-						R.last.firstChild.textContent = R.nLast = nLast
-					# current page
-					if R.current != current
-						if R.current
-							R.current.parentNode.classList.remove 'current'
-						if current
-							current.parentNode.classList.add 'current'
-						R.current = current
-					# }}}
+							a = Math.round a
+						# set
+						nGap1 = a
+						nGap2 = 100 - a
 				else
-					# range doesn't exist,
-					# always static
-					mode = 2
+					# nogap
+					mode   = 2
+					nCount = count
+					# set first
+					nFirst = a = (R.first and 1) or 0
+					# set range numbers
+					b = -1
+					c = nPages.length
+					while ++b < c and a < count
+						nPages[b] = ++a
+					# set last
+					nLast = if R.last and a < count
+						then count
+						else 0
+					# set current
+					a = index + 1
+					current = if a == nFirst
+						then R.first.firstChild
+						else if a == nLast
+							then R.last.firstChild
+							else R.buttons[(nPages.indexOf a)]
+				# }}}
+				# apply changes
+				# {{{
+				# operation mode
+				if mode != @mode
+					if not @mode
+						@rootBox.classList.add 'v'
+					if not mode
+						@rootBox.classList.remove 'v'
+					else if mode == 1
+						@rangeBox.classList.remove 'nogap'
+					else
+						@rangeBox.classList.add 'nogap'
+					@mode = mode
+				# range capacity
+				if R.nCount != nCount
+					@rangeBox.style.setProperty '--count', nCount
+					R.nCount = nCount
+					# determine new size of the widget
+					@root.classList.remove 'v'
+					@ctrl.resize!
+					@root.classList.add 'v'
+				# first page
+				if R.nFirst != nFirst
+					if not R.nFirst
+						R.first.classList.add 'v'
+					else if not nFirst
+						R.first.classList.remove 'v'
+					R.nFirst = nFirst
+				# first gap
+				if R.nGap1 != nGap1
+					if not R.nGap1
+						R.gap1.classList.add 'v'
+					else if not nGap1
+						R.gap1.classList.remove 'v'
+					R.gap1.style.flexGrow = R.nGap1 = nGap1
+				# pages
+				c = R.nPages
+				for a,b in nPages when a != c[b]
+					if not c[b]
+						R.pages[b].classList.add 'v'
+					else if not a
+						R.pages[b].classList.remove 'v'
+					R.buttons[b].textContent = c[b] = a
+				# last gap
+				if R.nGap2 != nGap2
+					if not R.nGap2
+						R.gap2.classList.add 'v'
+					else if not nGap2
+						R.gap2.classList.remove 'v'
+					R.gap2.style.flexGrow = R.nGap2 = nGap2
+				# last page
+				if R.nLast != nLast
+					if not R.nLast
+						R.last.classList.add 'v'
+					else if not nLast
+						R.last.classList.remove 'v'
+					R.last.firstChild.textContent = R.nLast = nLast
+				# current page
+				if R.current != current
+					if R.current
+						R.current.parentNode.classList.remove 'current'
+					if current
+						current.parentNode.classList.add 'current'
+					R.current = current
+				# }}}
 				# done
 			# }}}
 			lock: ->> # {{{
@@ -1938,7 +1946,7 @@ smBlocks = do !->>
 						await @ctrl.lock.spin!
 					# set lock
 					@locked = true
-					@rootBox.classList.add 'locked'
+					@rootBox.classList.remove 'v'
 					if (R = @range) and R.current
 						R.current.parentNode.classList.remove 'current'
 						R.current = null
@@ -1946,40 +1954,33 @@ smBlocks = do !->>
 				return true
 			# }}}
 			unlock: !-> # {{{
-				if @locked
-					@rootBox.classList.remove 'locked'
-					@locked = false
+				@rootBox.classList.add 'v'
+				@locked = false
 			# }}}
 		# }}}
 		# initialize
 		# {{{
-		# create common state
+		# create group state
 		state = new BlockState 'page', 1, (event, data) !->
 			switch event
-			case 'init'
-				# create widget's data
-				state.data = [data.pageIndex, data.pageCount]
-				for a in blocks
-					a.init!
 			case 'lock'
-				# must stop any interactions..
+				# stop any interactions..
 				for a in blocks
 					a.lock!
 			case 'change'
-				# when some block is active,
+				# in case of any block active,
 				# prevent current change
 				for a in blocks
 					if (a = a.ctrl.lock) and a.pending
 						return false
-			case 'unlock'
-				# may continue interactions..
+			case 'load'
+				# check first
 				for a in blocks
-					a.unlock!
-			case 'refresh'
-				# when some block is active,
-				# prevent self refreshing..
-				for a in blocks when a.ctrl.lock
-					return true
+					# continue interactions..
+					a.unlock! if a.locked
+					# in case of active block,
+					# prevent self-refreshing..
+					return true if a.ctrl.lock
 				# update
 				state.data.0 = data.pageIndex
 				state.data.1 = data.pageCount
@@ -1987,9 +1988,12 @@ smBlocks = do !->>
 					a.refresh!
 			# done
 			return true
+		# create widget's data
+		state.data = [0, 0]
 		# create individual blocks
-		blocks = [...(document.querySelectorAll '.sm-paginator')]
-		blocks = blocks.map (root) -> new Block root
+		blocks = [...(document.querySelectorAll '.sm-blocks.paginator')]
+		blocks = blocks.map (root) ->
+			new Block root, state
 		# }}}
 		return state
 	# }}}
@@ -2092,7 +2096,7 @@ smBlocks = do !->>
 			# }}}
 		}
 		# }}}
-		Block = (root) !-> # {{{
+		Block = (root, state) !-> # {{{
 			# containers
 			@root    = root
 			@rootBox = root.firstChild
@@ -2103,60 +2107,56 @@ smBlocks = do !->>
 			# state
 			@oMap    = null
 			@oList   = null
-			@locked  = false
-			@current = ['' -1]
+			@state   = state
+			@locked  = true
+			@current = ['', -1]
 			@ctrl    = new Control @
+			# set event handlers and refresh
+			@ctrl.attach!
+			@root.classList.add 'v'
 		###
 		Block.prototype =
-			init: (data) !-> # {{{
+			init: (options, current) !-> # {{{
 				# check
-				if @oMap = a = data.orderOptions
-					# activation
-					# create new options
-					@oList = b = Object.getOwnPropertyNames a
-					for c in b
-						d = document.createElement 'option'
-						d.textContent = a[c].0
-						d.value = a[c].1
-						@select.appendChild d
-					# set base style
-					@rootBox.classList.remove 'w'
-					@rootBox.classList.add 'v'
-					# set controller
-					@ctrl.attach!
+				if @oMap = options
+					# set options
+					@oList = b = Object.getOwnPropertyNames options
+					for a in b
+						c = document.createElement 'option'
+						c.textContent = options[a].0
+						c.value = options[a].1
+						@select.appendChild c
+					# set state
+					@state.data = current
 				else
-					# deactivation
-					# clear event handlers
-					@ctrl.detach!
 					# clear current options
 					a = @oList.length
 					b = @select
 					while --a > 0
 						b.removeChild b.options[a]
 					@oList = null
-					# set base style
-					@rootBox.classList.add 'w'
 				# done
 				@refresh!
+				/***/
 			# }}}
 			refresh: !-> # {{{
-				# prepare
-				a = state.data
+				# get data
+				a = @state.data
 				b = @current
-				# sync current
+				# sync tag
 				if a.0 != b.0
-					# set current index
+					# set controls
 					if (c = @oList.indexOf a.0) != @select.selectedIndex
 						@select.selectedIndex = c
-					# set switch state
-					if (not a.1 and b.1) or \
-					   (a.1 and not b.1)
-						###
+					if (not a.1 and b.1) or (a.1 and not b.1)
 						c = !a.1
 						@switch.forEach (d) !->
 							d.disabled = c
-				# sync variants
+					# store
+					b.0 = a.0
+				# sync variant
 				if a.1 != b.1
+					# set controls
 					if b.1 >= 0
 						c = ('abc')[b.1]
 						@variant.forEach (d) !->
@@ -2165,8 +2165,12 @@ smBlocks = do !->>
 						c = ('abc')[a.1]
 						@variant.forEach (d) !->
 							d.classList.add c
-				# complete
-				@current = a.slice!
+					# store
+					b.1 = a.1
+			# }}}
+			unlock: !-> # {{{
+				@rootBox.classList.add 'v'
+				@locked = false
 			# }}}
 		# }}}
 		# initialize
@@ -2175,67 +2179,30 @@ smBlocks = do !->>
 		state = new BlockState 'order', 0, (event, data) ->
 			switch event
 			case 'init'
-				# create widget's data by
-				# cloning the default
-				state.data = data.order.slice!
 				# initialize
 				for a in blocks
-					a.init data
-				# done, initial state determined
-			case 'change'
-				true
+					a.init data.orderOptions, data.order
+			case 'load'
+				# update
+				for a in blocks
+					a.unlock! if a.locked
+					a.refresh!
 			# done
 			return true
 		# create individual blocks
-		blocks = [...(document.querySelectorAll '.sm-orderer')]
-		blocks = blocks.map (root) -> new Block root
-		# }}}
-		return state
-	# }}}
-	smSizer = do -> # {{{
-		# constructors
-		Block = (root) !-> # {{{
-			@root = root
-		Block.prototype =
-			refresh: (data) !->
-				# update root
-				@root.style.setProperty '--sm-width',  data.width+'px'
-				@root.style.setProperty '--sm-height', data.height+'px'
-		# }}}
-		# initialize
-		# {{{
-		# create common state
-		state = new BlockState 'sizer', 0, (event, data) ->
-			switch event
-			case 'resize'
-				blocks.forEach (b) !->
-					b.refresh data
-			# done
-			return true
-		# create individual blocks
-		blocks = [...(document.querySelectorAll '.sm-sizer')]
-		blocks = blocks.map (root) -> new Block root
+		blocks = [...(document.querySelectorAll '.sm-blocks.orderer')]
+		blocks = blocks.map (root) ->
+			new Block root, state
 		# }}}
 		return state
 	# }}}
 	# initialize
 	# {{{
-	if smProducts
-		# load helpers
-		if not await smCart.load!
-			return null
-		# assemble widgets
-		if smCategoryFilter
-			smProducts.add smCategoryFilter
-		if smPaginator
-			smProducts.add smPaginator
-		if smOrderer
-			smProducts.add smOrderer
-		if smSizer
-			smProducts.add smSizer
-		# start main loader
-		smProducts.load!
+	smGrid and smGrid.load [
+		smCategoryFilter
+		smPaginator
+		smOrderer
+	]
 	# }}}
-	# done
-	return smProducts
+	return smGrid
 ###

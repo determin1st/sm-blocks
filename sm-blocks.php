@@ -1,5 +1,5 @@
 <?php
-/**
+/***
 * Plugin Name: sm-blocks
 * Description: A fully-asynchronous product catalogue for WooCommerce
 * Plugin URI: github.com/determin1st/sm-blocks
@@ -23,9 +23,15 @@ class StorefrontModernBlocks {
     $dir_data  = __DIR__.DIRECTORY_SEPARATOR.'data'.DIRECTORY_SEPARATOR,
     $dir_inc   = __DIR__.DIRECTORY_SEPARATOR.'inc'.DIRECTORY_SEPARATOR,
     $blocks    = [
-      'products' => [ # {{{
-        'render_callback' => [null, 'renderProducts'],
+      'grid' => [ # {{{
+        'render_callback' => [null, 'renderGrid'],
         'attributes'      => [
+          ### common
+          'customClass'   => [
+            'type'        => 'string',
+            'default'     => 'custom',
+          ],
+          ###
           'size'          => [
             'type'        => 'number',
             'default'     => 4,
@@ -88,6 +94,12 @@ class StorefrontModernBlocks {
       'category-filter' => [ # {{{
         'render_callback' => [null, 'renderCategoryFilter'],
         'attributes'      => [
+          ### common
+          'customClass'   => [
+            'type'        => 'string',
+            'default'     => 'custom',
+          ],
+          ###
           'mode'          => [
             'type'        => 'string',
             'default'     => 'compact',
@@ -122,6 +134,12 @@ class StorefrontModernBlocks {
       'paginator' => [ # {{{
         'render_callback' => [null, 'renderPaginator'],
         'attributes'      => [
+          ### common
+          'customClass'   => [
+            'type'        => 'string',
+            'default'     => 'custom',
+          ],
+          ###
           'modeFirstLast' => [
             'type'        => 'string',
             'default'     => 'inner',
@@ -134,9 +152,9 @@ class StorefrontModernBlocks {
             'type'        => 'boolean',
             'default'     => true,
           ],
-          'className'     => [
-            'type'        => 'string',
-            'default'     => '',
+          'rangeMode'     => [
+            'type'        => 'number',
+            'default'     => 2, # 0=none, 1=static, 2=flexy
           ],
           'rangePlus'     => [
             'type'        => 'number',
@@ -145,14 +163,6 @@ class StorefrontModernBlocks {
           'rangeMinus'  => [
             'type'        => 'number',
             'default'     => 1,
-          ],
-          'inversion'     => [
-            'type'        => 'boolean',
-            'default'     => false,
-          ],
-          'expansion'     => [
-            'type'        => 'boolean',
-            'default'     => true,
           ],
           'separator'     => [
             'type'        => 'boolean',
@@ -192,6 +202,12 @@ class StorefrontModernBlocks {
       'orderer' => [ # {{{
         'render_callback' => [null, 'renderOrderer'],
         'attributes'      => [
+          ### common
+          'customClass'   => [
+            'type'        => 'string',
+            'default'     => 'custom',
+          ],
+          ###
           'switchMode'    => [
             'type'        => 'number',
             'default'     => 1,
@@ -205,13 +221,13 @@ class StorefrontModernBlocks {
       # }}}
     ],
     $templates = [
-      'products' => [ # CSR {{{
-        # base
+      'grid' => [ # {{{
         'main' => '
-        <div id="sm-products" class="custom">
+        <div class="sm-blocks grid {{custom}}">
           <div class="{{class}}" style="{{style}}" {{data}}>
             {{items}}
           </div>
+          {{placeholder}}
         </div>
         ',
         'item' => '
@@ -317,13 +333,13 @@ class StorefrontModernBlocks {
         ',
       ],
       # }}}
-      'category-filter' => [ # SSR {{{
+      'category-filter' => [ # {{{
         'main' => '
-        <div class="sm-category-filter custom inactive" data-op="{{operator}}">
-          {{title}}
-          {{topLine}}
-          {{section}}
-          {{bottomLine}}
+        <div class="sm-blocks category-filter {{custom}}">
+          <div data-op="{{operator}}">
+            {{title}}{{topLine}}{{section}}{{bottomLine}}
+          </div>
+          {{placeholder}}
         </div>
         ',
         'title' => '
@@ -379,7 +395,13 @@ class StorefrontModernBlocks {
         ',
       ],
       # }}}
-      'paginator' => [ # CSR {{{
+      'paginator' => [ # {{{
+        'main' => '
+        <div class="sm-blocks paginator {{custom}}">
+          <div class="{{class}}">{{content}}</div>
+          {{placeholder}}
+        </div>
+        ',
         'first' => '
         <svg preserveAspectRatio="none" viewBox="0 0 100 100">
           <path d="M58.644 27.26v8.294c0 .571-.305 1.1-.8 1.385L37.632 48.608a1.6 1.6 0 000 2.771l20.212 11.669c.495.286.8.814.8 1.385v8.294a1.6 1.6 0 01-2.399 1.385L16.869 51.379a1.6 1.6 0 010-2.771l39.375-22.733a1.6 1.6 0 012.4 1.385z"/>
@@ -434,23 +456,17 @@ class StorefrontModernBlocks {
           <path d="M7 .997h6v14H7zM3 1.997h3v12H3z"/>
         </svg>
         ',
-        'placeholder' => '
-        <svg preserveAspectRatio="none" viewBox="0 0 16 16">
-          <path d="M0 1h16"/>
-          <path d="M0 15h16"/>
-          <path d="M1 3h14v10H1z"/>
-        </svg>
-        ',
       ],
       # }}}
-      'orderer' => [ # CSR {{{
+      'orderer' => [ # {{{
         'main' => '
-        <div class="sm-orderer custom">
+        <div class="sm-blocks orderer {{custom}}">
           <div>
             {{variantLeft}}
             <select class="{{class}}"></select>
             {{variantRight}}
           </div>
+          {{placeholder}}
         </div>
         ',
         'variantLeft' => '
@@ -471,6 +487,14 @@ class StorefrontModernBlocks {
         'asc_desc' => '
         <svg preserveAspectRatio="none" shape-rendering="geometricPrecision" viewBox="0 0 48 48">
           <path stroke-linejoin="round" d="M11 25l13 13 13-13h-2l-8 5-1-6 1-6 8 5h2L24 10 11 23h2l8-5 1 6-1 6-8-5z"/>
+        </svg>
+        ',
+      ],
+      # }}}
+      'svg' => [ # {{{
+        'placeholder' => '
+        <svg preserveAspectRatio="none" viewBox="0 0 48 48">
+          <path d="M1 47h46V1H1v46z"/>
         </svg>
         ',
       ],
@@ -572,6 +596,9 @@ class StorefrontModernBlocks {
         if ($me->cfg['enableDemoShop'] && is_shop()) {
           wp_enqueue_style($me->name.'-demo-css');
         }
+        # for removing gutenberg's default/core blocks:
+        #wp_dequeue_style('wp-block-library');
+        #wp_deregister_style('wp-block-library');
       }
     });
     # set demo-shop template
@@ -595,14 +622,15 @@ class StorefrontModernBlocks {
   }
   # }}}
   # ssr rendering
-  # products {{{
-  public function renderProducts($attr, $content)
+  # grid {{{
+  public function renderGrid($attr, $content)
   {
     # prepare
-    $T = $this->templates['products'];
-    $D = $this->blocks['products']['attributes'];
+    $T = $this->templates['grid'];
+    $D = $this->blocks['grid']['attributes'];
     $class = $style = $data = $items = '';
-    # determine base parameters
+    # create elements
+    # grid items {{{
     $size    = $attr['size'];
     $columns = (($a = $attr['columns']) > $size)
       ? $size
@@ -610,17 +638,17 @@ class StorefrontModernBlocks {
     $rows    = (($a = $size / $columns) % 1)
       ? ($rows | 0) + 1
       : $a;
-    # assemble items
+    # clone
     $a = $this->parseTemplate($T['item'], $T, $attr);
     $b = 1 + $size;
     while (--$b) {
       $items .= $a;
     }
-    # assemble class name and style
-    # {{{
+    # }}}
+    # class name and style {{{
     $class = $columns === 1
-      ? 'main x'
-      : 'main';
+      ? 'list'
+      : '';
     # using default to ssr-preset comparison here,
     # expands logic into 2 equal mod directions:
     # CSS class preset and/or SSR inline preset
@@ -642,8 +670,7 @@ class StorefrontModernBlocks {
       $style .= "--item-sz-1:{$a[0]};--item-sz-2:{$a[1]};--item-sz-3:{$a[2]}";
     }
     # }}}
-    # assemble data attributes
-    # {{{
+    # data attributes {{{
     # these are client-controller side options which serve
     # only the script's logic, with no direct effect on styles
     # 1: minimal count of columns in the grid
@@ -663,12 +690,14 @@ class StorefrontModernBlocks {
     # complete
     $data = trim($data);
     # }}}
-    # compose everything
+    # compose
     return $this->parseTemplate($T['main'], $T, [
-      'class' => $class,
-      'style' => $style,
-      'data'  => $data,
-      'items' => $items,
+      'custom' => $attr['customClass'],
+      'class'  => $class,
+      'style'  => $style,
+      'data'   => $data,
+      'items'  => $items,
+      'placeholder' => $this->templates['svg']['placeholder'],
     ]);
   }
   # }}}
@@ -729,52 +758,48 @@ class StorefrontModernBlocks {
       # }}}
     };
     # build categories tree
-    if (!($a = $f($root))) {
+    if (!($items = $f($root))) {
       return '';
     }
     # determine main section parameters
     switch ($b = $attr['mode']) {
     case 'none':
       $a = [
-        'operator'   => $attr['operator'],
         'title'      => false,
         'topLine'    => false,
         'bottomLine' => false,
         'class'      => ' opened',
-        'items'      => $a,
       ];
       break;
     case 'compact':
       $a = [
-        'operator'   => $attr['operator'],
         'name'       => $root['name'],
         'arrowBox'   => false,
         'class'      => ' opened',
-        'items'      => $a,
         'bottomLine' => false,
       ];
       break;
     default:
       $a = [
-        'operator'   => $attr['operator'],
         'name'       => $root['name'],
         'class'      => ($b === 'collapsed' ? '' : ' opened'),
-        'items'      => $a,
       ];
       break;
     }
-    # compose and complete
-    return $this->parseTemplate($T['main'], $T, $a);
+    # compose
+    return $this->parseTemplate($T['main'], $T, array_merge($a, [
+      'custom'      => $attr['customClass'],
+      'operator'    => $attr['operator'],
+      'items'       => $items,
+      'placeholder' => $this->templates['svg']['placeholder'],
+    ]));
   }
   # }}}
   # paginator {{{
   public function renderPaginator($attr, $content)
   {
     # prepare
-    # get templates
-    $temp = $this->templates['paginator'];
-    $content = '';
-    # parse attributes and
+    $T = $this->templates['paginator'];
     # create elements
     # first/last {{{
     if (($a = $attr['modeFirstLast']) !== 'none')
@@ -792,10 +817,10 @@ class StorefrontModernBlocks {
       if ($a === 'outer' || $a === 'both')
       {
         $oFirst = empty($attr['bFirst'])
-          ? $temp['first']
+          ? $T['first']
           : $attr['bFirst'];
         $oLast  = empty($attr['bLast'])
-          ? $temp['last']
+          ? $T['last']
           : $attr['bLast'];
         $oFirst = '<div class="goto a first"><button>'.$oFirst.'</button></div>';
         $oLast  = '<div class="goto a last"><button>'.$oLast.'</button></div>';
@@ -812,10 +837,10 @@ class StorefrontModernBlocks {
     if (($a = $attr['modePrevNext']) !== 'none')
     {
       $prev = $a === 'standard' || empty($attr['bPrev'])
-        ? $temp['prev']
+        ? $T['prev']
         : $attr['bPrev'];
       $next = $a === 'standard' || empty($attr['bNext'])
-        ? $temp['next']
+        ? $T['next']
         : $attr['bNext'];
       ###
       $prev = '<div class="goto b prev"><button>'.$prev.'</button></div>';
@@ -827,9 +852,9 @@ class StorefrontModernBlocks {
     # }}}
     # gap/separator {{{
     $gap = empty($attr['bGap'])
-      ? ($attr['expansion']
-         ? $temp['gapExp']
-         : $temp['gap'])
+      ? ($attr['rangeMode'] === 2
+        ? $T['gapExp']
+        : $T['gap'])
       : $attr['bGap'];
     $gapFirst = '<div class="gap first">'.$gap.'</div>';
     $gapLast  = '<div class="gap last">'.$gap.'</div>';
@@ -838,10 +863,10 @@ class StorefrontModernBlocks {
     if ($attr['separator'])
     {
       $sepFirst = empty($attr['bSep1'])
-        ? $temp['sep1']
+        ? $T['sep1']
         : $attr['bSep1'];
       $sepLast  = empty($attr['bSep2'])
-        ? $temp['sep2']
+        ? $T['sep2']
         : $attr['bSep2'];
       $sepFirst = '<div class="sep first">'.$sepFirst.'</div>';
       $sepMid   = '<div class="sep">'.$sepFirst.'</div>';
@@ -849,34 +874,29 @@ class StorefrontModernBlocks {
     }
     # }}}
     # range {{{
-    if ($attr['range'])
+    if ($attr['rangeMode'])
     {
       # prepare
       $rangeLeft = $rangeRight = '';
       $b = $attr['rangeMinus'];
       $c = $attr['rangePlus'];
-      # compose left
-      $a = $attr['inversion']
-        ? max($b, $c) + 1
-        : $b + 1;
+      # compose parts
+      $a = $b + 1;
       while (--$a > 0)
       {
-        $class = $a > $b ? 'ix' : 'x';
-        $rangeLeft .= <<<EOD
-        <div class="page {$class}"><button>x-{$a}</button></div>
-EOD;
+        $rangeLeft .= '
+        <div class="page x">
+          <button>x-'.$a.'</button>
+        </div>
+        ';
       }
-      # compose right
-      $a = 0;
-      $d = $attr['inversion']
-        ? max($b, $c)
-        : $c;
-      while (++$a <= $d)
+      while (++$a <= $c)
       {
-        $class = $a > $c ? 'xi' : 'x';
-        $rangeRight .= <<<EOD
-        <div class="page {$class}"><button>x+{$a}</button></div>
-EOD;
+        $rangeRight .= '
+        <div class="page x">
+          <button>x-'.$a.'</button>
+        </div>
+        ';
       }
       # add gaps
       if (!empty($rangeLeft)  ||
@@ -886,10 +906,10 @@ EOD;
         $rangeLeft  = $gapFirst.$rangeLeft;
         $rangeRight = $rangeRight.$gapLast;
       }
-      # determine range capacity
+      # determine capacity
       $a = empty($iFirst) ? 0 : 2;
       $a = $a + $b + 1 + $c;
-      # create range section
+      # compose
       $content = <<<EOD
       {$sepFirst}
       <div class="range" style="--count:{$a}">
@@ -902,44 +922,30 @@ EOD;
       {$sepLast}
 EOD;
     }
-    else if (!empty($iFirst))
+    else
     {
-      # range section with first/last only (wtf?)
-      $content = <<<EOD
-      {$sepFirst}
-      <div class="range" style="--count:2">
-        {$iFirst}
-        {$gapFirst}
-        {$iLast}
-      </div>
-      {$sepLast}
-EOD;
-    }
-    else {
+      # no range
       $content = $sepMid;
     }
     # }}}
-    # determine custom classes
-    $a = $attr['className'] ? ' '.$attr['className'] : '';
-    $b = empty($sepFirst) ? ' nosep' : '';
-    if (!$attr['range'] && empty($iFirst)) {
-      $b .= ' norange';
+    # class name {{{
+    $class = $attr['rangeMode'];
+    $class = $class === 2
+      ? 'flexy'
+      : ($class === 1
+        ? 'static'
+        : 'norange');
+    if (empty($sepFirst)) {
+      $class .= ' nosep';
     }
-    if ($attr['expansion']) {
-      $b .= ' flexy';
-    }
-    $b = trim($b);
+    # }}}
     # compose
-    $content = <<<EOD
-    <div class="sm-paginator custom inactive{$a}">
-      <div class="{$b}">
-        {$oFirst}{$prev}{$content}{$next}{$oLast}
-      </div>
-      {$temp['placeholder']}
-    </div>
-EOD;
-    # complete
-    return $this->tidy($content);
+    return $this->parseTemplate($T['main'], $T, [
+      'custom'  => $attr['customClass'],
+      'class'   => $class,
+      'content' => $oFirst.$prev.$content.$next.$oLast,
+      'placeholder' => $this->templates['svg']['placeholder'],
+    ]);
   }
   # }}}
   # orderer {{{
@@ -948,16 +954,16 @@ EOD;
     # prepare
     $T = $this->templates['orderer'];
     # determine class
-    $variantLeft  = true;
-    $variantRight = true;
+    $variantL = true;
+    $variantR = true;
     switch ($attr['switchMode']) {
     case 1:
-      $class = 'left';
-      $variantRight = false;
+      $class    = 'left';
+      $variantR = false;
       break;
     case 2:
-      $class = 'right';
-      $variantLeft = false;
+      $class    = 'right';
+      $variantL = false;
       break;
     default:
       $class = 'left right';
@@ -965,9 +971,11 @@ EOD;
     }
     # complete
     return $this->parseTemplate($T['main'], $T, [
-      'class' => $class,
-      'variantLeft' => $variantLeft,
-      'variantRight' => $variantRight,
+      'custom' => $attr['customClass'],
+      'class'  => $class,
+      'variantLeft'  => $variantL,
+      'variantRight' => $variantR,
+      'placeholder'  => $this->templates['svg']['placeholder'],
     ]);
   }
   # }}}
@@ -987,8 +995,8 @@ EOD;
     }
     # operate
     switch ($request['func']) {
-    case 'products':
-      $this->apiProducts($request);
+    case 'grid':
+      $this->apiGrid($request);
       break;
     case 'cart':
       $this->apiCart($request);
@@ -1018,8 +1026,8 @@ EOD;
     exit;
   }
   # }}}
-  # products {{{
-  private function apiProducts($request)
+  # grid {{{
+  private function apiGrid($request)
   {
     # checkout request parameters
     # {{{
@@ -1241,12 +1249,6 @@ EOD;
     }
     # remove extra gaps and complete
     return preg_replace('/>\s+</', '><', $template);
-  }
-  private function tidy($html)
-  {
-    # TODO: delete it
-    # remove extra spaces
-    return preg_replace('/>\s+</', '><', $html);
   }
   private function parseLocalName($json)
   {
@@ -1593,8 +1595,7 @@ EOD;
       {
         # set children
         $item['list'] = &$p[$a];
-        # recurse and
-        # determine own products count
+        # recurse to determine own items count
         $a = $item['count'];
         foreach ($item['list'] as &$a) {
           $item['count'] -= $f($a, $depth + 1);
@@ -1643,6 +1644,7 @@ EOD;
     return $cid;
   }
   # }}}
+  # TODO
   private function purgeCache()
   {
     # delete cache files

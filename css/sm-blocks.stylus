@@ -1,24 +1,74 @@
 /**
-* widgets
+* storefront modern styles
 */
-#sm-products
-	// {{{
-	// don't modify if not sure
-	display: flex
+.sm-blocks // {{{
+	position:   relative
 	box-sizing: border-box
+	min-width:  0
+	min-height: 0
+	overflow:   hidden
+	// {{{
+	div,button,select,input,label,svg,img,hr,h1,h2,h3
+		box-sizing: border-box
+		margin:  0
+		padding: 0
+		outline: 0
+	button,select,label
+		font-size:     1em
+		font-weight:   bold
+		line-height:   1
+		outline:       0
+		text-decoration: none
+		text-overflow: ellipsis // requires overflow & white-space below
+		overflow:      hidden
+		white-space:   nowrap
+		word-break:    keep-all // to break-word asian languages
+	svg
+		width:  100%
+		height: 100%
+	button
+		cursor: pointer
+		color:  transparent
+		> svg
+			fill:   transparent
+			stroke: transparent
+	// }}}
+	// default state
+	> div // rootbox
+		overflow: hidden
+		min-width:  0
+		min-height: 0
+		pointer-events: none
+		opacity: 0
+	> svg // placeholder
+		display:  block
+		position: absolute
+		top:    0
+		left:   0
+		width:  100%
+		height: 100%
+		fill:   alpha(silver, 0.2)
+	// captured state
+	&.v
+		> div
+			opacity: 0.6
+			&.v // operable
+				pointer-events: auto
+				opacity: 1
+		> svg
+			display: none
+// }}}
+.sm-blocks.grid // {{{
+	display: flex
 	flex-direction: column // just in case
 	align-items: center // grid is centered, not stretched
-	min-width:  0 // may zap into zero-point
-	min-height: 0 // same
-	width:      100% // eat all width
-	height:     auto // grid will grow/shrink automatically
-	overflow: hidden // no scrollbars please
-	margin:  0
+	width:  100% // eats all width
+	height: auto // will grow/shrink automatically
 	padding: 1em 0 1em 0
-	background-color: alpha(ghostwhite, 0.4)
-	> .main
-		// settings {{{
-		// configurable defaults
+	> div
+		// {{{
+		// settings
+		// configurable
 		--columns: 4
 		--column-gap: 4px
 		--row-gap:    4px
@@ -33,34 +83,16 @@
 		--rows: 1
 		--height: calc(var(--rows) * var(--item-max-y))
 		--svg-icon-size: calc(10px + var(--font-size))
-		// }}}
-		// guards {{{
-		div, input, svg, img
-			box-sizing: border-box
-			padding: 0
-			margin:  0
-		// }}}
 		// container setup
 		display: grid
-		box-sizing: border-box
 		grid-template-columns: repeat(var(--columns), 1fr)
 		grid-column-gap: var(--column-gap)
 		grid-row-gap: var(--row-gap)
 		justify-content: center
-		background-color: alpha(ghostwhite, 0.6)
-		margin:  0
-		padding: 0
-		////
-		// size & visibility {{{
 		width:  100%
 		height: var(--height)
 		max-width:  calc(var(--columns) * var(--item-max-x))
 		max-height: calc(var(--rows) * var(--item-max-y))
-		opacity: 0
-		pointer-events: none
-		&.v
-			opacity: 1
-			pointer-events: auto
 		// }}}
 		> .item // vertical {{{
 			width:  100%
@@ -79,6 +111,7 @@
 				justify-content: flex-start
 				max-width:  var(--item-max-x)
 				max-height: var(--item-max-y)
+				background-color: gainsboro
 				// data is placed into this block,
 				// it displays svg placeholder by default
 				.ph
@@ -359,346 +392,258 @@
 				}
 			}
 		// }}}
+		&.v // {{{
+			> .item > .box
+				background-color: transparent
+		// }}}
 // }}}
-div.sm-category-filter
-	// {{{
-	display: flex;
-	flex-direction: column;
-	////
-	> .title
-	{
-		display: flex;
-		> h3
-		{
-			flex: 1 1 0;
-			font-size: 36px;
-			font-weight: 700;
-			margin: 0;
-		}
-		> .arrow
-		{
-		}
-	}
-	> hr
-	{
-		height: 1px;
-		margin: 0;
-		color: lightgray;
-	}
-	> .section // root
-	{
-		padding-top:    4px;
-		padding-bottom: 4px;
-		padding-left:   4px;
-		padding-right:  0;
-		.item
-		{
-			> .name // {{{
-			{
-				padding-top:    0;
-				padding-bottom: 0;
-				display: flex;
-				flex-direction: row;
-				> div
+.sm-blocks.category-filter // {{{
+	/////
+	/////
+	> div
+		display: flex
+		flex-direction: column
+		////
+		> .title
+			display: flex
+			> h3
+				flex: 1 1 0
+				font-size: 36px
+				font-weight: bold
+				margin: 0
+		> hr
+			height: 1px
+			margin: 0
+			color: lightgray
+		> .section // root
+			padding-top:    4px
+			padding-bottom: 4px
+			padding-left:   4px
+			padding-right:  0
+			.item
+				> .name // {{{
 				{
+					padding-top:    0;
+					padding-bottom: 0;
 					display: flex;
 					flex-direction: row;
-					align-items: center;
-				}
-				> .box // {{{
-				{
-					flex: 1 1 0;
-					min-width: 0;
-					padding-top:    8px;
-					padding-bottom: 8px;
-					cursor: pointer;
-					> input // always hidden, used for focusing
+					> div
 					{
-						flex: 0 0 0;
-						width: 0;
-						height: 0;
-						min-width: 0;
-						min-height: 0;
-						margin: 0;
-						padding: 0;
-						border-style: none;
-						border-width: 0;
-						opacity: 0;
-						//min-width: 20px;
-						//min-height: 20px;
-						position: static;
-						outline: none;
-						&:focus ~ .check
-						{
-							border-width: 2px;
-						}
+						display: flex;
+						flex-direction: row;
+						align-items: center;
 					}
-					> .check // box
-					{
-						flex: 0 0 0;
-						min-width:  20px;
-						min-height: 20px;
-						border: 1px solid slategray;
-						border-radius: 2px;
-						background-color: white;
-						position: relative;
-						> svg
-						{
-							position: absolute;
-							top:  0;
-							left: 0;
-							width:  100%;
-							height: 100%;
-							opacity: 0;
-							fill: white;
-							stroke: silver;
-						}
-						&.checked
-						{
-							> svg:nth-child(1) {
-								opacity: 1;
-							}
-							background-color: black;
-						}
-						&.indeterminated
-						{
-							> svg:nth-child(2) {
-								opacity: 1;
-							}
-							background-color: black;
-						}
-						&.disabled
-						{
-							background-color: gainsboro;
-						}
-					}
-					> label
+					> .box // {{{
 					{
 						flex: 1 1 0;
-						padding-top:    1px;
-						padding-bottom: 0;
-						padding-left:   8px;
-						padding-right:  0;
 						min-width: 0;
-						margin: 0;
-						line-height: 1;
-						white-space: nowrap;
-						overflow: hidden;
-						text-overflow: ellipsis;
+						padding-top:    8px;
+						padding-bottom: 8px;
 						cursor: pointer;
-						user-select: none;
-						font-weight: normal;
-						color: black;
-					}
-					&:hover
-					{
-						padding-left: 1px;
-						> .check
+						> input // always hidden, used for focusing
 						{
-							border-width: 2px;
+							flex: 0 0 0;
+							width: 0;
+							height: 0;
+							min-width: 0;
+							min-height: 0;
+							margin: 0;
+							padding: 0;
+							border-style: none;
+							border-width: 0;
+							opacity: 0;
+							//min-width: 20px;
+							//min-height: 20px;
+							position: static;
+							outline: none;
+							&:focus ~ .check
+							{
+								border-width: 2px;
+							}
+						}
+						> .check // box
+						{
+							flex: 0 0 0;
+							min-width:  20px;
+							min-height: 20px;
+							border: 1px solid slategray;
+							border-radius: 2px;
+							background-color: white;
+							position: relative;
+							> svg
+							{
+								position: absolute;
+								top:  0;
+								left: 0;
+								width:  100%;
+								height: 100%;
+								opacity: 0;
+								fill: white;
+								stroke: silver;
+							}
+							&.checked
+							{
+								> svg:nth-child(1) {
+									opacity: 1;
+								}
+								background-color: black;
+							}
+							&.indeterminated
+							{
+								> svg:nth-child(2) {
+									opacity: 1;
+								}
+								background-color: black;
+							}
+							&.disabled
+							{
+								background-color: gainsboro;
+							}
+						}
+						> label
+						{
+							flex: 1 1 0;
+							padding-top:    1px;
+							padding-bottom: 0;
+							padding-left:   8px;
+							padding-right:  0;
+							min-width: 0;
+							margin: 0;
+							line-height: 1;
+							white-space: nowrap;
+							overflow: hidden;
+							text-overflow: ellipsis;
+							cursor: pointer;
+							user-select: none;
+							font-weight: normal;
+							color: black;
+						}
+						&:hover
+						{
+							padding-left: 1px;
+							> .check
+							{
+								border-width: 2px;
+							}
 						}
 					}
-				}
-				// }}}
-				> .count // {{{
-				{
-					flex: 0 0 auto;
-					white-space: nowrap;
-				}
-				// }}}
-				> .arrow // {{{
-				{
-					flex: 1 1 0;
-					min-width: 20px;
-					max-width: 48px;
-					justify-content: flex-end;
-					cursor: pointer;
-					> svg
+					// }}}
+					> .count // {{{
 					{
-						width:  auto;
-						height: 100%;
-						max-height: 24px;
-						transform: rotate(90deg);
-						fill: silver;
-						stroke: black;
+						flex: 0 0 auto;
+						white-space: nowrap;
 					}
-					&:hover > svg
+					// }}}
+					> .arrow // {{{
 					{
-						fill: black;
-						stroke: silver;
-					}
-					&.opened
-					{
+						flex: 1 1 0;
+						min-width: 20px;
+						max-width: 48px;
+						justify-content: flex-end;
+						cursor: pointer;
 						> svg
 						{
-							transform: rotate(0deg);
-							fill: black;
+							width:  auto;
+							height: 100%;
+							max-height: 24px;
+							transform: rotate(90deg);
+							fill: silver;
+							stroke: black;
 						}
+						&:hover > svg
+						{
+							fill: black;
+							stroke: silver;
+						}
+						&.opened
+						{
+							> svg
+							{
+								transform: rotate(0deg);
+								fill: black;
+							}
+						}
+					}
+					// }}}
+				}
+				// }}}
+				> .section // {{{
+				{
+					display: none;
+					opacity: 0;
+					padding-left: 20px;
+					&.opened
+					{
+						display: block;
+						opacity: 1;
 					}
 				}
 				// }}}
-			}
-			// }}}
-			> .section // {{{
-			{
-				display: none;
-				opacity: 0;
-				padding-left: 20px;
-				&.opened
-				{
-					display: block;
-					opacity: 1;
-				}
-			}
-			// }}}
-		}
-	}
-	&.inactive
-	{
-		pointer-events: none;
-		//opacity: 0.5;
-		svg {
-			opacity: 0.4;
-		}
-		.item > .name > .box > .check
-		{
-			background-color: gainsboro;
-		}
-	}
-	// guards
-	div, hr, input, label
-	{
-		box-sizing: border-box;
-		margin:  0;
-		padding: 0;
-	}
 // }}}
-div.sm-paginator
-	// {{{
+.sm-blocks.paginator // {{{
 	// configuration
-	--height:     48px
-	--width:      calc(1.35 * var(--height))
-	--font-size:  calc(0.35 * var(--height))
-	// container
+	--height:    48px
+	--width:     calc(1.35 * var(--height))
+	--font-size: calc(0.35 * var(--height))
+	////
+	width:  100%
+	height: calc(8px + var(--height))
+	font-size: var(--font-size)
 	display: flex
-	flex-direction: row
-	align-items: stretch
+	flex-direction:  row
 	justify-content: center
-	position: relative
-	overflow: hidden
-	box-sizing: border-box
-	min-width:  0
-	min-height: 0
-	width:   100%
-	height:  calc(8px + var(--height))
-	margin:  0
-	padding: 0
-	// content
 	> div
-		flex: 0 0 auto
+		flex:  0 0 auto
+		width: auto
+		max-width: 10000px
 		display: flex
 		flex-direction: row
-		overflow: hidden
-		box-sizing: border-box
-		padding: 0
-		margin:  0
 		touch-action: none
-		// size and visibility {{{
-		// these are for maximal size calculation
-		min-width: 0
-		max-width: 10000px
-		width:     auto
-		// non-visible by default
-		opacity: 0
-		background-color: alpha(ghostwhite, 0.6)
-		&.v
-			opacity: 1
-			&.flexy
-				width: 100%
-				> .range
-					width:     100%
-					max-width: 100%
-					&.nogaps > .page
-						flex-grow: 1
-		// }}}
-		> div // {{{
-			display: flex
-			flex-direction: row
-			font-size: var(--font-size)
-			padding: 0
-			margin:  0
-			button
-				display: flex
-				align-items: center
-				justify-content: center
-				width:   100%
-				height:  100%
-				padding: 0
-				margin:  0
-				line-height: 0
-				white-space: nowrap
-				font-size: 1em
-				font-weight: bold
-				text-decoration: none
-				border-width: 1px
-				border-style: solid
-				border-color: silver
-				border-radius: 2px
-				background-color: gainsboro
-				box-shadow: inset 0 0 10px 0 silver
-				color: black
-				outline: 0
-				cursor: pointer
-				touch-action: none // pointer events only
-				&:hover
-					border-color: darkslategray
-					color: slategray
-					font-weight: bolder
-				&:active,
-				&:focus
-					background-color: silver
-					border-color: darkslategray
-					color: slategray
-					font-weight: bolder
-					box-shadow: inset 0 0 0 1px white
-			svg
-				width:  100%
-				height: 100%
-		// }}}
 		> .goto // {{{
 			flex: 1 1 0
 			max-width: calc(2px + var(--width))
-			padding-top:    4px
-			padding-bottom: 4px
-			> button > svg
-				fill: slategray
+			padding: 4px 0 4px 0
 			// variants
 			&.prev
 				padding-left: 2px
 			&.next
 				padding-right: 2px
+			////
+			> button
+				width:  100%
+				height: 100%
+				border: 1px solid silver
+				border-radius: 2px
+				background-color: gainsboro
+				box-shadow: inset 0 0 10px 0 silver
+				touch-action: none
+				&:hover
+					border-color: darkslategray
+				&:active,
+				&:focus
+					background-color: silver
+					border-color: darkslategray
+					box-shadow: inset 0 0 0 1px white
 			// captured movement
-			&.fast
+			&.active
 				padding-top:    2px
 				padding-bottom: 2px
 				> button
-					border-width: 1px
 					background-color: black
 					padding: 4px
 					> svg
 						fill: white
 		// }}}
 		> .sep // {{{
+			flex: 1 1 0
 			max-width: 8px
-			padding-top:    2px
-			padding-bottom: 2px
-			> svg
-				fill: silver
-			// variants
+			padding:   2px 0 2px 0
 			&.first
-				padding-left: 0
+				padding-left:  0
 			&.last
 				padding-right: 0
+			> svg
+				fill: silver
 		// }}}
 		> .range // {{{
 			////
@@ -706,13 +651,73 @@ div.sm-paginator
 			--max-width: calc(2px + (1 + var(--count)) * var(--width))
 			--page-size: var(--width)
 			////
-			flex: 1 0 0
-			justify-content: center
-			min-width: 0
+			flex:  1 0 0
+			width: 10000px
 			max-width: var(--max-width)
-			width:     10000px
-			// states {{{
-			&.nogaps
+			display: flex
+			flex-direction:  row
+			justify-content: center
+			// content
+			> div // {{{
+				display: none
+				&.v
+					display: flex
+			// }}}
+			> .gap // {{{
+				flex: 0 100 0
+				min-width: calc(0.25 * var(--width))
+				padding: 4px 0 4px 0
+				> svg
+					fill: silver
+			// }}}
+			> .page // {{{
+				flex: 0 0 0
+				min-width: var(--page-size)
+				padding: 4px 1px 4px 1px
+				// non-visible by default
+				> button
+					display: flex
+					align-items: center
+					justify-content: center
+					width:   100%
+					height:  100%
+					border-width: 1px
+					border-style: solid
+					border-color: silver
+					border-radius: 2px
+					background-color: gainsboro
+					box-shadow: inset 0 0 10px 0 silver
+					touch-action: none // pointer events only
+					&:hover
+						font-weight: bolder
+						border-color: darkslategray
+						color: slategray
+					&:active,
+					&:focus
+						font-weight: bolder
+						background-color: silver
+						border-color: darkslategray
+						color: slategray
+						box-shadow: inset 0 0 0 1px white
+				// selected page
+				&.current
+					min-width: calc(2px + var(--page-size))
+					padding-top:    2px
+					padding-bottom: 2px
+					> button
+						font-size: 1.4em
+						border-color: black
+						background-color: black
+						cursor: grab
+						&:hover
+							color: lightslategray
+						&:active,
+						&:focus
+							box-shadow: inset 0 0 1px 1px white
+			// }}}
+			// states
+			// {{{
+			&.nogap
 				// range without gaps
 				// reduced size
 				--max-width: calc(2px + var(--count) * var(--width))
@@ -723,146 +728,66 @@ div.sm-paginator
 				// current page is being dragged
 				cursor: grabbing
 			// }}}
-			> .gap // {{{
-				flex: 0 100 0
-				min-width: calc(0.25 * var(--width))
-				padding: 4px 0 4px 0
-				// non-visible by default
-				display: none
-				&.v
-					display: flex
-				> svg
-					fill: silver
-			// }}}
-			> .page // {{{
-				flex: 0 0 0
-				overflow: hidden
-				min-width: var(--page-size)
-				padding-top:    4px
-				padding-bottom: 4px
-				padding-left:   1px
-				padding-right:  1px
-				// non-visible by default
-				display: none
-				&.v
-					display: flex
-				// selected page
-				&.current
-					min-width: calc(2px + var(--page-size))
-					padding-top:    2px
-					padding-bottom: 2px
-					> button
-						font-size: 1.4em
-						border-color: black
-						background-color: black
-						color: white
-						cursor: grab
-						&:hover
-							color: lightslategray
-						&:active,
-						&:focus
-							box-shadow: inset 0 0 1px 1px white
-			// }}}
-		// }}}
-		////
-		&.flexy // {{{
-			> .range
-				> .gap
-					padding: 4px 1px 4px 1px
-					> svg
-						fill: gainsboro
-				&.active > .gap
-					> svg
-						fill: silver
-		// }}}
-		&.hovered // {{{
-			> .sep
-				max-width: 8px
-				> svg
-					fill: slategray
-		// }}}
-		&.locked // {{{
-			// intermediate state of the widget,
-			// it will be intitialized soon
-			opacity: 0.8
-			pointer-events: none
-			> .goto > button > svg
-				fill: rgba(0, 0, 0, 0)
-			> .range > .page > button
-				color: rgba(0, 0, 0, 0)
-		// }}}
-		&.nosep // {{{
-			> .goto.prev
-				padding-right: 1px
-			> .goto.next
-				padding-left: 1px
 		// }}}
 	////
-	// placeholder
-	> svg
-		display: none
-		position: absolute
-		box-sizing: border-box
-		top:  0
-		left: 0
-		width:  100%
-		height: 100%
-		padding: 4px 8px 4px 8px
-		margin: 0
-		stroke: gainsboro
-		fill: gainsboro
-	// initial state
-	&.inactive
-		pointer-events: none
-		> div
-			display: none
-		> svg
-			display: block
-	// guards
-	div, button, svg
-		box-sizing: border-box
+	&.v > div
+		&.flexy // {{{
+			width: 100%
+			> .range
+				width:     100%
+				max-width: 100%
+				> .gap
+					padding: 4px 1px 4px 1px
+				&.active > .gap > svg
+					fill: silver
+				&.nogap > .page
+					flex-grow: 1
+		// }}}
+		&.nosep // {{{
+			> .goto
+				&.prev
+					padding-right: 1px
+				&.next
+					padding-left: 1px
+		// }}}
+		&.v // {{{
+			> .goto > button > svg
+				fill: slategray
+			> .range
+				> .gap > svg
+					fill: silver
+				> .page
+					> button
+						color: black
+					&.current > button
+						color: white
+			&.flexy
+				> .range > .gap > svg
+					fill: gainsboro
+				> .range.active > .gap > svg
+					fill: silver
+			&.hovered
+				> .sep > svg
+					fill: slategray
+		// }}}
 // }}}
-div.sm-orderer
-	// {{{
-	// settings {{{
+.sm-blocks.orderer // {{{
+	// settings
 	--height:    48px
 	--font-size: calc(0.35 * var(--height))
-	// }}}
-	// guards {{{
-	div, button, svg, select
-		box-sizing: border-box
-		padding: 0
-		margin:  0
-	// }}}
 	// container
-	box-sizing: border-box
-	width:   100%
-	height:  calc(8px + var(--height))
-	margin:  0
+	width:  100%
+	height: calc(8px + var(--height))
 	padding: 4px 0 4px 0
-	background-color: alpha(ghostwhite, 0.6)
 	// content
 	> div
-		position: relative
-		// size and visibility {{{
-		min-width:  0
-		min-height: 0
-		width:      100%
-		height:     100%
-		pointer-events: none
-		&.v
-			pointer-events: auto
-			> .variant
-				opacity: 1
-			&.hovered
-				> select
-					border-color: darkslategray
-		// }}}
+		width:  100%
+		height: 100%
 		> .variant // {{{
-			opacity: 0
 			position: absolute
 			width:  auto
 			height: 100%
+			opacity: 0
 			&.left
 				top:  0
 				left: 0
@@ -896,8 +821,6 @@ div.sm-orderer
 				width:  var(--height)
 				height: 100%
 				background-color: transparent
-				outline: 0
-				cursor: pointer
 				padding-left:  4px
 				padding-right: 4px
 				> svg
@@ -930,8 +853,8 @@ div.sm-orderer
 			border: 1px solid silver
 			border-radius: 2px
 			background-color: gainsboro
+			color: transparent
 			box-shadow: inset 0 0 10px 0 silver
-			color: darkslategray
 			outline: none
 			cursor: pointer
 			&.left
@@ -970,6 +893,14 @@ div.sm-orderer
 				&:hover
 					border-color: #aaa
 			/***/
+		// }}}
+		&.v // {{{
+			> .variant
+				opacity: 1
+			> select
+				color: darkslategray
+			&.hovered > select
+				border-color: darkslategray
 		// }}}
 // }}}
 

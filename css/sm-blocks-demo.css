@@ -15,13 +15,12 @@
 }
 #sm-demo > .b > .c {
   display: flex;
-  flex-wrap: wrap;
 }
-#sm-demo > .b > .c > .sm-orderer {
-  flex: 1 1 auto;
-  max-width: 240px;
+#sm-demo > .b > .c > .orderer {
+  flex: 1 2 auto;
+  max-width: 220px;
 }
-#sm-demo > .b > .c > .sm-paginator {
-  flex: 1 1 0;
-  justify-content: flex-start;
+#sm-demo > .b > .c > .paginator {
+  flex: 2 1 0;
+  justify-content: flex-end;
 }

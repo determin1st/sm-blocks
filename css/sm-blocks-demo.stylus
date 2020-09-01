@@ -12,10 +12,10 @@
 		flex: 1 1 0
 		> .c
 			display: flex
-			flex-wrap: wrap
-			> .sm-orderer
-				flex: 1 1 auto
-				max-width: 240px
-			> .sm-paginator
-				flex: 1 1 0
-				justify-content: flex-start
+			//flex-wrap: wrap
+			> .orderer
+				flex: 1 2 auto
+				max-width: 220px
+			> .paginator
+				flex: 2 1 0
+				justify-content: flex-end
