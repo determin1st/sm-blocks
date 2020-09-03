@@ -57,6 +57,7 @@ $o = <<<EOD
     <!-- wp:sm-blocks/category-filter /-->
     <!-- :sm-blocks/category-filter {"hasEmpty":true,"baseCategory":"санки"} /-->
     <!-- :sm-blocks/category-filter {"hasEmpty":true,"baseCategory":"инвентарь"} /-->
+    <!-- wp:sm-blocks/price-filter /-->
   </div>
   <div class="b">
     <div class="c">

@@ -181,6 +181,7 @@ smBlocks = do !->>
 			pageIndex: 0 # current page
 			orderOptions: null # orderer content
 			order: ['', 0]
+			priceFilter: ['', '']
 		}
 		gridLock = do ->>
 			# load configuration and cart contents
@@ -317,6 +318,7 @@ smBlocks = do !->>
 				offset: 0
 				category: null
 				order: gridState.order
+				price: gridState.priceFilter
 			}
 			# }}}
 			setState = (s) -> # {{{
@@ -2196,10 +2198,233 @@ smBlocks = do !->>
 		# }}}
 		return state
 	# }}}
+	smPriceFilter = do -> # {{{
+		# constructors
+		Control = (block) !-> # {{{
+			# create object shape
+			# data
+			@block = block
+			@inputState = 0
+			@hovered = 0
+			@focused = 0
+			# handlers
+			@hover = (e) !~> # {{{
+				# fulfil event
+				e.preventDefault!
+				# operate
+				if not @block.locked and not @hovered
+					@block.rootBox.classList.add 'hovered'
+					@inputState = @hovered = 1
+			# }}}
+			@unhover = (e) !~> # {{{
+				# fulfil event
+				e.preventDefault!
+				# operate
+				if @hovered == 1
+					@block.rootBox.classList.remove 'hovered'
+					if @inputState == 1
+						@inputState = 0
+					@hovered = 0
+			# }}}
+			@hoverInputs = []
+			@focusInputs = []
+		###
+		Control.prototype = {
+			attach: !-> # {{{
+				B = @block
+				I = B.inputs
+				B.rootBox.addEventListener 'pointerenter', @hover
+				B.rootBox.addEventListener 'pointerleave', @unhover
+				switch B.mode
+				case 1
+					true
+				default
+					# text inputs
+					# hover
+					a   = @hoverInputs
+					a.0 = @hoverTextInp I.leftBox, true
+					a.1 = @hoverTextInp I.rightBox, false
+					a.2 = @unhoverTextInp I.leftBox, true
+					a.3 = @unhoverTextInp I.rightBox, false
+					I.leftBox.addEventListener 'pointerenter', a.0
+					I.leftBox.addEventListener 'pointerleave', a.2
+					I.rightBox.addEventListener 'pointerenter', a.1
+					I.rightBox.addEventListener 'pointerleave', a.3
+					# focus
+					a   = @focusInputs
+					a.0 = @focusTextInp I.leftBox, true
+					a.1 = @focusTextInp I.rightBox, false
+					a.2 = @unfocusTextInp I.leftBox, true
+					a.3 = @unfocusTextInp I.rightBox, false
+					I.leftInp.addEventListener 'focusin', a.0
+					I.leftInp.addEventListener 'focusout', a.2
+					I.rightInp.addEventListener 'focusin', a.1
+					I.rightInp.addEventListener 'focusout', a.3
+					# ...
+					# done
+				# done
+			# }}}
+			detach: !-> # {{{
+				true
+			# }}}
+			hoverTextInp: (node, isLeft) -> (e) !~> # {{{
+				# fulfil event
+				e.preventDefault!
+				e.stopPropagation!
+				# operate
+				if not @block.locked
+					if not @inputState
+						@block.rootBox.classList.add 'hovered'
+					@hovered = if isLeft
+						then 2
+						else 3
+					if @inputState < 4
+						@inputState = @hovered
+					node.classList.add 'hovered'
+					@block.rootBox.classList.add if isLeft
+						then 'left'
+						else 'right'
+			# }}}
+			unhoverTextInp: (node, isLeft) -> (e) !~> # {{{
+				# fulfil event
+				e.preventDefault!
+				# ..dont stop propagation to reuse parent unhover
+				# operate
+				if @hovered
+					if not @focused or @hovered != @focused - 2
+						@block.rootBox.classList.remove if isLeft
+							then 'left'
+							else 'right'
+					if not @focused
+						@inputState = 1
+					@hovered = 1
+					node.classList.remove 'hovered'
+			# }}}
+			focusTextInp: (node, isLeft) -> (e) !~> # {{{
+				# operate
+				if @block.locked
+					e.preventDefault!
+					e.stopPropagation!
+				else
+					if not @focused
+						@block.rootBox.classList.add 'focused'
+					@focused = if isLeft
+						then 4
+						else 5
+					if not @hovered or @focused != @hovered + 2
+						@block.rootBox.classList.add if isLeft
+							then 'left'
+							else 'right'
+					@inputState = @focused
+					node.classList.add 'focused'
+			# }}}
+			unfocusTextInp: (node, isLeft) -> (e) !~> # {{{
+				# operate
+				if @hovered
+					if @focused != @hovered + 2
+						@block.rootBox.classList.remove if isLeft
+							then 'left'
+							else 'right'
+					@inputState = @hovered
+				else
+					@block.rootBox.classList.remove 'hovered', if isLeft
+						then 'left'
+						else 'right'
+					@inputState = 0
+				node.classList.remove 'focused'
+				@block.rootBox.classList.remove 'focused'
+				@focused = 0
+			# }}}
+		}
+		# }}}
+		TextInputs = (block) !-> # {{{
+			# set parent
+			@block = block
+			# set controls
+			a = block.rootBox
+			@leftBox  = b = a.children.0
+			@stateBox = a.children.1
+			@rightBox = c = a.children.2
+			@leftInp  = b.firstChild
+			@rightInp = c.firstChild
+			# set helpers
+		###
+		TextInputs.prototype =
+			refresh: !->
+				true
+		# }}}
+		Block = (root, state) !-> # {{{
+			# containers
+			@root    = root
+			@rootBox = box = root.firstChild
+			# determine UI mode
+			mode = if box.classList.contains 'text'
+				then 0
+				else 1
+			# controls
+			@inputs  = if mode == 0
+				then new TextInputs @
+				else null
+			# state
+			@mode    = mode
+			@state   = state
+			@locked  = true
+			@current = ['', '']
+			@ctrl    = new Control @
+			# set event handlers and refresh
+			@ctrl.attach!
+			@root.classList.add 'v'
+		###
+		Block.prototype =
+			init: ([min, max]) !-> # {{{
+				# ...
+				# done
+				@refresh!
+			# }}}
+			refresh: !-> # {{{
+				# get data
+				a = @state.data
+				b = @current
+				# sync
+				# ...
+			# }}}
+			unlock: !-> # {{{
+				@rootBox.classList.add 'v'
+				@locked = false
+			# }}}
+		# }}}
+		# initialize
+		# {{{
+		# create common state
+		state = new BlockState 'price', 2, (event, data) ->
+			switch event
+			case 'init'
+				# initialize
+				for a in blocks
+					a.init data.priceFilter
+			case 'lock'
+				# stop any interactions..
+				for a in blocks
+					a.lock!
+			case 'load'
+				# update
+				for a in blocks
+					a.unlock! if a.locked
+					a.refresh!
+			# done
+			return true
+		# create individual blocks
+		blocks = [...(document.querySelectorAll '.sm-blocks.price-filter')]
+		blocks = blocks.map (root) ->
+			new Block root, state
+		# }}}
+		return state
+	# }}}
 	# initialize
 	# {{{
 	smGrid and smGrid.load [
 		smCategoryFilter
+		smPriceFilter
 		smPaginator
 		smOrderer
 	]

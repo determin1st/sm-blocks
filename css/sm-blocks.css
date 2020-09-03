@@ -2,11 +2,14 @@
 * storefront modern styles
 */
 .sm-blocks {
+  --height: 48px;
+  --font-size: calc(0.35 * var(--height));
   position: relative;
   box-sizing: border-box;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
+  font-size: var(--font-size);
 }
 .sm-blocks div,
 .sm-blocks button,
@@ -36,6 +39,9 @@
   overflow: hidden;
   white-space: nowrap;
   word-break: keep-all;
+}
+.sm-blocks input {
+  font-size: 1em;
 }
 .sm-blocks svg {
   width: 100%;
@@ -325,7 +331,7 @@
 }
 .sm-blocks.category-filter > div > .title > h3 {
   flex: 1 1 0;
-  font-size: 36px;
+  font-size: 2em;
   font-weight: bold;
   margin: 0;
 }
@@ -469,12 +475,9 @@
   opacity: 1;
 }
 .sm-blocks.paginator {
-  --height: 48px;
   --width: calc(1.35 * var(--height));
-  --font-size: calc(0.35 * var(--height));
   width: 100%;
   height: calc(8px + var(--height));
-  font-size: var(--font-size);
   display: flex;
   flex-direction: row;
   justify-content: center;
@@ -669,8 +672,6 @@
   fill: #708090;
 }
 .sm-blocks.orderer {
-  --height: 48px;
-  --font-size: calc(0.35 * var(--height));
   width: 100%;
   height: calc(8px + var(--height));
   padding: 4px 0 4px 0;
@@ -747,7 +748,6 @@
   display: block;
   width: 100%;
   height: 100%;
-  font-size: var(--font-size);
   font-weight: bold;
   text-align: left;
   text-overflow: ellipsis;
@@ -812,4 +812,101 @@
 }
 .sm-blocks.orderer > div.v.hovered > select {
   border-color: #2f4f4f;
+}
+.sm-blocks.price-filter {
+  width: 100%;
+  height: calc(8px + var(--height));
+  padding: 4px 0 4px 0;
+}
+.sm-blocks.price-filter > div {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+.sm-blocks.price-filter > div.text > div {
+  flex: 3 1 0;
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 0.2em 0 0.2em 0;
+}
+.sm-blocks.price-filter > div.text > div > input {
+  width: 100%;
+  height: 100%;
+  font-size: 1em;
+  font-weight: bold;
+  padding: 0.5em;
+  background-color: #dcdcdc;
+  border: 1px solid #c0c0c0;
+  border-radius: 2px;
+  box-shadow: inset 0 0 10px 0 #c0c0c0;
+}
+.sm-blocks.price-filter > div.text > div.hovered > input {
+  border-color: #808080;
+  box-shadow: inset 0 0 0 2px #c0c0c0;
+}
+.sm-blocks.price-filter > div.text > div.hovered:not(.focused) > input {
+  cursor: ns-resize;
+}
+.sm-blocks.price-filter > div.text > div.focused > input {
+  background-color: rgba(220,220,220,0.6);
+  border-color: #808080;
+  box-shadow: inset 0 0 0 2px #c0c0c0;
+}
+.sm-blocks.price-filter > div.text > div.left > input {
+  border-right-width: 0;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  text-align: right;
+}
+.sm-blocks.price-filter > div.text > div.right > input {
+  border-left-width: 0;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+.sm-blocks.price-filter > div.text > svg {
+  flex: 1 3 0;
+  height: calc(var(--height) - 0.4em);
+  max-width: 48px;
+  fill: #c0c0c0;
+}
+.sm-blocks.price-filter > div.text > svg > .left {
+  fill: #a9a9a9;
+}
+.sm-blocks.price-filter > div.text > svg > .inputState {
+  fill: #708090;
+}
+.sm-blocks.price-filter > div.text > svg > .right {
+  fill: #a9a9a9;
+}
+.sm-blocks.price-filter > div.text.v > div > input {
+  color: #2f4f4f;
+}
+.sm-blocks.price-filter > div.text.v.hovered > svg > .inputState {
+  fill: #708090;
+}
+.sm-blocks.price-filter > div.text.v.hovered:not(.left):not(.right) > svg > .inputState {
+  fill: #2f4f4f;
+}
+.sm-blocks.price-filter > div.text.v.hovered.left > svg > .left,
+.sm-blocks.price-filter > div.text.v.focused.left > svg > .left {
+  fill: #2f4f4f;
+  transform: translateX(1px);
+}
+.sm-blocks.price-filter > div.text.v.hovered.right > svg > .right,
+.sm-blocks.price-filter > div.text.v.focused.right > svg > .right {
+  fill: #2f4f4f;
+  transform: translateX(-1px);
+}
+.sm-blocks.price-filter > div.text.v.focused.left > div.left > input {
+  color: #000;
+}
+.sm-blocks.price-filter > div.text.v.focused.right > div.right > input {
+  color: #000;
+}
+.sm-blocks.price-filter > div.text.v.focused > svg > .inputState {
+  fill: #2f4f4f;
 }

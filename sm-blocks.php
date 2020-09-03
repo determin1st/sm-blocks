@@ -219,6 +219,42 @@ class StorefrontModernBlocks {
         ],
       ],
       # }}}
+      'price-filter' => [ # {{{
+        'render_callback' => [null, 'renderPriceFilter'],
+        'attributes'      => [
+          ### common
+          'customClass'   => [
+            'type'        => 'string',
+            'default'     => 'custom',
+          ],
+          'dumbMode'      => [
+            'type'        => 'boolean',
+            'default'     => true,
+          ],
+          ###
+          'baseUI'        => [
+            'type'        => 'number',
+            'default'     => 0,
+          ],
+          'baseTitle'     => [
+            'type'        => 'string',
+            'default'     => '{"en":"Price","ru":"Цена"}',
+          ],
+          'sectionMode'   => [
+            'type'        => 'number',
+            'default'     => 0,
+          ],
+          'submitButton'  => [
+            'type'        => 'number',
+            'default'     => 0,
+          ],
+          'sliceGroups'   => [
+            'type'        => 'number',
+            'default'     => 0,
+          ],
+        ],
+      ],
+      # }}}
     ],
     $templates = [
       'grid' => [ # {{{
@@ -487,6 +523,82 @@ class StorefrontModernBlocks {
         'asc_desc' => '
         <svg preserveAspectRatio="none" shape-rendering="geometricPrecision" viewBox="0 0 48 48">
           <path stroke-linejoin="round" d="M11 25l13 13 13-13h-2l-8 5-1-6 1-6 8 5h2L24 10 11 23h2l8-5 1 6-1 6-8-5z"/>
+        </svg>
+        ',
+      ],
+      # }}}
+      'price-filter' => [ # {{{
+        'main' => '
+        <div class="sm-blocks price-filter {{custom}}">
+          {{content}}{{placeholder}}
+        </div>
+        ',
+        'textInputs' => '
+        <div class="left"><input type="text" inputmode="numeric" pattern="[0-9]*"></div>
+        {{delimiter}}
+        <div class="right"><input type="text" inputmode="numeric" pattern="[0-9]*"></div>
+        {{submitButton}}
+        ',
+        'rangeSlider' => '
+        ',
+        'submitButton' => '
+        <div class="submit" data-mode="1">
+          <button>{{submitIcon}}</button>
+        </div>
+        ',
+        'delimiter' => '
+        <svg preserveAspectRatio="none" shape-rendering="geometricPrecision" viewBox="0 0 48 48">
+          <polygon points="0,48 4,48 12,43 18,41 22,40 26,40 30,41 36,43 44,48 48,48 48,0 44,0 36,5 30,7 26,8 22,8 18,7 12,5 4,0 0,0 "/>
+          <polygon class="left"       points="13,28 16,31 19,32 23,32 23,31 19,30 17,28 16,24 17,20 19,18 23,17 23,16 19,16 16,17 13,20 12,22 12,26 "/>
+          <polygon class="inputState" points="18,28 20,30 24,31 28,30 30,28 31,24 30,20 28,18 24,17 20,18 18,20 17,24 "/>
+          <polygon class="right"      points="35,28 32,31 29,32 25,32 25,31 29,30 31,28 32,24 31,20 29,18 25,17 25,16 29,16 32,17 35,20 36,22 36,26 "/>
+        </svg>
+        ',
+      ],
+      # }}}
+      'section' => [ # {{{
+        'main' => '
+        <div class="main-section{{class}}"{{data}}>
+          {{title}}
+          {{topLine}}
+          {{items}}
+          {{bottomLine}}
+        </div>
+        ',
+        'title' => '
+        <div class="title" data-id="0">
+          <h3>{{name}}</h3>
+          {{arrowBox}}
+        </div>
+        ',
+        'item' => '
+        <div class="item{{class}}" data-id="{{id}}" data-order="{{order}}" data-extra="{{extraData}}">
+          <div class="name">
+            <div class="box">{{itemTitle}}</div>
+            {{extraBox}}
+            {{arrowBox}}
+          </div>
+          {{section}}
+        </div>
+        ',
+        'section' => '
+        <div class="section{{class}}">{{items}}</div>
+        ',
+        'extraBox' => '
+        <div class="extra">{{extra}}</div>
+        ',
+        'arrowBox' => '
+        <div class="arrow">{{arrow}}</div>
+        ',
+        'topLine' => '
+        <hr class="top">
+        ',
+        'bottomLine' => '
+        <hr class="bottom">
+        ',
+        'arrow' => '
+        <svg preserveAspectRatio="none" viewBox="0 0 16 16">
+          <path stroke-linejoin="round" d="M8 12l2.5-4L13 4H3l2.5 4z"/>
         </svg>
         ',
       ],
@@ -977,6 +1089,132 @@ EOD;
       'variantRight' => $variantR,
       'placeholder'  => $this->templates['svg']['placeholder'],
     ]);
+  }
+  # }}}
+  # price-filter {{{
+  public function renderPriceFilter($attr, $content)
+  {
+    # prepare
+    $T = $this->templates['price-filter'];
+    # create filter variant
+    switch ($attr['baseUI']) {
+    default:
+      $content = $this->parseTemplate($T['textInputs'], $T, [
+        'submitButton' => ($attr['submitButton'] !== 0),
+      ]);
+      $class = 'text';
+      break;
+    }
+    # create section
+    $content = $this->renderSection([
+      'class' => $class,
+      'data'  => '',
+      'mode'  => $attr['sectionMode'],
+      'name'  => $this->parseLocalName($attr['baseTitle']),
+      'items' => $content,
+    ]);
+    # compose
+    return $this->parseTemplate($T['main'], $T, [
+      'custom'  => $attr['customClass'],
+      'content' => $content,
+      'placeholder' => $this->templates['svg']['placeholder'],
+    ]);
+  }
+  # }}}
+  # section {{{
+  private function renderSection($attr)
+  {
+    # preapre
+    $T = $this->templates['section'];
+    # compose sections tree
+    $mode    = $attr['mode'];
+    $content = $attr['items'];
+    if (is_array($content))
+    {
+      $content = $this->renderSectionItems($items, $T, [
+      ]);
+      if (!$content || empty($content)) {
+        return '';
+      }
+    }
+    # determine main section parameters
+    switch ($mode) {
+    case 1:
+      # compact (title|content)
+      $a = [
+        'class'      => $attr['class'].' opened',
+        'name'       => $attr['name'],
+        'arrowBox'   => false,
+        'bottomLine' => false,
+      ];
+      break;
+    case 2:
+      # full opened (title^|content|)
+      $a = [
+        'class' => $attr['class'].' opened',
+        'name'  => $attr['name'],
+      ];
+      break;
+    case 3:
+      # full closed (title^|content|)
+      $a = [
+        'class' => $attr['class'],
+        'name'  => $attr['name'],
+      ];
+      break;
+    default:
+      # content only (empty section)
+      $a = [
+        'class'      => $attr['class'].' opened',
+        'title'      => false,
+        'topLine'    => false,
+        'bottomLine' => false,
+      ];
+      break;
+    }
+    # compose
+    $a['class'] = ' '.trim($a['class']);
+    $a['data']  = empty($attr['data']) ? '' : ' '.$attr['data'];
+    $a['items'] = $content;
+    return $this->parseTemplate($T['main'], $T, $a);
+  }
+  private function renderSectionItems($node, $T, $attr)
+  {
+    $html = '';
+    foreach ($node['list'] as $a)
+    {
+      # create item template parameters
+      if ($a['list'])
+      {
+        $b = [
+          'class'    => [
+            ' sub', ($attr['subOpened'] ? ' opened' : '')
+          ],
+          'id'       => $a['id'],
+          'order'    => $a['order'],
+          'extra'    => $a['extra'],
+          'name'     => $a['name'],
+          'countBox' => false,
+          'items'    => $this->renderSectionItem($a, $T, $attr),
+        ];
+      }
+      else
+      {
+        $b = [
+          'class'    => '',
+          'id'       => $a['id'],
+          'order'    => $a['order'],
+          'extra'    => $a['extra'],
+          'name'     => $a['name'],
+          'arrowBox' => false,
+          'section'  => false,
+        ];
+      }
+      # aggregate markup
+      $html .= $this->parseTemplate($T['item'], $T, $b).$c;
+    }
+    # complete
+    return $html;
   }
   # }}}
   # rest api

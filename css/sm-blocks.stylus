@@ -2,11 +2,14 @@
 * storefront modern styles
 */
 .sm-blocks // {{{
+	--height:    48px
+	--font-size: calc(0.35 * var(--height))
 	position:   relative
 	box-sizing: border-box
 	min-width:  0
 	min-height: 0
 	overflow:   hidden
+	font-size:  var(--font-size)
 	// {{{
 	div,button,select,input,label,svg,img,hr,h1,h2,h3
 		box-sizing: border-box
@@ -23,6 +26,8 @@
 		overflow:      hidden
 		white-space:   nowrap
 		word-break:    keep-all // to break-word asian languages
+	input
+		font-size: 1em
 	svg
 		width:  100%
 		height: 100%
@@ -408,7 +413,7 @@
 			display: flex
 			> h3
 				flex: 1 1 0
-				font-size: 36px
+				font-size: 2em
 				font-weight: bold
 				margin: 0
 		> hr
@@ -582,13 +587,10 @@
 // }}}
 .sm-blocks.paginator // {{{
 	// configuration
-	--height:    48px
-	--width:     calc(1.35 * var(--height))
-	--font-size: calc(0.35 * var(--height))
+	--width: calc(1.35 * var(--height))
 	////
 	width:  100%
 	height: calc(8px + var(--height))
-	font-size: var(--font-size)
 	display: flex
 	flex-direction:  row
 	justify-content: center
@@ -772,9 +774,6 @@
 		// }}}
 // }}}
 .sm-blocks.orderer // {{{
-	// settings
-	--height:    48px
-	--font-size: calc(0.35 * var(--height))
 	// container
 	width:  100%
 	height: calc(8px + var(--height))
@@ -844,7 +843,6 @@
 			display: block
 			width:  100%
 			height: 100%
-			font-size: var(--font-size)
 			font-weight: bold
 			text-align: left
 			text-overflow: ellipsis
@@ -902,5 +900,95 @@
 			&.hovered > select
 				border-color: darkslategray
 		// }}}
+// }}}
+.sm-blocks.price-filter // {{{
+	width:  100%
+	height: calc(8px + var(--height))
+	padding: 4px 0 4px 0
+	// content
+	> div
+		width:  100%
+		height: 100%
+		display: flex
+		flex-direction: row
+		align-items: center
+		&.text
+			> div // {{{
+				flex: 3 1 0
+				height: 100%
+				display: flex
+				flex-direction: row
+				align-items: center
+				padding: 0.2em 0 0.2em 0
+				> input
+					width:  100%
+					height: 100%
+					font-size: 1em
+					font-weight: bold
+					padding: 0.5em
+					background-color: gainsboro
+					border: 1px solid silver
+					border-radius: 2px
+					box-shadow: inset 0 0 10px 0 silver
+				&.hovered > input
+					border-color: gray
+					box-shadow: inset 0 0 0 2px silver
+				&.hovered:not(.focused) > input
+					cursor: ns-resize
+				&.focused > input
+					background-color: alpha(gainsboro, 0.6)
+					border-color: gray
+					box-shadow: inset 0 0 0 2px silver
+				&.left > input
+					border-right-width: 0
+					border-top-right-radius: 0
+					border-bottom-right-radius: 0
+					text-align: right
+				&.right > input
+					border-left-width: 0
+					border-top-left-radius: 0
+					border-bottom-left-radius: 0
+			// }}}
+			> svg // {{{
+				flex: 1 3 0
+				height: calc(var(--height) - 0.4em)
+				max-width: 48px
+				fill: silver
+				//stroke: black
+				//stroke-width: 0.6
+				> .left
+					fill: darkgray
+				> .inputState
+					fill: slategray
+				> .right
+					fill: darkgray
+			// }}}
+			&.v // {{{
+				> div > input
+					color: darkslategray
+				&.hovered
+					> svg > .inputState
+						fill: slategray
+					&:not(.left):not(.right) > svg > .inputState
+						fill: darkslategray
+				&.hovered,
+				&.focused
+					&.left > svg
+						> .left
+							fill: darkslategray
+							transform: translateX(1px)
+					&.right > svg
+						> .right
+							fill: darkslategray
+							transform: translateX(-1px)
+				&.focused
+					&.left > div.left > input
+						color: black
+					&.right > div.right > input
+						color: black
+					> svg > .inputState
+						fill: darkslategray
+			// }}}
+	// end
 // }}}
 

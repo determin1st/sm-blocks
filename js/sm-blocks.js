@@ -2,7 +2,7 @@
 "use strict";
 var smBlocks, slice$ = [].slice, arrayFrom$ = Array.from || function(x){return slice$.call(x);};
 smBlocks = async function(){
-  var BRAND, soFetch, newPromise, delay, newMetaObject, BlockState, smCart, smGrid, smCategoryFilter, smPaginator, smOrderer;
+  var BRAND, soFetch, newPromise, delay, newMetaObject, BlockState, smCart, smGrid, smCategoryFilter, smPaginator, smOrderer, smPriceFilter;
   BRAND = 'sm-blocks';
   soFetch = httpFetch.create({
     baseUrl: '/?rest_route=/' + BRAND + '/kiss',
@@ -156,7 +156,8 @@ smBlocks = async function(){
       pageCount: 0,
       pageIndex: 0,
       orderOptions: null,
-      order: ['', 0]
+      order: ['', 0],
+      priceFilter: ['', '']
     };
     gridLock = async function(){
       var a, b, c, CFG, d;
@@ -273,7 +274,8 @@ smBlocks = async function(){
         limit: gridList.length,
         offset: 0,
         category: null,
-        order: gridState.order
+        order: gridState.order,
+        price: gridState.priceFilter
       };
       setState = function(s){
         var a, b, i$, ref$, len$, c, j$, ref1$, len1$, d;
@@ -1965,7 +1967,218 @@ smBlocks = async function(){
     });
     return state;
   }();
-  smGrid && smGrid.load([smCategoryFilter, smPaginator, smOrderer]);
+  smPriceFilter = function(){
+    var Control, TextInputs, Block, state, blocks;
+    Control = function(block){
+      var this$ = this;
+      this.block = block;
+      this.inputState = 0;
+      this.hovered = 0;
+      this.focused = 0;
+      this.hover = function(e){
+        e.preventDefault();
+        if (!this$.block.locked && !this$.hovered) {
+          this$.block.rootBox.classList.add('hovered');
+          this$.inputState = this$.hovered = 1;
+        }
+      };
+      this.unhover = function(e){
+        e.preventDefault();
+        if (this$.hovered === 1) {
+          this$.block.rootBox.classList.remove('hovered');
+          if (this$.inputState === 1) {
+            this$.inputState = 0;
+          }
+          this$.hovered = 0;
+        }
+      };
+      this.hoverInputs = [];
+      this.focusInputs = [];
+    };
+    Control.prototype = {
+      attach: function(){
+        var B, I, a;
+        B = this.block;
+        I = B.inputs;
+        B.rootBox.addEventListener('pointerenter', this.hover);
+        B.rootBox.addEventListener('pointerleave', this.unhover);
+        switch (B.mode) {
+        case 1:
+          true;
+          break;
+        default:
+          a = this.hoverInputs;
+          a[0] = this.hoverTextInp(I.leftBox, true);
+          a[1] = this.hoverTextInp(I.rightBox, false);
+          a[2] = this.unhoverTextInp(I.leftBox, true);
+          a[3] = this.unhoverTextInp(I.rightBox, false);
+          I.leftBox.addEventListener('pointerenter', a[0]);
+          I.leftBox.addEventListener('pointerleave', a[2]);
+          I.rightBox.addEventListener('pointerenter', a[1]);
+          I.rightBox.addEventListener('pointerleave', a[3]);
+          a = this.focusInputs;
+          a[0] = this.focusTextInp(I.leftBox, true);
+          a[1] = this.focusTextInp(I.rightBox, false);
+          a[2] = this.unfocusTextInp(I.leftBox, true);
+          a[3] = this.unfocusTextInp(I.rightBox, false);
+          I.leftInp.addEventListener('focusin', a[0]);
+          I.leftInp.addEventListener('focusout', a[2]);
+          I.rightInp.addEventListener('focusin', a[1]);
+          I.rightInp.addEventListener('focusout', a[3]);
+        }
+      },
+      detach: function(){
+        true;
+      },
+      hoverTextInp: function(node, isLeft){
+        var this$ = this;
+        return function(e){
+          e.preventDefault();
+          e.stopPropagation();
+          if (!this$.block.locked) {
+            if (!this$.inputState) {
+              this$.block.rootBox.classList.add('hovered');
+            }
+            this$.hovered = isLeft ? 2 : 3;
+            if (this$.inputState < 4) {
+              this$.inputState = this$.hovered;
+            }
+            node.classList.add('hovered');
+            this$.block.rootBox.classList.add(isLeft ? 'left' : 'right');
+          }
+        };
+      },
+      unhoverTextInp: function(node, isLeft){
+        var this$ = this;
+        return function(e){
+          e.preventDefault();
+          if (this$.hovered) {
+            if (!this$.focused || this$.hovered !== this$.focused - 2) {
+              this$.block.rootBox.classList.remove(isLeft ? 'left' : 'right');
+            }
+            if (!this$.focused) {
+              this$.inputState = 1;
+            }
+            this$.hovered = 1;
+            node.classList.remove('hovered');
+          }
+        };
+      },
+      focusTextInp: function(node, isLeft){
+        var this$ = this;
+        return function(e){
+          if (this$.block.locked) {
+            e.preventDefault();
+            e.stopPropagation();
+          } else {
+            if (!this$.focused) {
+              this$.block.rootBox.classList.add('focused');
+            }
+            this$.focused = isLeft ? 4 : 5;
+            if (!this$.hovered || this$.focused !== this$.hovered + 2) {
+              this$.block.rootBox.classList.add(isLeft ? 'left' : 'right');
+            }
+            this$.inputState = this$.focused;
+            node.classList.add('focused');
+          }
+        };
+      },
+      unfocusTextInp: function(node, isLeft){
+        var this$ = this;
+        return function(e){
+          if (this$.hovered) {
+            if (this$.focused !== this$.hovered + 2) {
+              this$.block.rootBox.classList.remove(isLeft ? 'left' : 'right');
+            }
+            this$.inputState = this$.hovered;
+          } else {
+            this$.block.rootBox.classList.remove('hovered', isLeft ? 'left' : 'right');
+            this$.inputState = 0;
+          }
+          node.classList.remove('focused');
+          this$.block.rootBox.classList.remove('focused');
+          this$.focused = 0;
+        };
+      }
+    };
+    TextInputs = function(block){
+      var a, b, c;
+      this.block = block;
+      a = block.rootBox;
+      this.leftBox = b = a.children[0];
+      this.stateBox = a.children[1];
+      this.rightBox = c = a.children[2];
+      this.leftInp = b.firstChild;
+      this.rightInp = c.firstChild;
+    };
+    TextInputs.prototype = {
+      refresh: function(){
+        true;
+      }
+    };
+    Block = function(root, state){
+      var box, mode;
+      this.root = root;
+      this.rootBox = box = root.firstChild;
+      mode = box.classList.contains('text') ? 0 : 1;
+      this.inputs = mode === 0 ? new TextInputs(this) : null;
+      this.mode = mode;
+      this.state = state;
+      this.locked = true;
+      this.current = ['', ''];
+      this.ctrl = new Control(this);
+      this.ctrl.attach();
+      this.root.classList.add('v');
+    };
+    Block.prototype = {
+      init: function(arg$){
+        var min, max;
+        min = arg$[0], max = arg$[1];
+        this.refresh();
+      },
+      refresh: function(){
+        var a, b;
+        a = this.state.data;
+        b = this.current;
+      },
+      unlock: function(){
+        this.rootBox.classList.add('v');
+        this.locked = false;
+      }
+    };
+    state = new BlockState('price', 2, function(event, data){
+      var i$, ref$, len$, a;
+      switch (event) {
+      case 'init':
+        for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
+          a = ref$[i$];
+          a.init(data.priceFilter);
+        }
+        break;
+      case 'lock':
+        for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
+          a = ref$[i$];
+          a.lock();
+        }
+        break;
+      case 'load':
+        for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
+          a = ref$[i$];
+          if (a.locked) {
+            a.unlock();
+          }
+          a.refresh();
+        }
+      }
+      return true;
+    });
+    blocks = arrayFrom$(document.querySelectorAll('.sm-blocks.price-filter'));
+    blocks = blocks.map(function(root){
+      return new Block(root, state);
+    });
+    return state;
+  }();
+  smGrid && smGrid.load([smCategoryFilter, smPriceFilter, smPaginator, smOrderer]);
   return smGrid;
 }();
 function import$(obj, src){
