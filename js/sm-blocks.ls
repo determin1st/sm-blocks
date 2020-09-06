@@ -1,6 +1,5 @@
 "use strict"
-smBlocks = do !->>
-	# TODO: restructuring, (1)=>(2)=>(3)
+smCatalogueKing = do ->>
 	# TODO: price filter
 	# TODO: grid's goto next page + scroll up
 	# TODO: static paginator max-width auto-calc
@@ -56,6 +55,30 @@ smBlocks = do !->>
 		# done
 		return p
 	# }}}
+	querySelectorChildren = (parentNode, selector) -> # {{{
+		# prepare
+		a = []
+		if not parentNode or not parentNode.children.length
+			return a
+		# select all and
+		# filter into result
+		for b in parentNode.querySelectorAll selector
+			if b.parentNode == parentNode
+				a[*] = b
+		# done
+		return a
+	# }}}
+	querySelectorChild = (parentNode, selector) -> # {{{
+		# check
+		if not parentNode
+			return null
+		# reuse
+		a = querySelectorChildren parentNode, selector
+		# done
+		return if a.length
+			then a.0
+			else null
+	# }}}
 	newMetaObject = do -> # {{{
 		handler =
 			get: (o, k) -> # {{{
@@ -95,6 +118,7 @@ smBlocks = do !->>
 		@event  = handler
 		@data   = null
 		@master = null
+		@ready  = []
 	###
 	BlockState.prototype = {
 		set: (data) !->
@@ -102,8 +126,220 @@ smBlocks = do !->>
 			@master.resolve @
 	}
 	# }}}
-	# widgets
-	smCart = do -> # {{{
+	###
+	# slaves
+	# - passive, expose events / api / data
+	# - compliance to master events
+	###
+	sMainSection = do -> # {{{
+		# constructors
+		Control = (block) !-> # {{{
+			# data
+			@block = block
+			# handlers
+			# ...
+		###
+		Control.prototype = {
+			attach: !-> # {{{
+				# iterate items
+				for a of b = @block.item
+					b[a].attach!
+				# done
+			# }}}
+			detach: !-> # {{{
+				true
+			# }}}
+		}
+		# }}}
+		Item = do -> # {{{
+			Events = (item) !-> # {{{
+				@item    = item
+				@hovered = false
+				@focused = false
+				block = item.block
+				@switchHover = (e) !~> # {{{
+					# fulfil event
+					e.preventDefault!
+					# operate
+					if not block.locked and not @hovered
+						item.node.classList.add 'hovered'
+						@hovered = true
+				# }}}
+				@switchUnhover = (e) !~> # {{{
+					# fulfil event
+					e.preventDefault!
+					# operate
+					if @hovered
+						item.node.classList.remove 'hovered'
+						@hovered = false
+				# }}}
+				@switchFocus = (e) !~> # {{{
+					# fulfil event
+					e.preventDefault!
+					# operate
+					if not block.locked and not @focused
+						item.node.classList.add 'focused'
+						@focused = true
+				# }}}
+				@switchUnfocus = (e) !~> # {{{
+					# fulfil event
+					e.preventDefault!
+					# operate
+					if not block.locked and @focused
+						item.node.classList.remove 'focused'
+						@focused = false
+				# }}}
+				@switch = (e) !~> # {{{
+					# fulfil event
+					e.preventDefault!
+					# operate
+					if not block.locked
+						item.opened = !item.opened
+						item.node.classList.toggle 'opened', item.opened
+						if not @focused and item.switch
+							item.switch.focus!
+				# }}}
+			# }}}
+			return Item = (block, node, parent) !->
+				# item base
+				@block    = block
+				@node     = node
+				@id       = +node.dataset.id    # unique identifier
+				@order    = +node.dataset.order # position in the list
+				@parent   = parent
+				@opened   = node.classList.contains 'opened'
+				# containers
+				@titleBox = box = node.firstChild
+				@arrowBox = arrow = querySelectorChild box, '.arrow'
+				@extraBox = querySelectorChild box, '.extra'
+				@section  = sect = querySelectorChild node, '.section'
+				# controls
+				@title    = box.firstChild
+				@switch   = if arrow
+					then querySelectorChild arrow, '.switch'
+					else null
+				# children
+				if (a = querySelectorChildren sect, '.item').length
+					# store
+					@children = a
+					# initialize
+					for b,c in a
+						a[c] = new Item block, b, @
+				else
+					@children = null
+				# event handlers
+				@events = new Events @
+		#####
+		Item.prototype =
+			attach: !-> # {{{
+				# prepare
+				B = @block
+				E = @events
+				# check arrow mode enabled and
+				# set switch handlers
+				if B.mode .&. 4
+					if a = @switch
+						a.addEventListener 'click', E.switch
+						a.addEventListener 'pointerenter', E.switchHover
+						a.addEventListener 'pointerleave', E.switchUnhover
+						a.addEventListener 'focusin', E.switchFocus
+						a.addEventListener 'focusout', E.switchUnfocus
+					a = @title
+					a.addEventListener 'click', E.switch
+					a.addEventListener 'pointerenter', E.switchHover
+					a.addEventListener 'pointerleave', E.switchUnhover
+				# done
+			# }}}
+			detach: !-> # {{{
+				true
+			# }}}
+		# }}}
+		Block = (root, state) !-> # {{{
+			# containers
+			@root     = root
+			@rootBox  = box  = root.firstChild
+			@rootItem = root = new Item @, box, null
+			# items
+			@lines    = querySelectorChildren box, 'hr'
+			@sect     = sect = {} # with section (parents)
+			@item     = item = {} # all
+			@list     = list = [root] # all ordered
+			# initialize
+			a = -1
+			while ++a < list.length
+				if (b = list[a]).children
+					sect[b.id] = b
+					list ++= b.children
+				item[b.id] = b
+			# state
+			@mode     = +box.dataset.mode
+			@state    = state
+			@locked   = true
+			@ctrl     = new Control @
+		###
+		Block.prototype =
+			init: ->> # {{{
+				@ctrl.attach!
+				@root.classList.add 'v'
+				return true
+			# }}}
+			lock: !-> # {{{
+				if not @locked
+					@locked = true
+					@rootBox.classList.remove 'v'
+			# }}}
+			refresh: (list) !-> # {{{
+				# iterate changed items
+				for a in list
+					# get item
+					a = @item[a]
+					# set visual state
+					if b = a.state._checked
+						a.checkbox.classList.remove if b == 2
+							then 'indeterminated'
+							else 'checked'
+					if b = a.state.checked
+						a.checkbox.classList.add if b == 2
+							then 'indeterminated'
+							else 'checked'
+				# determine new filter
+				list = []
+				for a,b of @item
+					# get state
+					a = b.id
+					b = b.state
+					# collect non-empty category identifiers
+					if b.checked == 1 and b.count > 0
+						list[*] = a
+				# get old filter's data and
+				# check the difference exists
+				b = state.data[@index][1]
+				if b.length == list.length
+					a = list.every (a) -> (b.indexOf a) != -1
+					return if a
+				# set new filter
+				state.data[@index][1] = list
+				state.master.resolve state
+				# done
+			# }}}
+			unlock: ->> # {{{
+				# opearte
+				if @locked
+					@locked = false
+					@rootBox.classList.add 'v'
+				# done
+				return true
+			# }}}
+			finit: !-> # {{{
+				@root.classList.remove 'v'
+				@ctrl.detach!
+			# }}}
+		# }}}
+		# factory
+		return (node, state) ->
+			return new Block node, state
+	# }}}
+	sCart = do -> # {{{
 		# prepare
 		data = null
 		# create api
@@ -162,7 +398,12 @@ smBlocks = do !->>
 			# }}}
 		}
 	# }}}
-	smGrid = do -> # {{{
+	###
+	# masters
+	# - active, use and control of slaves
+	# - compliance to group events
+	###
+	KING = do -> # {{{
 		# prepare
 		# {{{
 		# get container
@@ -173,19 +414,24 @@ smBlocks = do !->>
 		gridList    = [...grid.children]
 		gridControl = []
 		gridState   = {
+			# loader
 			dirty: false # resolved-in-process flag
 			level: 0     # update priority level
+			# grid
 			total: 0     # items in the set
 			count: 0     # displayed items
+			# paginator
 			pageCount: 0 # calculated total/count
 			pageIndex: 0 # current page
-			orderOptions: null # orderer content
-			order: ['', 0]
-			priceFilter: ['', '']
+			# orderer
+			orderOption: null # orderer content
+			orderFilter: ['',  0]
+			# price-filter
+			priceFilter: [false, 0, -1, false, 0, -1]
 		}
 		gridLock = do ->>
 			# load configuration and cart contents
-			a = smCart.load!
+			a = sCart.load!
 			b = soFetch {
 				func: 'config'
 				#lang: 'en'
@@ -196,15 +442,15 @@ smBlocks = do !->>
 			a = grid.dataset.order.split ','
 			if b = a.length
 				# set order options
-				gridState.orderOptions = c = {}
+				gridState.orderOption = c = {}
 				d = -1
 				while ++d < b
-					c[a[d]] = CFG.orderOptions[a[d]]
+					c[a[d]] = CFG.orderOption[a[d]]
 				# set default order
 				b = parseInt grid.dataset.index
 				b = a[b]
-				gridState.order.0 = b
-				gridState.order.1 = CFG.orderOptions[b].1
+				gridState.orderFilter.0 = b
+				gridState.orderFilter.1 = CFG.orderOption[b].1
 			# done
 			return true
 		# }}}
@@ -317,7 +563,7 @@ smBlocks = do !->>
 				limit: gridList.length
 				offset: 0
 				category: null
-				order: gridState.order
+				order: gridState.orderFilter
 				price: gridState.priceFilter
 			}
 			# }}}
@@ -445,25 +691,33 @@ smBlocks = do !->>
 					return if a.id == 4
 						then true   # dirty update, cancelled
 						else false  # fatal failure
-				# get total items count
-				if (gridState.total = await a.readInt!) == null
+				# get metadata
+				if (b = await a.readJSON!) == null or gridState.dirty
 					a.cancel!
-					return false
-				# determine count of displayed items
-				b = gridList.length
-				gridState.count = if b > gridState.total
-					then gridState.total
-					else if (c = gridState.total - req.offset) < b
-						then c
-						else b
-				# determine count of pages
-				gridState.pageCount = Math.ceil (gridState.total / b)
-				#gridState.pageCount = 15
+					return gridState.dirty
+				# update internal state
+				# {{{
+				# set total items
+				gridState.total = c = b.total
+				# set count of displayed
+				gridState.count = if (d = c - req.offset) < gridList.length
+					then d
+					else gridList.length
+				# set count of pages
+				gridState.pageCount = Math.ceil (c / gridList.length)
+				# it's always welcome to
+				# set the correct price range
+				if c = b.priceFilter
+					d = gridState.priceFilter
+					c.0 = false if c.0
+					c.1 = d.0
+					c.2 = d.1
 				# dispatch load event
 				for c in gridControl
 					c.event 'load', gridState
 				# reset
 				gridState.level = 0
+				# }}}
 				# async loop
 				c = -1
 				while ++c < gridState.count and not gridState.dirty
@@ -485,34 +739,6 @@ smBlocks = do !->>
 				a.cancel!
 				return true
 		# }}}
-		# TODO
-		Block = (root) !-> # {{{
-			# root
-			@root    = root
-			@rootBox = root.firstChild
-			# controller
-			@state = new State @
-		# }}}
-		State = (block) !-> # {{{
-			# grid
-			@block = block
-			@lock  = null  # master lock
-			@dirty = false # resolved-in-process flag
-			@level = 0     # update priority level
-			@total = 0     # items in the set
-			@count = 0     # displayed items
-			# paginator
-			@pageCount = 0 # calculated total/count
-			@pageIndex = 0 # current page
-			# orderer
-			@orderOptions = null
-			@orderTag = ['', 0]
-			# cart
-			# ...
-			# initialize
-			# ...
-		# }}}
-		####
 		# CARD handler
 		# {{{
 		# constructors
@@ -706,7 +932,7 @@ smBlocks = do !->>
 						return
 					# check stock count and
 					# set initial button state
-					x = smCart.get data.id
+					x = sCart.get data.id
 					if s.count == 0 or (x and s.count <= x.quantity)
 						e.disabled = true
 					# create event handler and
@@ -716,13 +942,13 @@ smBlocks = do !->>
 						a.preventDefault!
 						e.disabled = true
 						# add simple single product to cart
-						if not (a = await smCart.add data.id)
+						if not (a = await sCart.add data.id)
 							return
 						# reload cart items and
 						# check if more items may be added
-						if not await smCart.load!
+						if not await sCart.load!
 							return
-						x = smCart.get data.id
+						x = sCart.get data.id
 						if not x or s.count <= x.quantity
 							return
 						# unlock
@@ -813,7 +1039,7 @@ smBlocks = do !->>
 		# api
 		return {
 			resize: gridResizer
-			load: (c) ->> # {{{
+			rule: (c) ->> # {{{
 				# construct and activate grid
 				if not grid.classList.contains 'v'
 					for a,b in gridList
@@ -821,21 +1047,14 @@ smBlocks = do !->>
 					gridResizer!
 					root.classList.add 'v'
 				# wait until state is ready to use
-				await gridLock
+				a = [gridLock]
+				for b in c when b
+					a ++= b.ready
+				await Promise.all a
 				# add new controllers
-				for a in c
-					if a and a instanceof BlockState
-						gridControl[*] = a
-						a.event 'init', gridState
-				/***
-				# check loop is running
-				if gridLock
-					# force unlock
-					if gridLock.pending
-						gridLock.resolve!
-					# done
-					return true
-				/***/
+				for a in c when a
+					gridControl[*] = a
+					a.event 'init', gridState
 				# enter the dragon
 				if await gridLoader!
 					# activate
@@ -850,7 +1069,45 @@ smBlocks = do !->>
 			# }}}
 		}
 	# }}}
-	smCategoryFilter = do -> # {{{
+	mProductsGrid = do -> # {{{
+		# TODO
+		Block = (root) !-> # {{{
+			# root
+			@root    = root
+			@rootBox = root.firstChild
+			# controller
+			@state = new State @
+		# }}}
+		State = (block) !-> # {{{
+			# grid
+			@block = block
+			@lock  = null  # master lock
+			@dirty = false # resolved-in-process flag
+			@level = 0     # update priority level
+			@total = 0     # items in the set
+			@count = 0     # displayed items
+			# paginator
+			@pageCount = 0 # calculated total/count
+			@pageIndex = 0 # current page
+			# orderer
+			@orderOption = null
+			@orderFilter = ['', 0]
+			# cart
+			# ...
+			# initialize
+			# ...
+		# }}}
+		# api
+		# initialize
+		# {{{
+		# create common state
+		state = new BlockState 'grid', 0, (event, data) ->
+			# done
+			return true
+		# }}}
+		return state
+	# }}}
+	mCategoryFilter = do -> # {{{
 		# constructors
 		Item = (block, node) !-> # {{{
 			# {{{
@@ -1084,7 +1341,250 @@ smBlocks = do !->>
 		# }}}
 		return state
 	# }}}
-	smPaginator = do -> # {{{
+	mPriceFilter = do -> # {{{
+		# constructors
+		Control = (block) !-> # {{{
+			# create object shape
+			# data
+			@block = block
+			@inputState = 0
+			@hovered = 0
+			@focused = 0
+			# handlers
+			@hover = (e) !~> # {{{
+				# fulfil event
+				e.preventDefault!
+				# operate
+				if not @block.locked and not @hovered
+					@block.rootBox.classList.add 'hovered'
+					@inputState = @hovered = 1
+			# }}}
+			@unhover = (e) !~> # {{{
+				# fulfil event
+				e.preventDefault!
+				# operate
+				if @hovered == 1
+					@block.rootBox.classList.remove 'hovered'
+					if @inputState == 1
+						@inputState = 0
+					@hovered = 0
+			# }}}
+			@hoverInputs = []
+			@focusInputs = []
+		###
+		Control.prototype = {
+			attach: !-> # {{{
+				B = @block
+				I = B.inputs
+				B.rootBox.addEventListener 'pointerenter', @hover
+				B.rootBox.addEventListener 'pointerleave', @unhover
+				switch B.mode
+				case 1
+					true
+				default
+					# text inputs
+					# hover
+					a   = @hoverInputs
+					a.0 = @hoverTextInp I.leftBox, true
+					a.1 = @hoverTextInp I.rightBox, false
+					a.2 = @unhoverTextInp I.leftBox, true
+					a.3 = @unhoverTextInp I.rightBox, false
+					I.leftBox.addEventListener 'pointerenter', a.0
+					I.leftBox.addEventListener 'pointerleave', a.2
+					I.rightBox.addEventListener 'pointerenter', a.1
+					I.rightBox.addEventListener 'pointerleave', a.3
+					# focus
+					a   = @focusInputs
+					a.0 = @focusTextInp I.leftBox, true
+					a.1 = @focusTextInp I.rightBox, false
+					a.2 = @unfocusTextInp I.leftBox, true
+					a.3 = @unfocusTextInp I.rightBox, false
+					I.leftInp.addEventListener 'focusin', a.0
+					I.leftInp.addEventListener 'focusout', a.2
+					I.rightInp.addEventListener 'focusin', a.1
+					I.rightInp.addEventListener 'focusout', a.3
+					# ...
+					# done
+				# done
+			# }}}
+			detach: !-> # {{{
+				true
+			# }}}
+			hoverTextInp: (node, isLeft) -> (e) !~> # {{{
+				# fulfil event
+				e.preventDefault!
+				e.stopPropagation!
+				# operate
+				if not @block.locked
+					if not @inputState
+						@block.rootBox.classList.add 'hovered'
+					@hovered = if isLeft
+						then 2
+						else 3
+					if @inputState < 4
+						@inputState = @hovered
+					node.classList.add 'hovered'
+					@block.rootBox.classList.add if isLeft
+						then 'left'
+						else 'right'
+			# }}}
+			unhoverTextInp: (node, isLeft) -> (e) !~> # {{{
+				# fulfil event
+				e.preventDefault!
+				# ..dont stop propagation to reuse parent unhover
+				# operate
+				if @hovered
+					if not @focused or @hovered != @focused - 2
+						@block.rootBox.classList.remove if isLeft
+							then 'left'
+							else 'right'
+					if not @focused
+						@inputState = 1
+					@hovered = 1
+					node.classList.remove 'hovered'
+			# }}}
+			focusTextInp: (node, isLeft) -> (e) !~> # {{{
+				# operate
+				if @block.locked
+					e.preventDefault!
+					e.stopPropagation!
+				else
+					if not @focused
+						@block.rootBox.classList.add 'focused'
+					@focused = if isLeft
+						then 4
+						else 5
+					if not @hovered or @focused != @hovered + 2
+						@block.rootBox.classList.add if isLeft
+							then 'left'
+							else 'right'
+					@inputState = @focused
+					node.classList.add 'focused'
+			# }}}
+			unfocusTextInp: (node, isLeft) -> (e) !~> # {{{
+				# operate
+				if @hovered
+					if @focused != @hovered + 2
+						@block.rootBox.classList.remove if isLeft
+							then 'left'
+							else 'right'
+					@inputState = @hovered
+				else
+					@block.rootBox.classList.remove 'hovered', if isLeft
+						then 'left'
+						else 'right'
+					@inputState = 0
+				node.classList.remove 'focused'
+				@block.rootBox.classList.remove 'focused'
+				@focused = 0
+			# }}}
+		}
+		# }}}
+		TextInputs = (block) !-> # {{{
+			# set parent
+			@block = block
+			# set controls
+			a = block.rootBox
+			@leftBox  = b = a.children.0
+			@stateBox = a.children.1
+			@rightBox = c = a.children.2
+			@leftInp  = b.firstChild
+			@rightInp = c.firstChild
+			# set helpers
+			# ...
+		###
+		TextInputs.prototype =
+			refresh: !->
+				true
+		# }}}
+		Block = (root, state) !-> # {{{
+			# {{{
+			# containers
+			@root    = root
+			@rootBox = box = root.firstChild
+			# determine UI mode
+			mode = if box.classList.contains 'text'
+				then 0
+				else 1
+			# controls
+			@inputs  = if mode == 0
+				then new TextInputs @
+				else null
+			box = root.parentNode.parentNode.parentNode
+			@section = box = new sMainSection box
+			# state
+			@mode    = mode
+			@state   = state
+			@locked  = true
+			@current = [false, 0, -1, false, 0, -1]
+			@ctrl    = new Control @
+			# initialize
+			state.ready[*] = box.init!
+				.then (x) ~>
+					# check
+					if x
+						# activate
+						@ctrl.attach!
+						@root.classList.add 'v'
+						# set price-filter option
+						@current.0 = box.rootItem.opened
+					# done
+					return x
+				.then (x) ~>
+					# unlock section
+					return if x
+						then box.unlock!
+						else false
+			# }}}
+		Block.prototype =
+			refresh: !-> # {{{
+				# get data
+				a = @state.data
+				b = @current
+				# sync
+				# ...
+				debugger
+			# }}}
+			unlock: !-> # {{{
+				@rootBox.classList.add 'v'
+				@locked = false
+			# }}}
+		# }}}
+		# initialize
+		# {{{
+		# create common state
+		state = new BlockState 'price', 2, (event, data) ->
+			switch event
+			case 'init'
+				# initialize
+				# set group data
+				state.data = a = data.priceFilter
+				# set initial group flag
+				for b in blocks when b.current.0
+					a.0 = true
+					break
+				# sync
+				for b in blocks
+					b.refresh!
+			case 'lock'
+				# stop any interactions..
+				for a in blocks
+					a.lock!
+			case 'load'
+				# update
+				for a in blocks
+					a.unlock! if a.locked
+					a.refresh!
+			# done
+			return true
+		# create individual blocks
+		blocks = [...(document.querySelectorAll '.sm-blocks.price-filter')]
+		blocks = blocks.map (root) ->
+			new Block root, state
+		# }}}
+		return state
+	# }}}
+	mPaginator = do -> # {{{
 		# constructors
 		Control = (block) !-> # {{{
 			# data {{{
@@ -1999,7 +2499,7 @@ smBlocks = do !->>
 		# }}}
 		return state
 	# }}}
-	smOrderer = do -> # {{{
+	mOrderer = do -> # {{{
 		# constructors
 		Control = (block) !-> # {{{
 			# create object shape
@@ -2118,7 +2618,7 @@ smBlocks = do !->>
 			@root.classList.add 'v'
 		###
 		Block.prototype =
-			init: (options, current) !-> # {{{
+			load: (options, current) !-> # {{{
 				# check
 				if @oMap = options
 					# set options
@@ -2139,7 +2639,6 @@ smBlocks = do !->>
 					@oList = null
 				# done
 				@refresh!
-				/***/
 			# }}}
 			refresh: !-> # {{{
 				# get data
@@ -2181,9 +2680,9 @@ smBlocks = do !->>
 		state = new BlockState 'order', 0, (event, data) ->
 			switch event
 			case 'init'
-				# initialize
+				# load
 				for a in blocks
-					a.init data.orderOptions, data.order
+					a.load data.orderOption, data.orderFilter
 			case 'load'
 				# update
 				for a in blocks
@@ -2198,236 +2697,14 @@ smBlocks = do !->>
 		# }}}
 		return state
 	# }}}
-	smPriceFilter = do -> # {{{
-		# constructors
-		Control = (block) !-> # {{{
-			# create object shape
-			# data
-			@block = block
-			@inputState = 0
-			@hovered = 0
-			@focused = 0
-			# handlers
-			@hover = (e) !~> # {{{
-				# fulfil event
-				e.preventDefault!
-				# operate
-				if not @block.locked and not @hovered
-					@block.rootBox.classList.add 'hovered'
-					@inputState = @hovered = 1
-			# }}}
-			@unhover = (e) !~> # {{{
-				# fulfil event
-				e.preventDefault!
-				# operate
-				if @hovered == 1
-					@block.rootBox.classList.remove 'hovered'
-					if @inputState == 1
-						@inputState = 0
-					@hovered = 0
-			# }}}
-			@hoverInputs = []
-			@focusInputs = []
-		###
-		Control.prototype = {
-			attach: !-> # {{{
-				B = @block
-				I = B.inputs
-				B.rootBox.addEventListener 'pointerenter', @hover
-				B.rootBox.addEventListener 'pointerleave', @unhover
-				switch B.mode
-				case 1
-					true
-				default
-					# text inputs
-					# hover
-					a   = @hoverInputs
-					a.0 = @hoverTextInp I.leftBox, true
-					a.1 = @hoverTextInp I.rightBox, false
-					a.2 = @unhoverTextInp I.leftBox, true
-					a.3 = @unhoverTextInp I.rightBox, false
-					I.leftBox.addEventListener 'pointerenter', a.0
-					I.leftBox.addEventListener 'pointerleave', a.2
-					I.rightBox.addEventListener 'pointerenter', a.1
-					I.rightBox.addEventListener 'pointerleave', a.3
-					# focus
-					a   = @focusInputs
-					a.0 = @focusTextInp I.leftBox, true
-					a.1 = @focusTextInp I.rightBox, false
-					a.2 = @unfocusTextInp I.leftBox, true
-					a.3 = @unfocusTextInp I.rightBox, false
-					I.leftInp.addEventListener 'focusin', a.0
-					I.leftInp.addEventListener 'focusout', a.2
-					I.rightInp.addEventListener 'focusin', a.1
-					I.rightInp.addEventListener 'focusout', a.3
-					# ...
-					# done
-				# done
-			# }}}
-			detach: !-> # {{{
-				true
-			# }}}
-			hoverTextInp: (node, isLeft) -> (e) !~> # {{{
-				# fulfil event
-				e.preventDefault!
-				e.stopPropagation!
-				# operate
-				if not @block.locked
-					if not @inputState
-						@block.rootBox.classList.add 'hovered'
-					@hovered = if isLeft
-						then 2
-						else 3
-					if @inputState < 4
-						@inputState = @hovered
-					node.classList.add 'hovered'
-					@block.rootBox.classList.add if isLeft
-						then 'left'
-						else 'right'
-			# }}}
-			unhoverTextInp: (node, isLeft) -> (e) !~> # {{{
-				# fulfil event
-				e.preventDefault!
-				# ..dont stop propagation to reuse parent unhover
-				# operate
-				if @hovered
-					if not @focused or @hovered != @focused - 2
-						@block.rootBox.classList.remove if isLeft
-							then 'left'
-							else 'right'
-					if not @focused
-						@inputState = 1
-					@hovered = 1
-					node.classList.remove 'hovered'
-			# }}}
-			focusTextInp: (node, isLeft) -> (e) !~> # {{{
-				# operate
-				if @block.locked
-					e.preventDefault!
-					e.stopPropagation!
-				else
-					if not @focused
-						@block.rootBox.classList.add 'focused'
-					@focused = if isLeft
-						then 4
-						else 5
-					if not @hovered or @focused != @hovered + 2
-						@block.rootBox.classList.add if isLeft
-							then 'left'
-							else 'right'
-					@inputState = @focused
-					node.classList.add 'focused'
-			# }}}
-			unfocusTextInp: (node, isLeft) -> (e) !~> # {{{
-				# operate
-				if @hovered
-					if @focused != @hovered + 2
-						@block.rootBox.classList.remove if isLeft
-							then 'left'
-							else 'right'
-					@inputState = @hovered
-				else
-					@block.rootBox.classList.remove 'hovered', if isLeft
-						then 'left'
-						else 'right'
-					@inputState = 0
-				node.classList.remove 'focused'
-				@block.rootBox.classList.remove 'focused'
-				@focused = 0
-			# }}}
-		}
-		# }}}
-		TextInputs = (block) !-> # {{{
-			# set parent
-			@block = block
-			# set controls
-			a = block.rootBox
-			@leftBox  = b = a.children.0
-			@stateBox = a.children.1
-			@rightBox = c = a.children.2
-			@leftInp  = b.firstChild
-			@rightInp = c.firstChild
-			# set helpers
-		###
-		TextInputs.prototype =
-			refresh: !->
-				true
-		# }}}
-		Block = (root, state) !-> # {{{
-			# containers
-			@root    = root
-			@rootBox = box = root.firstChild
-			# determine UI mode
-			mode = if box.classList.contains 'text'
-				then 0
-				else 1
-			# controls
-			@inputs  = if mode == 0
-				then new TextInputs @
-				else null
-			# state
-			@mode    = mode
-			@state   = state
-			@locked  = true
-			@current = ['', '']
-			@ctrl    = new Control @
-			# set event handlers and refresh
-			@ctrl.attach!
-			@root.classList.add 'v'
-		###
-		Block.prototype =
-			init: ([min, max]) !-> # {{{
-				# ...
-				# done
-				@refresh!
-			# }}}
-			refresh: !-> # {{{
-				# get data
-				a = @state.data
-				b = @current
-				# sync
-				# ...
-			# }}}
-			unlock: !-> # {{{
-				@rootBox.classList.add 'v'
-				@locked = false
-			# }}}
-		# }}}
-		# initialize
-		# {{{
-		# create common state
-		state = new BlockState 'price', 2, (event, data) ->
-			switch event
-			case 'init'
-				# initialize
-				for a in blocks
-					a.init data.priceFilter
-			case 'lock'
-				# stop any interactions..
-				for a in blocks
-					a.lock!
-			case 'load'
-				# update
-				for a in blocks
-					a.unlock! if a.locked
-					a.refresh!
-			# done
-			return true
-		# create individual blocks
-		blocks = [...(document.querySelectorAll '.sm-blocks.price-filter')]
-		blocks = blocks.map (root) ->
-			new Block root, state
-		# }}}
-		return state
-	# }}}
 	# initialize
 	# {{{
-	smGrid and smGrid.load [
-		smCategoryFilter
-		smPriceFilter
-		smPaginator
-		smOrderer
+	KING and KING.rule [
+		mCategoryFilter
+		mPriceFilter
+		mPaginator
+		mOrderer
 	]
 	# }}}
-	return smGrid
+	return await KING
 ###

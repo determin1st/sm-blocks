@@ -232,15 +232,15 @@ class StorefrontModernBlocks {
             'default'     => true,
           ],
           ###
-          'baseUI'        => [
-            'type'        => 'number',
-            'default'     => 0,
-          ],
-          'baseTitle'     => [
+          'sectionTitle'  => [
             'type'        => 'string',
             'default'     => '{"en":"Price","ru":"Цена"}',
           ],
           'sectionMode'   => [
+            'type'        => 'number',
+            'default'     => 1|2|4|16|32,
+          ],
+          'baseUI'        => [
             'type'        => 'number',
             'default'     => 0,
           ],
@@ -328,7 +328,7 @@ class StorefrontModernBlocks {
         'itemControls' => '
         <div class="controls ph">
           <div>
-            <button class="cart">{{cartIcon}}</button>
+            <button type="button" class="cart">{{cartIcon}}</button>
             <a href="#" class="link">подробнее</a>
           </div>
           {{noControls}}
@@ -507,12 +507,12 @@ class StorefrontModernBlocks {
         ',
         'variantLeft' => '
         <div class="variant left">
-          <button>{{arrow}}</button>
+          <button type="button">{{arrow}}</button>
         </div>
         ',
         'variantRight' => '
         <div class="variant right">
-          <button>{{arrow}}</button>
+          <button type="button">{{arrow}}</button>
         </div>
         ',
         'arrow' => '
@@ -534,16 +534,18 @@ class StorefrontModernBlocks {
         </div>
         ',
         'textInputs' => '
-        <div class="left"><input type="text" inputmode="numeric" pattern="[0-9]*"></div>
-        {{delimiter}}
-        <div class="right"><input type="text" inputmode="numeric" pattern="[0-9]*"></div>
-        {{submitButton}}
+        <div class="text">
+          <div class="left"><input type="text" inputmode="numeric" pattern="[0-9]*"></div>
+          {{delimiter}}
+          <div class="right"><input type="text" inputmode="numeric" pattern="[0-9]*"></div>
+          {{submitButton}}
+        </div>
         ',
         'rangeSlider' => '
         ',
         'submitButton' => '
         <div class="submit" data-mode="1">
-          <button>{{submitIcon}}</button>
+          <button type="button">{{submitIcon}}</button>
         </div>
         ',
         'delimiter' => '
@@ -558,37 +560,39 @@ class StorefrontModernBlocks {
       # }}}
       'section' => [ # {{{
         'main' => '
-        <div class="main-section{{class}}"{{data}}>
-          {{title}}
-          {{topLine}}
-          {{items}}
-          {{bottomLine}}
-        </div>
-        ',
-        'title' => '
-        <div class="title" data-id="0">
-          <h3>{{name}}</h3>
-          {{arrowBox}}
+        <div class="sm-blocks main-section {{custom}}">
+          <div class="item{{class}}" {{data}}>
+            {{titleBox}}
+            {{topLine}}
+            {{section}}
+            {{bottomLine}}
+          </div>
+          {{placeholder}}
         </div>
         ',
         'item' => '
-        <div class="item{{class}}" data-id="{{id}}" data-order="{{order}}" data-extra="{{extraData}}">
-          <div class="name">
-            <div class="box">{{itemTitle}}</div>
-            {{extraBox}}
-            {{arrowBox}}
-          </div>
+        <div class="item{{class}}" data-id="{{id}}" data-order="{{order}}"{{extraData}}>
+          {{titleBox}}
           {{section}}
         </div>
         ',
+        'titleBox' => '
+        <div class="title">
+          <h3>{{title}}</h3>
+          {{arrowBox}}
+          {{extraBox}}
+        </div>
+        ',
         'section' => '
-        <div class="section{{class}}">{{items}}</div>
+        <div class="section">{{items}}</div>
         ',
         'extraBox' => '
         <div class="extra">{{extra}}</div>
         ',
         'arrowBox' => '
-        <div class="arrow">{{arrow}}</div>
+        <div class="arrow">
+          <button type="button" class="switch">{{arrow}}</button>
+        </div>
         ',
         'topLine' => '
         <hr class="top">
@@ -919,8 +923,8 @@ class StorefrontModernBlocks {
       # create inner buttons
       if ($a === 'inner' || $a === 'both')
       {
-        $iFirst = '<div class="page first"><button>1</button></div>';
-        $iLast  = '<div class="page last"><button>n</button></div>';
+        $iFirst = '<div class="page first"><button type="button">1</button></div>';
+        $iLast  = '<div class="page last"><button type="button">n</button></div>';
       }
       else {
         $iFirst = $iLast = '';
@@ -934,8 +938,8 @@ class StorefrontModernBlocks {
         $oLast  = empty($attr['bLast'])
           ? $T['last']
           : $attr['bLast'];
-        $oFirst = '<div class="goto a first"><button>'.$oFirst.'</button></div>';
-        $oLast  = '<div class="goto a last"><button>'.$oLast.'</button></div>';
+        $oFirst = '<div class="goto a first"><button type="button">'.$oFirst.'</button></div>';
+        $oLast  = '<div class="goto a last"><button type="button">'.$oLast.'</button></div>';
       }
       else {
         $oFirst = $oLast = '';
@@ -955,8 +959,8 @@ class StorefrontModernBlocks {
         ? $T['next']
         : $attr['bNext'];
       ###
-      $prev = '<div class="goto b prev"><button>'.$prev.'</button></div>';
-      $next = '<div class="goto b next"><button>'.$next.'</button></div>';
+      $prev = '<div class="goto b prev"><button type="button">'.$prev.'</button></div>';
+      $next = '<div class="goto b next"><button type="button">'.$next.'</button></div>';
     }
     else {
       $prev = $next = '';
@@ -998,7 +1002,7 @@ class StorefrontModernBlocks {
       {
         $rangeLeft .= '
         <div class="page x">
-          <button>x-'.$a.'</button>
+          <button type="button">x-'.$a.'</button>
         </div>
         ';
       }
@@ -1006,7 +1010,7 @@ class StorefrontModernBlocks {
       {
         $rangeRight .= '
         <div class="page x">
-          <button>x-'.$a.'</button>
+          <button type="button">x-'.$a.'</button>
         </div>
         ';
       }
@@ -1027,7 +1031,7 @@ class StorefrontModernBlocks {
       <div class="range" style="--count:{$a}">
         {$iFirst}
         {$rangeLeft}
-        <div class="page x current"><button>x</button></div>
+        <div class="page x current"><button type="button">x</button></div>
         {$rangeRight}
         {$iLast}
       </div>
@@ -1102,22 +1106,21 @@ EOD;
       $content = $this->parseTemplate($T['textInputs'], $T, [
         'submitButton' => ($attr['submitButton'] !== 0),
       ]);
-      $class = 'text';
       break;
     }
-    # create section
-    $content = $this->renderSection([
-      'class' => $class,
-      'data'  => '',
-      'mode'  => $attr['sectionMode'],
-      'name'  => $this->parseLocalName($attr['baseTitle']),
-      'items' => $content,
-    ]);
-    # compose
-    return $this->parseTemplate($T['main'], $T, [
+    # compose widget
+    $content = $this->parseTemplate($T['main'], $T, [
       'custom'  => $attr['customClass'],
       'content' => $content,
       'placeholder' => $this->templates['svg']['placeholder'],
+    ]);
+    # wrap into section
+    return $this->renderSection([
+      'class' => '',
+      'data'  => '',
+      'mode'  => $attr['sectionMode'],
+      'title' => $this->parseLocalName($attr['sectionTitle']),
+      'items' => $content,
     ]);
   }
   # }}}
@@ -1126,58 +1129,70 @@ EOD;
   {
     # preapre
     $T = $this->templates['section'];
-    # compose sections tree
+    # create sub-sections
     $mode    = $attr['mode'];
     $content = $attr['items'];
     if (is_array($content))
     {
-      $content = $this->renderSectionItems($items, $T, [
+      # TODO: items tree
+      $id      = $content['id'];
+      $order   = $content['order'];
+      $content = $this->renderSectionItems($content, $T, [
       ]);
       if (!$content || empty($content)) {
         return '';
       }
     }
+    else
+    {
+      # zero section
+      $id    = 0;
+      $order = 0;
+      $class = ($mode !== 3)
+        ? ' opened'
+        : '';
+      $this->parseTemplate($T['section'], $T, [
+        'class' => $class,
+        'items' => $content,
+      ]);
+    }
     # determine main section parameters
-    switch ($mode) {
-    case 1:
-      # compact (title|content)
-      $a = [
-        'class'      => $attr['class'].' opened',
-        'name'       => $attr['name'],
-        'arrowBox'   => false,
-        'bottomLine' => false,
-      ];
-      break;
-    case 2:
-      # full opened (title^|content|)
-      $a = [
-        'class' => $attr['class'].' opened',
-        'name'  => $attr['name'],
-      ];
-      break;
-    case 3:
-      # full closed (title^|content|)
-      $a = [
-        'class' => $attr['class'],
-        'name'  => $attr['name'],
-      ];
-      break;
-    default:
-      # content only (empty section)
-      $a = [
-        'class'      => $attr['class'].' opened',
-        'title'      => false,
-        'topLine'    => false,
-        'bottomLine' => false,
-      ];
-      break;
+    $class      = !!($mode &  1) # opened section
+      ? ' main opened'
+      : ' main';
+    $titleBox   = !!($mode &  2);# has title
+    $arrowBox   = !!($mode &  4);# may be opened/closed
+    $extraBox   = !!($mode &  8);# extended title
+    $topLine    = !!($mode & 16);# has top separator
+    $bottomLine = !!($mode & 32);# has bottom separator
+    # determine custom class and data
+    if (!($custom = $attr['customClass'])) {
+      $custom = 'custom';
+    }
+    $data =
+      'data-id="'.$id.'" '.
+      'data-order="'.$order.'" '.
+      'data-mode="'.$mode.'"';
+    if (!empty($attr['extraData'])) {
+      $data .= ' '.$data;
     }
     # compose
-    $a['class'] = ' '.trim($a['class']);
-    $a['data']  = empty($attr['data']) ? '' : ' '.$attr['data'];
-    $a['items'] = $content;
-    return $this->parseTemplate($T['main'], $T, $a);
+    return $this->parseTemplate($T['main'], $T, [
+      'custom'      => $custom,
+      'class'       => $class,
+      'data'        => $data,
+      'titleBox'    => $titleBox,
+      'title'       => $attr['title'],
+      'arrowBox'    => $arrowBox,
+      'extraBox'    => $extraBox,
+      'topLine'     => $topLine,
+      'items'       => $content,
+      'bottomLine'  => $bottomLine,
+      'placeholder' => $this->templates['svg']['placeholder'],
+    ]);
   }
+  /***/
+  /***/
   private function renderSectionItems($node, $T, $attr)
   {
     $html = '';
@@ -1192,8 +1207,8 @@ EOD;
           ],
           'id'       => $a['id'],
           'order'    => $a['order'],
+          'title'    => $a['name'],
           'extra'    => $a['extra'],
-          'name'     => $a['name'],
           'countBox' => false,
           'items'    => $this->renderSectionItem($a, $T, $attr),
         ];
@@ -1204,8 +1219,8 @@ EOD;
           'class'    => '',
           'id'       => $a['id'],
           'order'    => $a['order'],
+          'title'    => $a['name'],
           'extra'    => $a['extra'],
-          'name'     => $a['name'],
           'arrowBox' => false,
           'section'  => false,
         ];
@@ -1267,21 +1282,27 @@ EOD;
   # grid {{{
   private function apiGrid($request)
   {
-    # checkout request parameters
+    # TODO: cache
+    # refine request parameters
     # {{{
-    # check must have
+    # create key filter
     $a = [
       'limit',
       'offset',
       'category',
       'order',
+      'price',
     ];
+    # iterate and apply filter
+    $c = [];
     foreach ($a as $b)
     {
       if (!array_key_exists($b, $request)) {
         $this->apiFail(400, 'missing "'.$b.'" in the request');
       }
+      $c[$b] = $request[$b];
     }
+    $request = $c;
     # check limit and offset
     $limit  = intval($request['limit']);
     $offset = intval($request['offset']);
@@ -1315,24 +1336,62 @@ EOD;
     if (!is_array($a) || !is_string($a[0]) || !is_int($a[1])) {
       $this->apiFail(400, 'incorrect order parameter');
     }
+    # price range and filter
+    # check
+    if (!($a = $request['price']) ||
+        !is_array($a) || count($a) !== 6)
+    {
+      $this->apiFail(400, 'incorrect price parameter');
+    }
+    # set range
+    $priceRange = [!!$a[0], intval($a[1]), intval($a[2])];
+    # set filter
+    if ($a[3]) {
+      $priceFilter = [intval($a[4]), intval($a[5])];
+    }
+    else {
+      $priceFilter = null;
+    }
     # }}}
-    # get product identifiers
+    # get products map
+    # {{{
+    # set parameters
     $ids = [
       'order'    => $request['order'],
       'category' => $cats,
       #'status'  => ['publish'],
       #'type'    => ['external','grouped','simple','variable']
+      'price'    => $priceFilter,
     ];
     if (!($ids = $this->getProductIds($ids))) {
       $this->apiFail(500, 'failed to fetch products');
     }
-    # get total count and check overflow
+    # }}}
+    # get map details
+    # {{{
+    # total count
     $total = count($ids);
+    # check offset overflow
     if ($offset >= $total) {
       $this->apiFail(400, 'incorrect offset, too large');
     }
-    # extract and use limited set
-    $ids = array_slice($ids, $offset, $limit);
+    # price range
+    # check if price range update is required
+    if ($priceRange[0] && !$priceFilter)
+    {
+      # TODO: extract from cache
+      # determine current price range
+      #$priceRange[1] and $priceRange[2];
+      $priceRange = $this->getProductPriceRange($ids);
+    }
+    else {
+      $priceRange = null;
+    }
+    # currency settings
+    $currency = $this->getCurrency();
+    # }}}
+    # send metadata
+    # {{{
     # activate streaming
     if (session_status() === PHP_SESSION_ACTIVE) {
       session_write_close();
@@ -1341,14 +1400,17 @@ EOD;
       ob_end_clean();
     }
     header('content-type: application/octet-stream');
-    # send total count
-    $this->sendInt($total);
-    # get currency settings
-    $currency = $this->getCurrency();
+    # send
+    $this->sendJSON([
+      'total'      => $total,
+      'priceRange' => $priceRange,
+    ]);
+    # }}}
+    # extract limited set
+    $ids = array_slice($ids, $offset, $limit);
     # stream products
     foreach ($ids as $id)
     {
-      # TODO: cache?
       # get product
       if (!($a = $this->getProduct($id))) {
         break;
@@ -1535,11 +1597,12 @@ EOD;
     if (($o = json_encode($o)) === false) {
       return false;
     }
-    # send size and content
+    # send size
     echo pack('N', strlen($o));
+    # send content
     echo $o;
-    flush();
     # done
+    flush();
     return true;
   }
   # }}}
@@ -1627,6 +1690,47 @@ EOD;
     }
     # done
     return $res;
+  }
+  # }}}
+  private function getProductPriceRange($ids) # {{{
+  {
+    # prepare
+    $x   = [0, -1];# undetermined values
+    $ids = implode(',', $ids);
+    $wp_ = $this->prefix;
+    # compose database query
+    $q = <<<EOD
+
+      SELECT
+        MIN(CONVERT(m.meta_value, UNSIGNED)),
+        MAX(CONVERT(m.meta_value, UNSIGNED))
+      FROM {$wp_}posts AS p
+        JOIN {$wp_}postmeta AS m
+          ON m.meta_key = '_price' AND
+             m.post_id = p.ID
+      WHERE
+        p.post_type = 'product' AND
+        p.ID IN ({$ids})
+
+EOD;
+    # query the database
+    if (($q = $this->db->query($q)) === false) {
+      #$a = mysqli_error($this->db);
+      #xdebug_break();
+      return $x;
+    }
+    # get the result and cleanup
+    $a = $q->fetch_all(MYSQLI_NUM);
+    $q->free();
+    # check
+    if (count($a) !== 1) {
+      return $x;
+    }
+    $a = $a[0];
+    $a[0] = intval($a[0]);
+    $a[1] = intval($a[1]);
+    # done
+    return $a;
   }
   # }}}
   public function getProduct($id) # {{{

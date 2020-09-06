@@ -1,7 +1,7 @@
 <?php
 return [
   'en' => [ # {{{
-    'orderOptions' => [
+    'orderOption' => [
       'default'  => ['default', 0],
       'featured' => ['featured', 0],
       'new'      => ['new', 0],
@@ -10,7 +10,7 @@ return [
   ],
   # }}}
   'ru' => [ # {{{
-    'orderOptions' => [
+    'orderOption' => [
       'default'  => ['по-умолчанию', 0],
       'featured' => ['рекомендуемые', 0],
       'new'      => ['новые', 0],
