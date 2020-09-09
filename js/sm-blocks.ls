@@ -1606,27 +1606,54 @@ smCatalogueKing = do ->>
 				# check
 				if e.keyCode == 13
 					# Enter
-					# validate the value
+					# cancel default action
+					e.preventDefault!
+					e.stopPropagation!
+					# get the values
+					v = @values
 					a = +@input.0.value
-					b = +@input.1.value
-					c = true
+					b = c = +@input.1.value
+					d = false
+					# validate the range
+					# swap if user mixed up min/max fields
 					if a > b
-						true
-					else
-						true
-					debugger
-					# check mode
-					if n == 1 or e.ctrlKey
+						d = true
+						b = a
+						a = c
+					# reset invalid values to the
+					# previous or the default values
+					c = @block.current
+					if c.1 >= 0
+						if a < c.1
+							d = true
+							a = if c.3
+								then c.4
+								else c.1
+						if b > c.2
+							d = true
+							b = if c.3
+								then c.5
+								else c.2
+					# update
+					@set a, b if d
+					# apply
+					if n or e.ctrlKey
 						# submit
-						true
+						# check equal the current
+						if c.3 and a == c.4 and b == c.5
+							return true
+						# set
+						c.3 = true
+						c.4 = a
+						c.5 = b
+						#@current = [false, -1, -1, false, -1, -1]
 					else
 						# focus next
-						true
-					# ...
+						@input.1.focus!
+					# done
 			# }}}
 		# }}}
 		Block = (root, state) !-> # {{{
-			# {{{
 			# containers
 			@root    = root
 			@rootBox = box = root.firstChild
@@ -1657,18 +1684,33 @@ smCatalogueKing = do ->>
 						@current.0 = box.rootItem.opened
 					# done
 					return x
-			# }}}
+		###
 		Block.prototype =
 			init: (cfg) !-> # {{{
 				@ctrl.init cfg
 				@refresh!
 			# }}}
+			submit: !-> # {{{
+				# prepare
+				a = @state.data
+				b = @current
+				# set
+				a.3 = b.3
+				a.4 = b.4
+				a.5 = b.5
+				# notify others
+				@state.master.resolve state
+			# }}}
 			refresh: !-> # {{{
-				# get data
+				# prepare
 				a = @current
 				b = @state.data
+				# check
 				# refresh
-				if a.1 != b.1 or a.2 != b.2 or \
+				if a.0 != b.0 or a.1 != b.1
+					a.0 = b.0
+					a.1 = b.1
+				if b.3 and (not a.3 or a.4 != b.4 or a.5 != b.5)
 				   a.4 != b.4 or a.5 != b.5
 					###
 					c = if b.4 >= 0
