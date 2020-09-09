@@ -231,9 +231,9 @@ smCatalogueKing = async function(){
       this.rootBox = box = root.firstChild;
       this.rootItem = root = new Item(this, box, null);
       this.lines = querySelectorChildren(box, 'hr');
-      this.sect = sect = {};
-      this.item = item = {};
-      this.list = list = [root];
+      sect = {};
+      item = {};
+      list = [root];
       a = -1;
       while (++a < list.length) {
         if ((b = list[a]).children) {
@@ -242,6 +242,9 @@ smCatalogueKing = async function(){
         }
         item[b.id] = b;
       }
+      this.sect = sect;
+      this.item = item;
+      this.list = list;
       this.mode = +box.dataset.mode;
       this.state = state;
       this.locked = true;
@@ -370,33 +373,35 @@ smCatalogueKing = async function(){
     gridState = {
       dirty: false,
       level: 0,
+      config: {},
       total: 0,
       count: 0,
       pageCount: 0,
       pageIndex: 0,
       orderOption: null,
       orderFilter: ['', 0],
-      priceFilter: [false, 0, -1, false, 0, -1]
+      priceFilter: [false, -1, -1, false, -1, -1]
     };
     gridLock = async function(){
-      var a, b, c, CFG, d;
+      var cfg, a, b, c, d;
+      cfg = gridState.config;
       a = sCart.load();
       b = soFetch({
         func: 'config'
       });
       c = (await Promise.all([a, b]));
-      CFG = c[1];
+      import$(cfg, c[1]);
       a = grid.dataset.order.split(',');
       if (b = a.length) {
         gridState.orderOption = c = {};
         d = -1;
         while (++d < b) {
-          c[a[d]] = CFG.orderOption[a[d]];
+          c[a[d]] = cfg.order[a[d]];
         }
         b = parseInt(grid.dataset.index);
         b = a[b];
         gridState.orderFilter[0] = b;
-        gridState.orderFilter[1] = CFG.orderOption[b][1];
+        gridState.orderFilter[1] = cfg.order[b][1];
       }
       return true;
     }();
@@ -536,8 +541,8 @@ smCatalogueKing = async function(){
           req.offset = gridState.pageIndex * req.limit;
           break;
         case 'order':
-          gridState.order[0] = s.data[0];
-          gridState.order[1] = s.data[1];
+          gridState.orderFilter[0] = s.data[0];
+          gridState.orderFilter[1] = s.data[1];
         }
         return true;
       };
@@ -612,13 +617,13 @@ smCatalogueKing = async function(){
           ? d
           : gridList.length;
         gridState.pageCount = Math.ceil(c / gridList.length);
-        if (c = b.priceFilter) {
+        if (c = b.priceRange) {
           d = gridState.priceFilter;
-          if (c[0]) {
-            c[0] = false;
+          if (d[0]) {
+            d[0] = false;
           }
-          c[1] = d[0];
-          c[2] = d[1];
+          d[1] = c[0];
+          d[2] = c[1];
         }
         for (i$ = 0, len$ = (ref$ = gridControl).length; i$ < len$; ++i$) {
           c = ref$[i$];
@@ -1205,152 +1210,235 @@ smCatalogueKing = async function(){
     return state;
   }();
   mPriceFilter = function(){
-    var Control, TextInputs, Block, state, blocks;
-    Control = function(block){
-      var this$ = this;
+    var TextInputs, Block, state, blocks;
+    TextInputs = function(block){
+      var a, b, c, this$ = this;
       this.block = block;
-      this.inputState = 0;
-      this.hovered = 0;
-      this.focused = 0;
-      this.hover = function(e){
+      a = block.rootBox;
+      b = a.children[0];
+      c = a.children[2];
+      this.boxes = [b, c];
+      this.svg = a.children[1];
+      this.input = [b.children[0], c.children[0]];
+      this.label = [b.children[1], c.children[1]];
+      this.rootHover = function(e){
         e.preventDefault();
-        if (!this$.block.locked && !this$.hovered) {
-          this$.block.rootBox.classList.add('hovered');
-          this$.inputState = this$.hovered = 1;
+        if (!block.locked && !this$.hovered[3]) {
+          this$.hovered[3] = true;
+          block.rootBox.classList.add('hovered');
         }
       };
-      this.unhover = function(e){
+      this.rootUnhover = function(e){
         e.preventDefault();
-        if (this$.hovered === 1) {
-          this$.block.rootBox.classList.remove('hovered');
-          if (this$.inputState === 1) {
-            this$.inputState = 0;
-          }
-          this$.hovered = 0;
+        if (this$.hovered[3]) {
+          this$.hovered[3] = false;
+          block.rootBox.classList.remove('hovered');
         }
       };
-      this.hoverInputs = [];
-      this.focusInputs = [];
+      this.boxHovers = [this.boxHover(0), this.boxUnhover(0), this.boxHover(1), this.boxUnhover(1)];
+      this.inputFocus = [this.inputFocusIn(0), this.inputFocusOut(0), this.inputFocusIn(1), this.inputFocusOut(1)];
+      this.labelClicks = [this.labelClick(0), this.labelClick(1)];
+      this.inputEvents = [this.inputChange(0), this.inputChange(1), this.inputKey(0), this.inputKey(1)];
+      this.hovered = [false, false, false];
+      this.focused = [false, false, false];
+      this.values = ['', '', 0, 0, 0, 0];
+      this.regex = /^[0-9]{0,10}$/;
     };
-    Control.prototype = {
+    TextInputs.prototype = {
       attach: function(){
-        var B, I, a;
+        var B, a, b;
         B = this.block;
-        I = B.inputs;
-        B.rootBox.addEventListener('pointerenter', this.hover);
-        B.rootBox.addEventListener('pointerleave', this.unhover);
-        switch (B.mode) {
-        case 1:
-          true;
-          break;
-        default:
-          a = this.hoverInputs;
-          a[0] = this.hoverTextInp(I.leftBox, true);
-          a[1] = this.hoverTextInp(I.rightBox, false);
-          a[2] = this.unhoverTextInp(I.leftBox, true);
-          a[3] = this.unhoverTextInp(I.rightBox, false);
-          I.leftBox.addEventListener('pointerenter', a[0]);
-          I.leftBox.addEventListener('pointerleave', a[2]);
-          I.rightBox.addEventListener('pointerenter', a[1]);
-          I.rightBox.addEventListener('pointerleave', a[3]);
-          a = this.focusInputs;
-          a[0] = this.focusTextInp(I.leftBox, true);
-          a[1] = this.focusTextInp(I.rightBox, false);
-          a[2] = this.unfocusTextInp(I.leftBox, true);
-          a[3] = this.unfocusTextInp(I.rightBox, false);
-          I.leftInp.addEventListener('focusin', a[0]);
-          I.leftInp.addEventListener('focusout', a[2]);
-          I.rightInp.addEventListener('focusin', a[1]);
-          I.rightInp.addEventListener('focusout', a[3]);
-        }
+        B.rootBox.addEventListener('pointerenter', this.rootHover);
+        B.rootBox.addEventListener('pointerleave', this.rootUnhover);
+        a = this.boxHovers;
+        b = this.boxes;
+        b[0].addEventListener('pointerenter', a[0]);
+        b[0].addEventListener('pointerleave', a[1]);
+        b[1].addEventListener('pointerenter', a[2]);
+        b[1].addEventListener('pointerleave', a[3]);
+        a = this.inputFocus;
+        b = this.input;
+        b[0].addEventListener('focusin', a[0]);
+        b[0].addEventListener('focusout', a[1]);
+        b[1].addEventListener('focusin', a[2]);
+        b[1].addEventListener('focusout', a[3]);
+        a = this.label;
+        b = this.labelClicks;
+        a[0].addEventListener('pointerdown', b[0], true);
+        a[1].addEventListener('pointerdown', b[1], true);
+        a = this.input;
+        b = this.inputEvents;
+        a[0].addEventListener('input', b[0], true);
+        a[1].addEventListener('input', b[1], true);
+        a[0].addEventListener('keydown', b[2], true);
+        a[1].addEventListener('keydown', b[3], true);
       },
-      detach: function(){
-        true;
+      detach: function(){},
+      init: function(cfg){
+        this.label[0].textContent = cfg.min;
+        this.label[1].textContent = cfg.max;
       },
-      hoverTextInp: function(node, isLeft){
+      set: function(min, max){
+        var v;
+        min = min === -1
+          ? ''
+          : '' + min;
+        max = max === -1
+          ? ''
+          : '' + max;
+        v = this.values;
+        v[0] = this.input[0].value = min;
+        v[1] = this.input[1].value = max;
+        v[2] = v[3] = 0;
+        v[4] = min.length;
+        v[5] = max.length;
+      },
+      boxHover: function(n){
         var this$ = this;
         return function(e){
+          var B, H, F;
           e.preventDefault();
           e.stopPropagation();
-          if (!this$.block.locked) {
-            if (!this$.inputState) {
-              this$.block.rootBox.classList.add('hovered');
+          if (!(B = this$.block).locked) {
+            H = this$.hovered;
+            F = this$.focused;
+            H[n] = true;
+            if (!H[2]) {
+              H[2] = true;
+              B.rootBox.classList.add('hovered');
             }
-            this$.hovered = isLeft ? 2 : 3;
-            if (this$.inputState < 4) {
-              this$.inputState = this$.hovered;
-            }
-            node.classList.add('hovered');
-            this$.block.rootBox.classList.add(isLeft ? 'left' : 'right');
+            B.rootBox.classList.add(n ? 'R' : 'L');
+            this$.boxes[n].classList.add('hovered');
           }
         };
       },
-      unhoverTextInp: function(node, isLeft){
+      boxUnhover: function(n){
         var this$ = this;
         return function(e){
+          var H, B, F;
           e.preventDefault();
-          if (this$.hovered) {
-            if (!this$.focused || this$.hovered !== this$.focused - 2) {
-              this$.block.rootBox.classList.remove(isLeft ? 'left' : 'right');
+          if ((H = this$.hovered)[n]) {
+            B = this$.block;
+            F = this$.focused;
+            H[n] = false;
+            if (!F[n]) {
+              B.rootBox.classList.remove(n ? 'R' : 'L');
             }
-            if (!this$.focused) {
-              this$.inputState = 1;
-            }
-            this$.hovered = 1;
-            node.classList.remove('hovered');
+            this$.boxes[n].classList.remove('hovered');
           }
         };
       },
-      focusTextInp: function(node, isLeft){
+      inputFocusIn: function(n){
         var this$ = this;
         return function(e){
-          if (this$.block.locked) {
+          var B, H, F;
+          if ((B = this$.block).locked) {
             e.preventDefault();
             e.stopPropagation();
           } else {
-            if (!this$.focused) {
-              this$.block.rootBox.classList.add('focused');
+            H = this$.hovered;
+            F = this$.focused;
+            F[n] = true;
+            if (!F[2]) {
+              F[2] = true;
+              B.rootBox.classList.add('focused');
             }
-            this$.focused = isLeft ? 4 : 5;
-            if (!this$.hovered || this$.focused !== this$.hovered + 2) {
-              this$.block.rootBox.classList.add(isLeft ? 'left' : 'right');
+            if (!H[n]) {
+              B.rootBox.classList.add(n ? 'R' : 'L');
             }
-            this$.inputState = this$.focused;
-            node.classList.add('focused');
+            this$.input[n].select();
+            this$.boxes[n].classList.add('focused');
           }
         };
       },
-      unfocusTextInp: function(node, isLeft){
+      inputFocusOut: function(n){
         var this$ = this;
         return function(e){
-          if (this$.hovered) {
-            if (this$.focused !== this$.hovered + 2) {
-              this$.block.rootBox.classList.remove(isLeft ? 'left' : 'right');
-            }
-            this$.inputState = this$.hovered;
-          } else {
-            this$.block.rootBox.classList.remove('hovered', isLeft ? 'left' : 'right');
-            this$.inputState = 0;
+          var B, F;
+          B = this$.block;
+          F = this$.focused;
+          F[n] = false;
+          F[2] = false;
+          B.rootBox.classList.remove('focused');
+          if (!this$.hovered[n]) {
+            B.rootBox.classList.remove(n ? 'R' : 'L');
           }
-          node.classList.remove('focused');
-          this$.block.rootBox.classList.remove('focused');
-          this$.focused = 0;
+          this$.boxes[n].classList.remove('focused');
         };
-      }
-    };
-    TextInputs = function(block){
-      var a, b, c;
-      this.block = block;
-      a = block.rootBox;
-      this.leftBox = b = a.children[0];
-      this.stateBox = a.children[1];
-      this.rightBox = c = a.children[2];
-      this.leftInp = b.firstChild;
-      this.rightInp = c.firstChild;
-    };
-    TextInputs.prototype = {
-      refresh: function(){
-        true;
+      },
+      labelClick: function(n){
+        var this$ = this;
+        return function(e){
+          var a;
+          if (!this$.block.locked && this$.focused[n]) {
+            e.preventDefault();
+            e.stopPropagation();
+            e = this$.block.current;
+            if ((a = e[4 + n]) >= 0 || (a = e[1 + n]) >= 0) {
+              a = '' + a;
+            } else {
+              a = '';
+            }
+            e = this$.values;
+            e[n] = this$.input[n].value = a;
+            e[2 + n] = 0;
+            e[4 + n] = a.length;
+            this$.input[n].select();
+          }
+        };
+      },
+      inputChange: function(n){
+        var this$ = this;
+        return function(e){
+          var a, b, c, d;
+          a = this$.input[n];
+          b = this$.values;
+          c = a.value;
+          if (c.length) {
+            if (!this$.regex.test(c)) {
+              a.value = b[n];
+              a.setSelectionRange(b[2 + n], b[4 + n]);
+            } else {
+              b[n] = c;
+              b[2 + n] = a.selectionStart;
+              b[4 + n] = a.selectionEnd;
+              return true;
+            }
+          } else {
+            c = this$.block.current;
+            if ((d = b[4 + n]) >= 0 || (d = b[1 + n]) >= 0) {
+              b[n] = a.value = d;
+              b[2 + n] = 0;
+              b[4 + n] = d.length;
+              a.select();
+            }
+          }
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        };
+      },
+      inputKey: function(n){
+        var this$ = this;
+        return function(e){
+          var a, b, c;
+          if (e.keyCode === 13) {
+            a = +this$.input[0].value;
+            b = +this$.input[1].value;
+            c = true;
+            if (a > b) {
+              true;
+            } else {
+              true;
+            }
+            debugger;
+            if (n === 1 || e.ctrlKey) {
+              true;
+            } else {
+              true;
+            }
+          }
+        };
       }
     };
     Block = function(root, state){
@@ -1358,14 +1446,13 @@ smCatalogueKing = async function(){
       this.root = root;
       this.rootBox = box = root.firstChild;
       mode = box.classList.contains('text') ? 0 : 1;
-      this.inputs = mode === 0 ? new TextInputs(this) : null;
+      this.ctrl = mode === 0 ? new TextInputs(this) : null;
       box = root.parentNode.parentNode.parentNode;
       this.section = box = new sMainSection(box);
       this.mode = mode;
       this.state = state;
       this.locked = true;
-      this.current = [false, 0, -1, false, 0, -1];
-      this.ctrl = new Control(this);
+      this.current = [false, -1, -1, false, -1, -1];
       (ref$ = state.ready)[ref$.length] = box.init().then(function(x){
         if (x) {
           this$.ctrl.attach();
@@ -1373,20 +1460,38 @@ smCatalogueKing = async function(){
           this$.current[0] = box.rootItem.opened;
         }
         return x;
-      }).then(function(x){
-        return x ? box.unlock() : false;
       });
     };
     Block.prototype = {
+      init: function(cfg){
+        this.ctrl.init(cfg);
+        this.refresh();
+      },
       refresh: function(){
-        var a, b;
-        a = this.state.data;
-        b = this.current;
-        debugger;
+        var a, b, c, d;
+        a = this.current;
+        b = this.state.data;
+        if (a[1] !== b[1] || a[2] !== b[2] || a[4] !== b[4] || a[5] !== b[5]) {
+          c = b[4] >= 0
+            ? b[4]
+            : b[1] >= 0
+              ? b[1]
+              : -1;
+          d = b[5] >= 0
+            ? b[5]
+            : b[2] >= 0
+              ? b[2]
+              : -1;
+          this.ctrl.set(c, d);
+        }
+        this.current = b.slice();
       },
       unlock: function(){
         this.rootBox.classList.add('v');
         this.locked = false;
+        if (this.section.locked) {
+          this.section.unlock();
+        }
       }
     };
     state = new BlockState('price', 2, function(event, data){
@@ -1403,7 +1508,7 @@ smCatalogueKing = async function(){
         }
         for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
           b = ref$[i$];
-          b.refresh();
+          b.init(data.config.price);
         }
         break;
       case 'lock':

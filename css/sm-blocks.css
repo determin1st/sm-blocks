@@ -831,29 +831,44 @@
   align-items: center;
 }
 .sm-blocks.price-filter > div.text > div {
+  position: relative;
   flex: 3 1 0;
   height: 100%;
   display: flex;
   flex-direction: row;
   align-items: center;
-  padding: 0.2em 0 0.2em 0;
 }
 .sm-blocks.price-filter > div.text > div > input {
   width: 100%;
   height: 100%;
-  font-size: 1em;
+  font-family: Consolas, Courier, monospace;
+  font-size: 1.2em;
   font-weight: bold;
-  padding: 0.5em;
+  padding: 0.6em 0 0.3em 0;
   background-color: #dcdcdc;
   border: 1px solid #c0c0c0;
   border-radius: 2px;
   box-shadow: inset 0 0 10px 0 #c0c0c0;
 }
+.sm-blocks.price-filter > div.text > div > label {
+  position: absolute;
+  top: 0;
+  width: 100%;
+  font-family: Verdana, Arial, sans-serif;
+  font-size: 0.8em;
+  font-weight: bold;
+  padding: 0.2em 0 0 0;
+  background-color: transparent;
+  color: #708090;
+  user-select: none;
+  cursor: text;
+}
 .sm-blocks.price-filter > div.text > div.hovered > input {
   border-color: #808080;
   box-shadow: inset 0 0 0 2px #c0c0c0;
 }
-.sm-blocks.price-filter > div.text > div.hovered:not(.focused) > input {
+.sm-blocks.price-filter > div.text > div.hovered:not(.focused) > input,
+.sm-blocks.price-filter > div.text > div.hovered:not(.focused) > label {
   cursor: ns-resize;
 }
 .sm-blocks.price-filter > div.text > div.focused > input {
@@ -861,20 +876,37 @@
   border-color: #808080;
   box-shadow: inset 0 0 0 2px #c0c0c0;
 }
-.sm-blocks.price-filter > div.text > div.left > input {
+.sm-blocks.price-filter > div.text > div.focused > label {
+  cursor: pointer;
+}
+.sm-blocks.price-filter > div.text > div.focused > label:hover {
+  color: #6a5acd;
+}
+.sm-blocks.price-filter > div.text > div.L > input {
   border-right-width: 0;
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
+  padding-right: 0.6em;
   text-align: right;
 }
-.sm-blocks.price-filter > div.text > div.right > input {
+.sm-blocks.price-filter > div.text > div.L > label {
+  padding-right: 0.4em;
+  text-align: right;
+}
+.sm-blocks.price-filter > div.text > div.R > input {
   border-left-width: 0;
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
+  padding-left: 0.6em;
+  text-align: left;
+}
+.sm-blocks.price-filter > div.text > div.R > label {
+  padding-left: 0.4em;
+  text-align: left;
 }
 .sm-blocks.price-filter > div.text > svg {
   flex: 1 3 0;
-  height: calc(var(--height) - 0.4em);
+  height: var(--height);
   max-width: 48px;
   fill: #c0c0c0;
 }
@@ -890,30 +922,34 @@
 .sm-blocks.price-filter > div.text.v > div > input {
   color: #2f4f4f;
 }
+.sm-blocks.price-filter > div.text.v > div > input::selection {
+  background-color: #483d8b;
+  color: #dcdcdc;
+}
 .sm-blocks.price-filter > div.text.v.hovered > svg > .inputState {
   fill: #708090;
 }
-.sm-blocks.price-filter > div.text.v.hovered:not(.left):not(.right) > svg > .inputState {
+.sm-blocks.price-filter > div.text.v.hovered:not(.L):not(.R) > svg > .inputState {
   fill: #6a5acd;
 }
-.sm-blocks.price-filter > div.text.v.hovered.left > svg > .left,
-.sm-blocks.price-filter > div.text.v.focused.left > svg > .left {
+.sm-blocks.price-filter > div.text.v.hovered.L > svg > .left,
+.sm-blocks.price-filter > div.text.v.focused.L > svg > .left {
   fill: #708090;
   transform: translateX(1px);
 }
-.sm-blocks.price-filter > div.text.v.hovered.right > svg > .right,
-.sm-blocks.price-filter > div.text.v.focused.right > svg > .right {
+.sm-blocks.price-filter > div.text.v.hovered.R > svg > .right,
+.sm-blocks.price-filter > div.text.v.focused.R > svg > .right {
   fill: #708090;
   transform: translateX(-1px);
 }
-.sm-blocks.price-filter > div.text.v.focused.left > div.left > input {
+.sm-blocks.price-filter > div.text.v.focused.L > div.L > input {
   color: #000;
 }
-.sm-blocks.price-filter > div.text.v.focused.right > div.right > input {
+.sm-blocks.price-filter > div.text.v.focused.R > div.R > input {
   color: #000;
 }
 .sm-blocks.price-filter > div.text.v.focused > svg > .inputState {
-  fill: #6a5acd;
+  fill: #483d8b;
 }
 .sm-blocks.main-section {
   width: 100%;
@@ -1131,18 +1167,10 @@
   fill: #c0c0c0;
 }
 .sm-blocks.main-section > div.focused > .title > h3 {
-  color: #2f4f4f;
-}
-.sm-blocks.main-section > div.focused > .title > .arrow > button > svg {
-  stroke: #c0c0c0;
-  fill: #6a5acd;
+  color: #483d8b;
 }
 .sm-blocks.main-section > div.focused.opened > .title > h3 {
-  color: #2f4f4f;
-}
-.sm-blocks.main-section > div.focused.opened > .title > .arrow > button > svg {
-  stroke: #000;
-  fill: #6a5acd;
+  color: #483d8b;
 }
 .sm-blocks.main-section > div.v {
   font-size: 1em;

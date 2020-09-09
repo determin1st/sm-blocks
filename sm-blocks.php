@@ -20,6 +20,7 @@ class StorefrontModernBlocks {
     $db        = null,
     $prefix    = null,
     $lang      = 'en',
+    $unique_id = 0,
     $dir_data  = __DIR__.DIRECTORY_SEPARATOR.'data'.DIRECTORY_SEPARATOR,
     $dir_inc   = __DIR__.DIRECTORY_SEPARATOR.'inc'.DIRECTORY_SEPARATOR,
     $blocks    = [
@@ -535,9 +536,15 @@ class StorefrontModernBlocks {
         ',
         'textInputs' => '
         <div class="text">
-          <div class="left"><input type="text" inputmode="numeric" pattern="[0-9]*"></div>
+          <div class="L">
+            <input id="{{UID=1}}" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="9">
+            <label for="{{UID=1}}"></label>
+          </div>
           {{delimiter}}
-          <div class="right"><input type="text" inputmode="numeric" pattern="[0-9]*"></div>
+          <div class="R">
+            <input id="{{UID=2}}" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="9">
+            <label for="{{UID=2}}"></label>
+          </div>
           {{submitButton}}
         </div>
         ',
@@ -1381,7 +1388,6 @@ EOD;
     {
       # TODO: extract from cache
       # determine current price range
-      #$priceRange[1] and $priceRange[2];
       $priceRange = $this->getProductPriceRange($ids);
     }
     else {
@@ -1521,6 +1527,16 @@ EOD;
           }
           else if (!$attr[$a]) {
             $b = '';
+          }
+        }
+        else
+        {
+          # check special
+          switch(substr($a, 0, 4)) {
+          case 'UID=':
+            ++$this->unique_id;
+            $attr[$a] = $b = $this->name.'-'.$this->unique_id;
+            break;
           }
         }
         # check data
@@ -1728,7 +1744,7 @@ EOD;
     }
     $a = $a[0];
     $a[0] = intval($a[0]);
-    $a[1] = intval($a[1]);
+    $a[1] = intval($a[1]) + 1;# to close the range
     # done
     return $a;
   }

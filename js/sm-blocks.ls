@@ -259,18 +259,23 @@ smCatalogueKing = do ->>
 			@root     = root
 			@rootBox  = box  = root.firstChild
 			@rootItem = root = new Item @, box, null
-			# items
 			@lines    = querySelectorChildren box, 'hr'
-			@sect     = sect = {} # with section (parents)
-			@item     = item = {} # all
-			@list     = list = [root] # all ordered
+			# items
+			sect      = {}     # with section (parents)
+			item      = {}     # all
+			list      = [root] # all ordered
 			# initialize
+			# {{{
 			a = -1
 			while ++a < list.length
 				if (b = list[a]).children
 					sect[b.id] = b
 					list ++= b.children
 				item[b.id] = b
+			# }}}
+			@sect     = sect
+			@item     = item
+			@list     = list
 			# state
 			@mode     = +box.dataset.mode
 			@state    = state
@@ -417,6 +422,7 @@ smCatalogueKing = do ->>
 			# loader
 			dirty: false # resolved-in-process flag
 			level: 0     # update priority level
+			config: {}   # localized block's data/options
 			# grid
 			total: 0     # items in the set
 			count: 0     # displayed items
@@ -424,33 +430,38 @@ smCatalogueKing = do ->>
 			pageCount: 0 # calculated total/count
 			pageIndex: 0 # current page
 			# orderer
-			orderOption: null # orderer content
+			orderOption: null # TODO: delete
 			orderFilter: ['',  0]
 			# price-filter
-			priceFilter: [false, 0, -1, false, 0, -1]
+			priceFilter: [false, -1, -1, false, -1, -1]
+			# ...
 		}
 		gridLock = do ->>
-			# load configuration and cart contents
+			# load configuration
+			# prepare
+			cfg = gridState.config
+			# initial cart contents
 			a = sCart.load!
 			b = soFetch {
 				func: 'config'
 				#lang: 'en'
 			}
 			c = await Promise.all [a, b]
-			CFG = c.1
-			# initialize order tags
+			cfg <<< c.1
+			# initialize
+			# order tags
 			a = grid.dataset.order.split ','
 			if b = a.length
 				# set order options
 				gridState.orderOption = c = {}
 				d = -1
 				while ++d < b
-					c[a[d]] = CFG.orderOption[a[d]]
+					c[a[d]] = cfg.order[a[d]]
 				# set default order
 				b = parseInt grid.dataset.index
 				b = a[b]
 				gridState.orderFilter.0 = b
-				gridState.orderFilter.1 = CFG.orderOption[b].1
+				gridState.orderFilter.1 = cfg.order[b].1
 			# done
 			return true
 		# }}}
@@ -611,8 +622,8 @@ smCatalogueKing = do ->>
 					# }}}
 				case 'order'
 					# {{{
-					gridState.order.0 = s.data.0
-					gridState.order.1 = s.data.1
+					gridState.orderFilter.0 = s.data.0
+					gridState.orderFilter.1 = s.data.1
 					# }}}
 				# done
 				return true
@@ -707,11 +718,11 @@ smCatalogueKing = do ->>
 				gridState.pageCount = Math.ceil (c / gridList.length)
 				# it's always welcome to
 				# set the correct price range
-				if c = b.priceFilter
+				if c = b.priceRange
 					d = gridState.priceFilter
-					c.0 = false if c.0
-					c.1 = d.0
-					c.2 = d.1
+					d.0 = false if d.0
+					d.1 = c.0
+					d.2 = c.1
 				# dispatch load event
 				for c in gridControl
 					c.event 'load', gridState
@@ -1343,159 +1354,276 @@ smCatalogueKing = do ->>
 	# }}}
 	mPriceFilter = do -> # {{{
 		# constructors
-		Control = (block) !-> # {{{
-			# create object shape
-			# data
+		TextInputs = (block) !-> # {{{
+			# parent
 			@block = block
-			@inputState = 0
-			@hovered = 0
-			@focused = 0
-			# handlers
-			@hover = (e) !~> # {{{
+			# containers
+			a = block.rootBox
+			b = a.children.0
+			c = a.children.2
+			@boxes = [b, c]
+			# controls
+			@svg   = a.children.1
+			@input = [b.children.0, c.children.0]
+			@label = [b.children.1, c.children.1]
+			# event handlers
+			@rootHover = (e) !~> # {{{
 				# fulfil event
 				e.preventDefault!
 				# operate
-				if not @block.locked and not @hovered
-					@block.rootBox.classList.add 'hovered'
-					@inputState = @hovered = 1
+				if not block.locked and not @hovered.3
+					@hovered.3 = true
+					block.rootBox.classList.add 'hovered'
 			# }}}
-			@unhover = (e) !~> # {{{
+			@rootUnhover = (e) !~> # {{{
 				# fulfil event
 				e.preventDefault!
 				# operate
-				if @hovered == 1
-					@block.rootBox.classList.remove 'hovered'
-					if @inputState == 1
-						@inputState = 0
-					@hovered = 0
+				if @hovered.3
+					@hovered.3 = false
+					block.rootBox.classList.remove 'hovered'
 			# }}}
-			@hoverInputs = []
-			@focusInputs = []
+			# {{{
+			@boxHovers = [
+				@boxHover   0
+				@boxUnhover 0
+				@boxHover   1
+				@boxUnhover 1
+			]
+			@inputFocus = [
+				@inputFocusIn  0
+				@inputFocusOut 0
+				@inputFocusIn  1
+				@inputFocusOut 1
+			]
+			@labelClicks = [
+				@labelClick 0
+				@labelClick 1
+			]
+			@inputEvents = [
+				@inputChange 0
+				@inputChange 1
+				@inputKey  0
+				@inputKey  1
+			]
+			# }}}
+			# state
+			@hovered = [false, false, false]
+			@focused = [false, false, false]
+			@values  = ['', '', 0, 0, 0, 0]
+			@regex   = /^[0-9]{0,10}$/
 		###
-		Control.prototype = {
+		TextInputs.prototype =
 			attach: !-> # {{{
+				# hover maze
 				B = @block
-				I = B.inputs
-				B.rootBox.addEventListener 'pointerenter', @hover
-				B.rootBox.addEventListener 'pointerleave', @unhover
-				switch B.mode
-				case 1
-					true
-				default
-					# text inputs
-					# hover
-					a   = @hoverInputs
-					a.0 = @hoverTextInp I.leftBox, true
-					a.1 = @hoverTextInp I.rightBox, false
-					a.2 = @unhoverTextInp I.leftBox, true
-					a.3 = @unhoverTextInp I.rightBox, false
-					I.leftBox.addEventListener 'pointerenter', a.0
-					I.leftBox.addEventListener 'pointerleave', a.2
-					I.rightBox.addEventListener 'pointerenter', a.1
-					I.rightBox.addEventListener 'pointerleave', a.3
-					# focus
-					a   = @focusInputs
-					a.0 = @focusTextInp I.leftBox, true
-					a.1 = @focusTextInp I.rightBox, false
-					a.2 = @unfocusTextInp I.leftBox, true
-					a.3 = @unfocusTextInp I.rightBox, false
-					I.leftInp.addEventListener 'focusin', a.0
-					I.leftInp.addEventListener 'focusout', a.2
-					I.rightInp.addEventListener 'focusin', a.1
-					I.rightInp.addEventListener 'focusout', a.3
-					# ...
-					# done
+				B.rootBox.addEventListener 'pointerenter', @rootHover
+				B.rootBox.addEventListener 'pointerleave', @rootUnhover
+				a = @boxHovers
+				b = @boxes
+				b.0.addEventListener 'pointerenter', a.0
+				b.0.addEventListener 'pointerleave', a.1
+				b.1.addEventListener 'pointerenter', a.2
+				b.1.addEventListener 'pointerleave', a.3
+				# focus maze
+				a = @inputFocus
+				b = @input
+				b.0.addEventListener 'focusin',  a.0
+				b.0.addEventListener 'focusout', a.1
+				b.1.addEventListener 'focusin',  a.2
+				b.1.addEventListener 'focusout', a.3
+				# label when focused:
+				# resets to default min/max value
+				a = @label
+				b = @labelClicks
+				a.0.addEventListener 'pointerdown', b.0, true
+				a.1.addEventListener 'pointerdown', b.1, true
+				# input maze
+				a = @input
+				b = @inputEvents
+				a.0.addEventListener 'input', b.0, true
+				a.1.addEventListener 'input', b.1, true
+				a.0.addEventListener 'keydown', b.2, true
+				a.1.addEventListener 'keydown', b.3, true
 				# done
 			# }}}
 			detach: !-> # {{{
-				true
+				# done
 			# }}}
-			hoverTextInp: (node, isLeft) -> (e) !~> # {{{
+			init: (cfg) !-> # {{{
+				# set label names
+				@label.0.textContent = cfg.min
+				@label.1.textContent = cfg.max
+			# }}}
+			set: (min, max) !-> # {{{
+				# prepare
+				min = if min == -1
+					then ''
+					else '' + min
+				max = if max == -1
+					then ''
+					else '' + max
+				# set the values
+				v = @values
+				v.0 = @input.0.value = min
+				v.1 = @input.1.value = max
+				v.2 = v.3 = 0
+				v.4 = min.length
+				v.5 = max.length
+			# }}}
+			boxHover: (n) -> (e) !~> # {{{
 				# fulfil event
 				e.preventDefault!
 				e.stopPropagation!
-				# operate
-				if not @block.locked
-					if not @inputState
-						@block.rootBox.classList.add 'hovered'
-					@hovered = if isLeft
-						then 2
-						else 3
-					if @inputState < 4
-						@inputState = @hovered
-					node.classList.add 'hovered'
-					@block.rootBox.classList.add if isLeft
-						then 'left'
-						else 'right'
+				# check
+				if not (B = @block).locked
+					# operate
+					H    = @hovered
+					F    = @focused
+					H[n] = true
+					# set root state
+					if not H.2
+						H.2 = true
+						B.rootBox.classList.add 'hovered'
+					B.rootBox.classList.add if n
+						then 'R'
+						else 'L'
+					# set own state
+					@boxes[n].classList.add 'hovered'
 			# }}}
-			unhoverTextInp: (node, isLeft) -> (e) !~> # {{{
+			boxUnhover: (n) -> (e) !~> # {{{
 				# fulfil event
 				e.preventDefault!
-				# ..dont stop propagation to reuse parent unhover
-				# operate
-				if @hovered
-					if not @focused or @hovered != @focused - 2
-						@block.rootBox.classList.remove if isLeft
-							then 'left'
-							else 'right'
-					if not @focused
-						@inputState = 1
-					@hovered = 1
-					node.classList.remove 'hovered'
+				# check
+				if (H = @hovered)[n]
+					# operate
+					B    = @block
+					F    = @focused
+					H[n] = false
+					# set root state
+					if not F[n]
+						B.rootBox.classList.remove if n
+							then 'R'
+							else 'L'
+					# set own state
+					@boxes[n].classList.remove 'hovered'
 			# }}}
-			focusTextInp: (node, isLeft) -> (e) !~> # {{{
-				# operate
-				if @block.locked
+			inputFocusIn: (n) -> (e) !~> # {{{
+				# check
+				if (B = @block).locked
+					# inactive
 					e.preventDefault!
 					e.stopPropagation!
 				else
-					if not @focused
-						@block.rootBox.classList.add 'focused'
-					@focused = if isLeft
-						then 4
-						else 5
-					if not @hovered or @focused != @hovered + 2
-						@block.rootBox.classList.add if isLeft
-							then 'left'
-							else 'right'
-					@inputState = @focused
-					node.classList.add 'focused'
+					# operate
+					H    = @hovered
+					F    = @focused
+					F[n] = true
+					# set root state
+					if not F.2
+						F.2 = true
+						B.rootBox.classList.add 'focused'
+					if not H[n]
+						B.rootBox.classList.add if n
+							then 'R'
+							else 'L'
+					# set own state
+					@input[n].select!
+					@boxes[n].classList.add 'focused'
 			# }}}
-			unfocusTextInp: (node, isLeft) -> (e) !~> # {{{
+			inputFocusOut: (n) -> (e) !~> # {{{
 				# operate
-				if @hovered
-					if @focused != @hovered + 2
-						@block.rootBox.classList.remove if isLeft
-							then 'left'
-							else 'right'
-					@inputState = @hovered
-				else
-					@block.rootBox.classList.remove 'hovered', if isLeft
-						then 'left'
-						else 'right'
-					@inputState = 0
-				node.classList.remove 'focused'
-				@block.rootBox.classList.remove 'focused'
-				@focused = 0
+				B    = @block
+				F    = @focused
+				F[n] = false
+				F.2  = false
+				# set root state
+				B.rootBox.classList.remove 'focused'
+				if not @hovered[n]
+					B.rootBox.classList.remove if n
+						then 'R'
+						else 'L'
+				# set own state
+				@boxes[n].classList.remove 'focused'
 			# }}}
-		}
-		# }}}
-		TextInputs = (block) !-> # {{{
-			# set parent
-			@block = block
-			# set controls
-			a = block.rootBox
-			@leftBox  = b = a.children.0
-			@stateBox = a.children.1
-			@rightBox = c = a.children.2
-			@leftInp  = b.firstChild
-			@rightInp = c.firstChild
-			# set helpers
-			# ...
-		###
-		TextInputs.prototype =
-			refresh: !->
-				true
+			labelClick: (n) -> (e) !~> # {{{
+				# check
+				if not @block.locked and @focused[n]
+					# fulfil
+					e.preventDefault!
+					e.stopPropagation!
+					# determine current value
+					e = @block.current
+					if (a = e[4+n]) >= 0 or \
+					   (a = e[1+n]) >= 0
+						###
+						a = '' + a
+					else
+						a = ''
+					# restore
+					e = @values
+					e[n]   = @input[n].value = a
+					e[2+n] = 0
+					e[4+n] = a.length
+					@input[n].select!
+			# }}}
+			inputChange: (n) -> (e) ~> # {{{
+				# prepare
+				a = @input[n]
+				b = @values
+				c = a.value
+				# check
+				if c.length
+					# non-empty
+					if not @regex.test c
+						# invalid,
+						# restore previous
+						a.value = b[n]
+						a.setSelectionRange b[2+n], b[4+n]
+					else
+						# save and continue typing..
+						b[n]   = c
+						b[2+n] = a.selectionStart
+						b[4+n] = a.selectionEnd
+						return true
+				else
+					# empty,
+					# restore the default
+					c = @block.current
+					if (d = b[4 + n]) >= 0 or \
+					   (d = b[1 + n]) >= 0
+						###
+						b[n]   = a.value = d
+						b[2+n] = 0
+						b[4+n] = d.length
+						a.select!
+				# dont do the default
+				e.preventDefault!
+				e.stopPropagation!
+				return false
+			# }}}
+			inputKey: (n) -> (e) !~> # {{{
+				# check
+				if e.keyCode == 13
+					# Enter
+					# validate the value
+					a = +@input.0.value
+					b = +@input.1.value
+					c = true
+					if a > b
+						true
+					else
+						true
+					debugger
+					# check mode
+					if n == 1 or e.ctrlKey
+						# submit
+						true
+					else
+						# focus next
+						true
+					# ...
+			# }}}
 		# }}}
 		Block = (root, state) !-> # {{{
 			# {{{
@@ -1507,7 +1635,7 @@ smCatalogueKing = do ->>
 				then 0
 				else 1
 			# controls
-			@inputs  = if mode == 0
+			@ctrl = if mode == 0
 				then new TextInputs @
 				else null
 			box = root.parentNode.parentNode.parentNode
@@ -1516,8 +1644,7 @@ smCatalogueKing = do ->>
 			@mode    = mode
 			@state   = state
 			@locked  = true
-			@current = [false, 0, -1, false, 0, -1]
-			@ctrl    = new Control @
+			@current = [false, -1, -1, false, -1, -1]
 			# initialize
 			state.ready[*] = box.init!
 				.then (x) ~>
@@ -1530,24 +1657,41 @@ smCatalogueKing = do ->>
 						@current.0 = box.rootItem.opened
 					# done
 					return x
-				.then (x) ~>
-					# unlock section
-					return if x
-						then box.unlock!
-						else false
 			# }}}
 		Block.prototype =
+			init: (cfg) !-> # {{{
+				@ctrl.init cfg
+				@refresh!
+			# }}}
 			refresh: !-> # {{{
 				# get data
-				a = @state.data
-				b = @current
+				a = @current
+				b = @state.data
+				# refresh
+				if a.1 != b.1 or a.2 != b.2 or \
+				   a.4 != b.4 or a.5 != b.5
+					###
+					c = if b.4 >= 0
+						then b.4
+						else if b.1 >= 0
+							then b.1
+							else -1
+					d = if b.5 >= 0
+						then b.5
+						else if b.2 >= 0
+							then b.2
+							else -1
+					# update
+					@ctrl.set c, d
 				# sync
-				# ...
-				debugger
+				@current = b.slice!
+				# done
 			# }}}
 			unlock: !-> # {{{
 				@rootBox.classList.add 'v'
 				@locked = false
+				if @section.locked
+					@section.unlock!
 			# }}}
 		# }}}
 		# initialize
@@ -1565,7 +1709,7 @@ smCatalogueKing = do ->>
 					break
 				# sync
 				for b in blocks
-					b.refresh!
+					b.init data.config.price
 			case 'lock'
 				# stop any interactions..
 				for a in blocks
