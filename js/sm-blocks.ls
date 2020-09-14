@@ -1,8 +1,11 @@
 "use strict"
-smCatalogueKing = do ->>
-	# TODO: price filter
-	# TODO: grid's goto next page + scroll up
-	# TODO: static paginator max-width auto-calc
+smBlocks = do ->>
+	# TODO {{{
+	# - price filter (!)
+	# - ...
+	# - static paginator max-width auto-calc
+	# - grid's goto next page + scroll up (?)
+	# }}}
 	# prepare
 	# {{{
 	# constants
@@ -14,7 +17,7 @@ smCatalogueKing = do ->>
 		notNull: true
 		method: 'POST'
 	}
-	# }}}
+	# helpers
 	newPromise = -> # {{{
 		# create a custom promise
 		r = null
@@ -113,24 +116,39 @@ smCatalogueKing = do ->>
 			return new Proxy [o, {} <<< o], handler
 	# }}}
 	BlockState = (name, level, handler) !-> # {{{
-		@name   = name
-		@level  = level
-		@event  = handler
-		@data   = null
-		@master = null
-		@ready  = []
+		@name    = name
+		@level   = level
+		@event   = handler
+		@data    = null
+		@master  = null
+		@ready   = []
+		@pending = false
 	###
 	BlockState.prototype = {
-		set: (data) !->
-			@data = data
+		change: !->
+			# set the flag
+			@pending = true
+			# let the master find the solution
 			@master.resolve @
+		onChange: (m) ->
+			# OBEY only to higher update levels
+			if @level < m.level
+				# dispatch lock request
+				@event 'lock'
+				return true
+			# dispatch notification and
+			# allow the negative response for the group control,
+			# by the privilege of being first
+			return @event 'change', m
+		onLoad: (m) ->
+			# reset the flag
+			@pending = false if @pending
+			# dispatch notification
+			return @event 'load', m
 	}
 	# }}}
-	###
+	# }}}
 	# slaves
-	# - passive, expose events / api / data
-	# - compliance to master events
-	###
 	sMainSection = do -> # {{{
 		# constructors
 		Control = (block) !-> # {{{
@@ -279,7 +297,8 @@ smCatalogueKing = do ->>
 			# state
 			@mode     = +box.dataset.mode
 			@state    = state
-			@locked   = true
+			@locked   = 1
+			@class    = {}
 			@ctrl     = new Control @
 		###
 		Block.prototype =
@@ -288,10 +307,25 @@ smCatalogueKing = do ->>
 				@root.classList.add 'v'
 				return true
 			# }}}
-			lock: !-> # {{{
-				if not @locked
-					@locked = true
-					@rootBox.classList.remove 'v'
+			lock: (level) !-> # {{{
+				# check
+				switch level
+				case 1
+					if not @locked
+						@rootBox.classList.remove 'v'
+				default
+					if @locked
+						@rootBox.classList.add 'v'
+				# set
+				@locked = level
+			# }}}
+			setClass: (k, v) !-> # {{{
+				# check
+				a = @class
+				if not (a.hasOwnProperty k) or a[k] != v
+					# set
+					a[k] = v
+					@rootBox.classList.toggle k, !!v
 			# }}}
 			refresh: (list) !-> # {{{
 				# iterate changed items
@@ -324,16 +358,8 @@ smCatalogueKing = do ->>
 					return if a
 				# set new filter
 				state.data[@index][1] = list
-				state.master.resolve state
+				state.change!
 				# done
-			# }}}
-			unlock: ->> # {{{
-				# opearte
-				if @locked
-					@locked = false
-					@rootBox.classList.add 'v'
-				# done
-				return true
 			# }}}
 			finit: !-> # {{{
 				@root.classList.remove 'v'
@@ -403,11 +429,10 @@ smCatalogueKing = do ->>
 			# }}}
 		}
 	# }}}
-	###
+	sGridCard = do -> # TODO {{{
+		return null
+	# }}}
 	# masters
-	# - active, use and control of slaves
-	# - compliance to group events
-	###
 	KING = do -> # {{{
 		# prepare
 		# {{{
@@ -419,49 +444,54 @@ smCatalogueKing = do ->>
 		gridList    = [...grid.children]
 		gridControl = []
 		gridState   = {
-			# loader
+			# state
 			dirty: false # resolved-in-process flag
-			level: 0     # update priority level
+			level: 100   # update priority (highest for the first)
+			# content
 			config: {}   # localized block's data/options
-			# grid
+			orderOption: null # TODO: delete
 			total: 0     # items in the set
 			count: 0     # displayed items
-			# paginator
+			# modifiers
 			pageCount: 0 # calculated total/count
 			pageIndex: 0 # current page
-			# orderer
-			orderOption: null # TODO: delete
-			orderFilter: ['',  0]
-			# price-filter
-			priceFilter: [false, -1, -1, false, -1, -1]
-			# ...
+			orderFilter: ['',  0] # tag, variant
+			# filters
+			priceFilter: [false, -1, -1, -1, -1] # enabled, a, b, aMin, bMax
 		}
 		gridLock = do ->>
 			# load configuration
-			# prepare
-			cfg = gridState.config
-			# initial cart contents
 			a = sCart.load!
 			b = soFetch {
 				func: 'config'
-				#lang: 'en'
+				lang: ''
+				category: null
 			}
-			c = await Promise.all [a, b]
-			cfg <<< c.1
-			# initialize
+			c = gridState.config
+			d = await Promise.all [a, b]
+			c <<< d.1
+			# set current state
 			# order tags
 			a = grid.dataset.order.split ','
 			if b = a.length
 				# set order options
-				gridState.orderOption = c = {}
-				d = -1
-				while ++d < b
-					c[a[d]] = cfg.order[a[d]]
+				gridState.orderOption = d = {}
+				e = -1
+				while ++e < b
+					d[a[e]] = c.locale.order[a[e]]
 				# set default order
 				b = parseInt grid.dataset.index
 				b = a[b]
 				gridState.orderFilter.0 = b
-				gridState.orderFilter.1 = cfg.order[b].1
+				gridState.orderFilter.1 = c.locale.order[b].1
+			# price range
+			if a = c.priceRange
+				gridState.priceFilter.3 = a.0
+				gridState.priceFilter.4 = a.1
+			# total items
+			gridState.total = a = c.total
+			# count of pages
+			gridState.pageCount = Math.ceil (a / gridList.length)
 			# done
 			return true
 		# }}}
@@ -628,6 +658,9 @@ smCatalogueKing = do ->>
 				# done
 				return true
 			# }}}
+			clearState = !-> # {{{
+				true
+			# }}}
 			unloadItems = !-> # {{{
 				if c = gridState.count
 					# clear product cards in the reverse order
@@ -683,15 +716,10 @@ smCatalogueKing = do ->>
 				if gridState.dirty
 					return true
 				# new update arrived,
-				# dispatch lock/change events
+				# sync state of the masters
 				for c in gridControl
-					if c.level < gridState.level
-						# widget operation level is lower,
-						# so lock it up until initialized
-						c.event 'lock'
-					else if not (c.event 'change', gridState)
-						# widget is about to change again,
-						# dont rush, just restart
+					if not c.onChange gridState
+						# master wants to restart
 						return true
 				# start fetching
 				a = await (res := iFetch req)
@@ -702,30 +730,23 @@ smCatalogueKing = do ->>
 					return if a.id == 4
 						then true   # dirty update, cancelled
 						else false  # fatal failure
-				# get metadata
-				if (b = await a.readJSON!) == null or gridState.dirty
+				# get total
+				if (b = await a.readInt!) == null or gridState.dirty
 					a.cancel!
 					return gridState.dirty
 				# update internal state
 				# {{{
 				# set total items
-				gridState.total = c = b.total
+				gridState.total = b
 				# set count of displayed
-				gridState.count = if (d = c - req.offset) < gridList.length
-					then d
+				gridState.count = if (c = b - req.offset) < gridList.length
+					then c
 					else gridList.length
 				# set count of pages
-				gridState.pageCount = Math.ceil (c / gridList.length)
-				# it's always welcome to
-				# set the correct price range
-				if c = b.priceRange
-					d = gridState.priceFilter
-					d.0 = false if d.0
-					d.1 = c.0
-					d.2 = c.1
+				gridState.pageCount = Math.ceil (b / gridList.length)
 				# dispatch load event
 				for c in gridControl
-					c.event 'load', gridState
+					c.onLoad gridState
 				# reset
 				gridState.level = 0
 				# }}}
@@ -851,7 +872,7 @@ smCatalogueKing = do ->>
 			set = (data) !-> #  # {{{
 				# prepare
 				v = @data.value
-				c = data.currency
+				c = gridState.config.currency # :|
 				# check
 				if d = data.price # [regular_price,price]
 					# split decimal parts
@@ -885,7 +906,7 @@ smCatalogueKing = do ->>
 							then 'lower'
 							else 'higher'
 					# currency sign position
-					if data.currency.4
+					if gridState.config.currency.4 # :|
 						# right (the default is left)
 						@data.container.classList.add 'right'
 				else
@@ -1081,7 +1102,7 @@ smCatalogueKing = do ->>
 		}
 	# }}}
 	mProductsGrid = do -> # {{{
-		# TODO
+		###
 		Block = (root) !-> # {{{
 			# root
 			@root    = root
@@ -1321,7 +1342,7 @@ smCatalogueKing = do ->>
 					return if a
 				# set new filter
 				state.data[@index][1] = list
-				state.master.resolve state
+				state.change!
 				# done
 			# }}}
 			unlock: !-> # {{{
@@ -1363,7 +1384,8 @@ smCatalogueKing = do ->>
 			c = a.children.2
 			@boxes = [b, c]
 			# controls
-			@svg   = a.children.1
+			@svg = a.children.1
+			@resetBtn = querySelectorChild @svg, '.state'
 			@input = [b.children.0, c.children.0]
 			@label = [b.children.1, c.children.1]
 			# event handlers
@@ -1406,14 +1428,45 @@ smCatalogueKing = do ->>
 				@inputKey  0
 				@inputKey  1
 			]
+			@inputWheels = [
+				@inputWheel 0
+				@inputWheel 1
+				@inputWheel -1
+			]
+			# }}}
+			@reset = (e) !~> # {{{
+				# check
+				if @block.locked
+					return
+				# fulfil event
+				if e
+					e.preventDefault!
+					e.stopPropagation!
+				# check
+				if (c = @block.current).0
+					# reset
+					c.0 = false
+					c.1 = c.2 = -1
+					# submit instantly
+					@set c.3, c.4
+					@submit!
 			# }}}
 			# state
 			@hovered = [false, false, false]
 			@focused = [false, false, false]
 			@values  = ['', '', 0, 0, 0, 0]
-			@regex   = /^[0-9]{0,10}$/
+			@changed = 0
+			@locked  = 1
+			@regex   = /^[0-9]{0,9}$/
+			@stepSz  = 10/100
+			@waiter  = delay 0
 		###
 		TextInputs.prototype =
+			init: (cfg) !-> # {{{
+				# set label names
+				@label.0.textContent = cfg.min
+				@label.1.textContent = cfg.max
+			# }}}
 			attach: !-> # {{{
 				# hover maze
 				B = @block
@@ -1439,37 +1492,165 @@ smCatalogueKing = do ->>
 				a.0.addEventListener 'pointerdown', b.0, true
 				a.1.addEventListener 'pointerdown', b.1, true
 				# input maze
-				a = @input
-				b = @inputEvents
-				a.0.addEventListener 'input', b.0, true
-				a.1.addEventListener 'input', b.1, true
-				a.0.addEventListener 'keydown', b.2, true
-				a.1.addEventListener 'keydown', b.3, true
+				a = @inputEvents
+				b = @input
+				b.0.addEventListener 'input', a.0, true
+				b.1.addEventListener 'input', a.1, true
+				b.0.addEventListener 'keydown', a.2, true
+				b.1.addEventListener 'keydown', a.3, true
+				a = @inputWheels
+				b = @boxes
+				b.0.addEventListener 'wheel', a.0
+				b.1.addEventListener 'wheel', a.1
+				@svg.addEventListener 'wheel', a.2
+				if a = @resetBtn
+					a.addEventListener 'click', @reset
 				# done
 			# }}}
 			detach: !-> # {{{
 				# done
 			# }}}
-			init: (cfg) !-> # {{{
-				# set label names
-				@label.0.textContent = cfg.min
-				@label.1.textContent = cfg.max
-			# }}}
 			set: (min, max) !-> # {{{
-				# prepare
-				min = if min == -1
-					then ''
-					else '' + min
-				max = if max == -1
-					then ''
-					else '' + max
-				# set the values
-				v = @values
-				v.0 = @input.0.value = min
-				v.1 = @input.1.value = max
+				v   = @values
+				v.0 = @input.0.value = '' + min
+				v.1 = @input.1.value = '' + max
 				v.2 = v.3 = 0
-				v.4 = min.length
-				v.5 = max.length
+				v.4 = v.0.length
+				v.5 = v.1.length
+			# }}}
+			check: (n) -> # {{{
+				# get the values
+				a = +@input.0.value
+				b = +@input.1.value
+				c = @block.current
+				d = true # input is correct
+				# check range numbers
+				if a > b
+					# swap values (user mixed-up min>max)
+					d = a
+					a = b
+					b = d
+					d = false
+				else if a == b
+					# push inactive border
+					if n
+						if (a = c.3) == b
+							++b
+					else
+						if (b = c.4) == a
+							--a
+					d = false
+				# check out of the valid range
+				if a >= c.4 or a < c.3
+					d = false
+					a = if c.0
+						then c.1
+						else c.3
+				else if a < c.3
+					d = false
+					a = c.3
+				if b <= c.3
+					d = false
+					b = if c.0
+						then c.2
+						else c.4
+				else if b > c.4
+					d = false
+					b = c.4
+				# fix incorrect input
+				@set a, b if not d
+				# determine current state
+				if a == c.3 and b == c.4
+					# inactive
+					# set pending change
+					++@changed if c.0
+					# reset
+					c.0 = false
+					c.1 = c.2 = -1
+				else
+					# active
+					# set pending change
+					++@changed if not c.0 or (a != c.1 or b != c.2)
+					# set filter
+					c.0 = true
+					c.1 = a
+					c.2 = b
+				# done
+				return d
+			# }}}
+			submit: !-> # {{{
+				# reset and notify
+				@changed = 0
+				@block.submit!
+			# }}}
+			lock: (level) !-> # {{{
+				# prepare
+				I = @input
+				B = @boxes
+				F = @focused
+				# check
+				switch level
+				case 1
+					if not @locked
+						I.0.readOnly = true
+						I.1.readOnly = true
+						B.0.classList.add 'locked'
+						B.1.classList.add 'locked'
+						if F.2
+							if F.1
+								I.1.setSelectionRange 0, 0
+							else
+								I.0.setSelectionRange 0, 0
+				default
+					if @locked
+						I.0.readOnly = false
+						I.1.readOnly = false
+						B.0.classList.remove 'locked'
+						B.1.classList.remove 'locked'
+						if F.2
+							if F.1
+								I.1.select!
+							else
+								I.0.select!
+				# set
+				@locked = level
+			# }}}
+			inputScroll: (n, direction) !-> # {{{
+				# determine step size
+				c = @block.current
+				a = if c.4 > 100
+					then 0.01
+					else 0.1
+				# determine current position
+				d = c.4 - c.3
+				b = (+@values[n] - c.3) / d
+				# check the direction and
+				# increment or decrement current
+				if direction
+					b += 1.5 * a
+				else
+					b -= 0.5 * a
+				# clamp to the step and
+				# determine new position
+				b = a * (b/a .|. 0)
+				a = c.3 + b * d .|. 0
+				# determine new range
+				if n
+					b = a
+					a = +@values.0
+					if b >= c.4
+						b = c.4
+					else if b <= a
+						b = a + 1
+				else
+					b = +@values.1
+					if a <= c.3
+						a = c.3
+					else if a >= b
+						a = b - 1
+				# apply
+				@set a, b
+				# done
 			# }}}
 			boxHover: (n) -> (e) !~> # {{{
 				# fulfil event
@@ -1479,7 +1660,6 @@ smCatalogueKing = do ->>
 				if not (B = @block).locked
 					# operate
 					H    = @hovered
-					F    = @focused
 					H[n] = true
 					# set root state
 					if not H.2
@@ -1498,10 +1678,9 @@ smCatalogueKing = do ->>
 				if (H = @hovered)[n]
 					# operate
 					B    = @block
-					F    = @focused
 					H[n] = false
 					# set root state
-					if not F[n]
+					if not @focused[n]
 						B.rootBox.classList.remove if n
 							then 'R'
 							else 'L'
@@ -1545,57 +1724,61 @@ smCatalogueKing = do ->>
 						else 'L'
 				# set own state
 				@boxes[n].classList.remove 'focused'
+				# checkout and try to submit
+				@check n
+				@submit! if @changed
 			# }}}
 			labelClick: (n) -> (e) !~> # {{{
 				# check
-				if not @block.locked and @focused[n]
-					# fulfil
-					e.preventDefault!
-					e.stopPropagation!
-					# determine current value
-					e = @block.current
-					if (a = e[4+n]) >= 0 or \
-					   (a = e[1+n]) >= 0
-						###
-						a = '' + a
-					else
-						a = ''
-					# restore
-					e = @values
+				if @block.locked or not @focused[n]
+					return
+				# fulfil the event
+				e.preventDefault!
+				e.stopPropagation!
+				# prepare
+				a = ''+@block.current[3 + n]
+				e = @values
+				# check current against default
+				if e[n] != a
+					# restore default
 					e[n]   = @input[n].value = a
 					e[2+n] = 0
 					e[4+n] = a.length
-					@input[n].select!
+					# submit fluently
+					@check n
+					@submit! if @changed
+				# select text
+				@input[n].select!
 			# }}}
 			inputChange: (n) -> (e) ~> # {{{
 				# prepare
+				v = @values
 				a = @input[n]
-				b = @values
-				c = a.value
+				b = a.value
 				# check
-				if c.length
+				if b.length
 					# non-empty
-					if not @regex.test c
+					if not @regex.test b
 						# invalid,
 						# restore previous
-						a.value = b[n]
-						a.setSelectionRange b[2+n], b[4+n]
+						a.value = v[n]
+						a.setSelectionRange v[2+n], v[4+n]
 					else
 						# save and continue typing..
-						b[n]   = c
-						b[2+n] = a.selectionStart
-						b[4+n] = a.selectionEnd
+						v[n]   = b
+						v[2+n] = a.selectionStart
+						v[4+n] = a.selectionEnd
 						return true
 				else
 					# empty,
 					# restore the default
 					c = @block.current
-					if (d = b[4 + n]) >= 0 or \
-					   (d = b[1 + n]) >= 0
+					if (b = c[3+n]) >= 0 or \
+					   (b = c[1+n]) >= 0
 						###
-						b[n]   = a.value = d
-						b[2+n] = 0
-						b[4+n] = d.length
+						v[n]   = a.value = "" + b
+						v[2+n] = 0
+						v[4+n] = v[n].length
 						a.select!
 				# dont do the default
 				e.preventDefault!
@@ -1604,56 +1787,67 @@ smCatalogueKing = do ->>
 			# }}}
 			inputKey: (n) -> (e) !~> # {{{
 				# check
+				if @block.locked
+					return
+				# operate
 				if e.keyCode == 13
-					# Enter
+					# Enter {{{
 					# cancel default action
 					e.preventDefault!
 					e.stopPropagation!
-					# get the values
-					v = @values
-					a = +@input.0.value
-					b = c = +@input.1.value
-					d = false
-					# validate the range
-					# swap if user mixed up min/max fields
-					if a > b
-						d = true
-						b = a
-						a = c
-					# reset invalid values to the
-					# previous or the default values
-					c = @block.current
-					if c.1 >= 0
-						if a < c.1
-							d = true
-							a = if c.3
-								then c.4
-								else c.1
-						if b > c.2
-							d = true
-							b = if c.3
-								then c.5
-								else c.2
-					# update
-					@set a, b if d
-					# apply
-					if n or e.ctrlKey
-						# submit
-						# check equal the current
-						if c.3 and a == c.4 and b == c.5
-							return true
-						# set
-						c.3 = true
-						c.4 = a
-						c.5 = b
-						#@current = [false, -1, -1, false, -1, -1]
+					# determine action type
+					if e.ctrlKey
+						# fluent submit
+						@check n
+						@submit! if @changed
 					else
-						# focus next
-						@input.1.focus!
+						# validate input and submit
+						if @check n and @changed
+							@submit!
+						# focus the opposite input
+						@input[n.^.1].focus!
 					# done
+					# }}}
+				else if e.keyCode in [38 40]
+					# Up, Down {{{
+					# cancel default action
+					e.preventDefault!
+					e.stopPropagation!
+					# scroll number
+					@inputScroll n, (e.keyCode == 38)
+					@input[n].select!
+					# }}}
+				# done
+			# }}}
+			inputWheel: (n) -> (e) ~>> # {{{
+				# check
+				if @block.locked
+					return
+				# fulfil the event
+				e.preventDefault!
+				e.stopPropagation!
+				# operate
+				# terminate waiter
+				@waiter.cancel!
+				# scroll numbers
+				if n < 0
+					e = e.deltaY < 0
+					@inputScroll 0, not e
+					@inputScroll 1, e
+				else
+					@inputScroll n, (e.deltaY < 0)
+					@input[n].select! if @focused[n]
+				# initiate submit sequence
+				if await (@waiter = delay 400)
+					# timeout passed, submit fluently
+					@check n
+					@submit! if @changed
+				# done
+				return true
 			# }}}
 		# }}}
 		Block = (root, state) !-> # {{{
+			# {{{
 			# containers
 			@root    = root
 			@rootBox = box = root.firstChild
@@ -1670,70 +1864,83 @@ smCatalogueKing = do ->>
 			# state
 			@mode    = mode
 			@state   = state
-			@locked  = true
-			@current = [false, -1, -1, false, -1, -1]
+			@locked  = 2
+			@current = [false, -1, -1, -1, -1]
 			# initialize
 			state.ready[*] = box.init!
 				.then (x) ~>
-					# check
+					# activate controls
 					if x
-						# activate
 						@ctrl.attach!
 						@root.classList.add 'v'
-						# set price-filter option
-						@current.0 = box.rootItem.opened
 					# done
 					return x
-		###
+			# }}}
 		Block.prototype =
 			init: (cfg) !-> # {{{
 				@ctrl.init cfg
 				@refresh!
 			# }}}
-			submit: !-> # {{{
-				# prepare
-				a = @state.data
-				b = @current
-				# set
-				a.3 = b.3
-				a.4 = b.4
-				a.5 = b.5
-				# notify others
-				@state.master.resolve state
-			# }}}
 			refresh: !-> # {{{
 				# prepare
-				a = @current
-				b = @state.data
-				# check
-				# refresh
-				if a.0 != b.0 or a.1 != b.1
-					a.0 = b.0
-					a.1 = b.1
-				if b.3 and (not a.3 or a.4 != b.4 or a.5 != b.5)
-				   a.4 != b.4 or a.5 != b.5
-					###
-					c = if b.4 >= 0
-						then b.4
-						else if b.1 >= 0
-							then b.1
-							else -1
-					d = if b.5 >= 0
-						then b.5
-						else if b.2 >= 0
-							then b.2
-							else -1
-					# update
-					@ctrl.set c, d
+				a = @state.data # source
+				b = @current    # destination
+				# check status changed
+				if a.0 != b.0
+					@rootBox.classList.toggle 'active', a.0
+					@section.setClass 'active', a.0
+				# check current changed
+				if a.0 != b.0 or a.1 != b.1 or a.2 != b.2
+					@ctrl.set a.1, a.2
+				# check range limits (TODO: delete)
+				if a.3 != b.3 or a.4 != b.4
+					@ctrl.set a.3, a.4
 				# sync
-				@current = b.slice!
-				# done
+				b[0 to 4] = a
 			# }}}
-			unlock: !-> # {{{
-				@rootBox.classList.add 'v'
-				@locked = false
-				if @section.locked
-					@section.unlock!
+			submit: !-> # {{{
+				# prepare
+				a = @current    # source
+				b = @state.data # destination
+				# check status changed
+				if a.0 != b.0
+					@rootBox.classList.toggle 'active', a.0
+					@section.setClass 'active', a.0
+				# sync
+				b[0 to 2] = a
+				# notify
+				@state.change!
+			# }}}
+			lock: (level) !-> # {{{
+				# check
+				switch level
+				case 2
+					# full lock
+					switch @locked
+					case 1
+						@ctrl.lock 1
+						fallthrough
+					case 0
+						@rootBox.classList.remove 'v'
+						@section.lock!
+					###
+				case 1
+					# partial lock
+					if not @locked
+						@ctrl.lock 1
+					###
+				default
+					# full unlock
+					switch @locked
+					case 2
+						@section.lock 0
+						@rootBox.classList.add 'v'
+						fallthrough
+					case 1
+						@ctrl.lock 0
+					###
+				# set
+				@locked = level
 			# }}}
 		# }}}
 		# initialize
@@ -1743,24 +1950,24 @@ smCatalogueKing = do ->>
 			switch event
 			case 'init'
 				# initialize
-				# set group data
-				state.data = a = data.priceFilter
-				# set initial group flag
-				for b in blocks when b.current.0
-					a.0 = true
-					break
-				# sync
+				@data = data.priceFilter
 				for b in blocks
-					b.init data.config.price
+					b.init data.config.locale.price
+			case 'change'
+				# when foreign update initiator,
+				# sieze input processing
+				if not @pending
+					for a in blocks
+						a.lock 1
 			case 'lock'
-				# stop any interactions..
+				# stop any interactions
 				for a in blocks
-					a.lock!
+					a.lock 2
 			case 'load'
-				# update
+				# update and unlock
 				for a in blocks
-					a.unlock! if a.locked
 					a.refresh!
+					a.lock 0
 			# done
 			return true
 		# create individual blocks

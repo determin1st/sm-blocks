@@ -537,12 +537,18 @@ class StorefrontModernBlocks {
         'textInputs' => '
         <div class="text">
           <div class="L">
-            <input id="{{UID=1}}" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="9">
+            <input id="{{UID=1}}"
+                   type="text" inputmode="numeric"
+                   pattern="[0-9]*"
+                   maxlength="9" readonly>
             <label for="{{UID=1}}"></label>
           </div>
           {{delimiter}}
           <div class="R">
-            <input id="{{UID=2}}" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="9">
+            <input id="{{UID=2}}"
+                   type="text" inputmode="numeric"
+                   pattern="[0-9]*"
+                   maxlength="9" readonly>
             <label for="{{UID=2}}"></label>
           </div>
           {{submitButton}}
@@ -558,9 +564,9 @@ class StorefrontModernBlocks {
         'delimiter' => '
         <svg preserveAspectRatio="none" shape-rendering="geometricPrecision" viewBox="0 0 48 48">
           <polygon points="0,48 4,48 12,43 18,41 22,40 26,40 30,41 36,43 44,48 48,48 48,0 44,0 36,5 30,7 26,8 22,8 18,7 12,5 4,0 0,0 "/>
-          <polygon class="left"       points="13,28 16,31 19,32 23,32 23,31 19,30 17,28 16,24 17,20 19,18 23,17 23,16 19,16 16,17 13,20 12,22 12,26 "/>
-          <polygon class="inputState" points="18,28 20,30 24,31 28,30 30,28 31,24 30,20 28,18 24,17 20,18 18,20 17,24 "/>
-          <polygon class="right"      points="35,28 32,31 29,32 25,32 25,31 29,30 31,28 32,24 31,20 29,18 25,17 25,16 29,16 32,17 35,20 36,22 36,26 "/>
+          <polygon class="left"  points="13,28 16,31 19,32 23,32 23,31 19,30 17,28 16,24 17,20 19,18 23,17 23,16 19,16 16,17 13,20 12,22 12,26 "/>
+          <polygon class="state" points="18,28 20,30 24,31 28,30 30,28 31,24 30,20 28,18 24,17 20,18 18,20 17,24 "/>
+          <polygon class="right" points="35,28 32,31 29,32 25,32 25,31 29,30 31,28 32,24 31,20 29,18 25,17 25,16 29,16 32,17 35,20 36,22 36,26 "/>
         </svg>
         ',
       ],
@@ -1255,28 +1261,14 @@ EOD;
     }
     # operate
     switch ($request['func']) {
+    case 'config':
+      $this->apiConfig($request);
+      break;
     case 'grid':
       $this->apiGrid($request);
       break;
     case 'cart':
       $this->apiCart($request);
-      break;
-    case 'config':
-      # {{{
-      # determine language
-      $a = array_key_exists('lang', $request)
-        ? $request['lang']
-        : $this->lang;
-      # load data
-      $b = __DIR__.DIRECTORY_SEPARATOR.$this->name.'-config.php';
-      $b = (include $b);
-      $b = array_key_exists($a, $b)
-        ? $b[$a]
-        : $b['en'];
-      # output
-      header('content-type: application/json');
-      echo json_encode($b);
-      # }}}
       break;
     default:
       $this->apiFail(400, 'unknown request function');
@@ -1284,6 +1276,79 @@ EOD;
     }
     # terminate
     exit;
+  }
+  # }}}
+  # config {{{
+  private function apiConfig($request)
+  {
+    # refine request parameters
+    # {{{
+    # create key filter
+    $a = [
+      'lang',
+      'category',
+    ];
+    # iterate and apply filter
+    $c = [];
+    foreach ($a as $b)
+    {
+      if (!array_key_exists($b, $request)) {
+        $this->apiFail(400, 'missing "'.$b.'" in the request');
+      }
+      $c[$b] = $request[$b];
+    }
+    $request = $c;
+    # refine
+    # language
+    if (!($lang = $request['lang']) || empty($lang)) {
+      $lang = $this->lang;
+    }
+    else if (strlen($lang) !== 2) {
+      $this->apiFail(400, 'incorrect limit/offset');
+    }
+    # base categories
+    if (!($cats = $request['category']) ||
+        !is_array($cats) || count($cats) === 0)
+    {
+      $cats = null;
+    }
+    # }}}
+    # get product map metadata
+    # {{{
+    # set parameters for base query
+    $ids = [
+      'order'    => [''],
+      'category' => $cats,
+      'price'    => null,
+    ];
+    # get identifiers
+    if (($ids = $this->getProductIds($ids)) === null) {
+      $this->apiFail(500, 'failed to fetch products');
+    }
+    # determine
+    # total count
+    $total = count($ids);
+    # price range
+    $priceRange = $this->getProductPriceRange($ids);
+    # currency settings
+    $currency = $this->getCurrency();
+    # }}}
+    # get localized config
+    # {{{
+    $locale = __DIR__.DIRECTORY_SEPARATOR.$this->name.'-config.php';
+    $locale = (include $locale);
+    $locale = array_key_exists($lang, $locale)
+      ? $locale[$lang]
+      : $locale['en'];
+    # }}}
+    # send
+    header('content-type: application/json');
+    echo json_encode([
+      'locale'     => $locale,
+      'total'      => $total,
+      'priceRange' => $priceRange,
+      'currency'   => $currency,
+    ]);
   }
   # }}}
   # grid {{{
@@ -1310,7 +1375,8 @@ EOD;
       $c[$b] = $request[$b];
     }
     $request = $c;
-    # check limit and offset
+    # refine
+    # limit and offset
     $limit  = intval($request['limit']);
     $offset = intval($request['offset']);
     if ($limit < 0 || $limit > 200 || $offset < 0) {
@@ -1338,63 +1404,39 @@ EOD;
         }
       }
     }
-    # check order parameter
+    # order
     $a = $request['order'];
     if (!is_array($a) || !is_string($a[0]) || !is_int($a[1])) {
       $this->apiFail(400, 'incorrect order parameter');
     }
-    # price range and filter
-    # check
+    # price filter
     if (!($a = $request['price']) ||
-        !is_array($a) || count($a) !== 6)
+        !is_array($a) || count($a) !== 5)
     {
       $this->apiFail(400, 'incorrect price parameter');
     }
-    # set range
-    $priceRange = [!!$a[0], intval($a[1]), intval($a[2])];
-    # set filter
-    if ($a[3]) {
-      $priceFilter = [intval($a[4]), intval($a[5])];
-    }
-    else {
-      $priceFilter = null;
-    }
+    $priceFilter = $a[0]
+      ? [intval($a[1]), intval($a[2])]
+      : null;
     # }}}
     # get products map
     # {{{
-    # set parameters
+    # set parameters (heavy)
     $ids = [
       'order'    => $request['order'],
       'category' => $cats,
-      #'status'  => ['publish'],
-      #'type'    => ['external','grouped','simple','variable']
       'price'    => $priceFilter,
     ];
-    if (!($ids = $this->getProductIds($ids))) {
+    # get identifiers
+    if (($ids = $this->getProductIds($ids)) === null) {
       $this->apiFail(500, 'failed to fetch products');
     }
-    # }}}
-    # get map details
-    # {{{
-    # total count
+    # determine total count
     $total = count($ids);
-    # check offset overflow
-    if ($offset >= $total) {
+    # check overflow
+    if ($total && $offset >= $total) {
       $this->apiFail(400, 'incorrect offset, too large');
     }
-    # price range
-    # check if price range update is required
-    if ($priceRange[0] && !$priceFilter)
-    {
-      # TODO: extract from cache
-      # determine current price range
-      $priceRange = $this->getProductPriceRange($ids);
-    }
-    else {
-      $priceRange = null;
-    }
-    # currency settings
-    $currency = $this->getCurrency();
     # }}}
     # send metadata
     # {{{
@@ -1407,14 +1449,11 @@ EOD;
     }
     header('content-type: application/octet-stream');
     # send
-    $this->sendJSON([
-      'total'      => $total,
-      'priceRange' => $priceRange,
-    ]);
+    $this->sendInt($total);
     # }}}
     # extract limited set
     $ids = array_slice($ids, $offset, $limit);
-    # stream products
+    # send products
     foreach ($ids as $id)
     {
       # get product
@@ -1423,7 +1462,6 @@ EOD;
       }
       # create transferable item
       $item = [
-        'currency' => $currency,
         'id'       => intval($id),
         'name'     => $a['name'],
         'type'     => $a['product_type'],
@@ -1645,10 +1683,27 @@ EOD;
         $filts .= "AND tCatRel.term_taxonomy_id IN ({$b}) ";
       }
     }
+    if ($a = $o['price'])
+    {
+      $joins .= <<<EOD
+
+        LEFT JOIN {$this->prefix}postmeta as mPrice
+          ON mPrice.post_id  = p.ID AND
+             mPrice.meta_key = '_price'
+
+EOD;
+      if ($a[0] >= 0) {
+        $filts .= 'AND CAST(mPrice.meta_value AS SIGNED) >= '.$a[0].' ';
+      }
+      if ($a[1] >= 0) {
+        $filts .= 'AND CAST(mPrice.meta_value AS SIGNED) < '.$a[1].' ';
+      }
+    }
     # }}}
-    # compose order {{{
+    # compose order
     switch ($o['order'][0]) {
     case 'featured':
+      # {{{
       $joins .= <<<EOD
 
         LEFT JOIN {$this->prefix}terms as tFeatured
@@ -1659,29 +1714,37 @@ EOD;
 
 EOD;
       $order = 'tFeatRel.term_taxonomy_id DESC, p.menu_order, p.post_title';
+      # }}}
       break;
     case 'new':
+      # {{{
       $order = 'p.post_date DESC, p.post_title';
+      # }}}
       break;
     case 'price':
-      $joins .= <<<EOD
+      # {{{
+      # add price joins only
+      # when the price filter unset
+      if (!$o['price']) {
+        $joins .= <<<EOD
 
         LEFT JOIN {$this->prefix}postmeta as mPrice
           ON mPrice.post_id  = p.ID AND
              mPrice.meta_key = '_price'
 
 EOD;
+      }
       $order = 'CAST(mPrice.meta_value AS SIGNED)';
       if ($o['order'][1] === 2) {
         $order .= ' DESC';
       }
+      # }}}
       break;
     default:
       $order = 'p.menu_order, p.ID';
       break;
     }
-    # }}}
-    # compose database query
+    # compose the query
     $q = <<<EOD
 
       SELECT DISTINCT p.ID
@@ -1692,8 +1755,9 @@ EOD;
 EOD;
     # query the database
     if (($res = $this->db->query($q)) === false) {
-      #$a = mysqli_error($this->db);
-      #xdebug_break();
+      $a = mysqli_error($this->db);
+      print_r($q);
+      print_r($a);
       return null;
     }
     # get the result and cleanup
@@ -1711,7 +1775,7 @@ EOD;
   private function getProductPriceRange($ids) # {{{
   {
     # prepare
-    $x   = [0, -1];# undetermined values
+    $x   = [-1, -1];# undetermined values
     $ids = implode(',', $ids);
     $wp_ = $this->prefix;
     # compose database query
@@ -1731,8 +1795,6 @@ EOD;
 EOD;
     # query the database
     if (($q = $this->db->query($q)) === false) {
-      #$a = mysqli_error($this->db);
-      #xdebug_break();
       return $x;
     }
     # get the result and cleanup
@@ -1744,7 +1806,7 @@ EOD;
     }
     $a = $a[0];
     $a[0] = intval($a[0]);
-    $a[1] = intval($a[1]) + 1;# to close the range
+    $a[1] = intval($a[1]) + 1;# close mantissa
     # done
     return $a;
   }

@@ -837,6 +837,7 @@
   display: flex;
   flex-direction: row;
   align-items: center;
+  touch-action: none;
 }
 .sm-blocks.price-filter > div.text > div > input {
   width: 100%;
@@ -849,6 +850,7 @@
   border: 1px solid #c0c0c0;
   border-radius: 2px;
   box-shadow: inset 0 0 10px 0 #c0c0c0;
+  touch-action: none;
 }
 .sm-blocks.price-filter > div.text > div > label {
   position: absolute;
@@ -862,25 +864,6 @@
   color: #708090;
   user-select: none;
   cursor: text;
-}
-.sm-blocks.price-filter > div.text > div.hovered > input {
-  border-color: #808080;
-  box-shadow: inset 0 0 0 2px #c0c0c0;
-}
-.sm-blocks.price-filter > div.text > div.hovered:not(.focused) > input,
-.sm-blocks.price-filter > div.text > div.hovered:not(.focused) > label {
-  cursor: ns-resize;
-}
-.sm-blocks.price-filter > div.text > div.focused > input {
-  background-color: rgba(220,220,220,0.6);
-  border-color: #808080;
-  box-shadow: inset 0 0 0 2px #c0c0c0;
-}
-.sm-blocks.price-filter > div.text > div.focused > label {
-  cursor: pointer;
-}
-.sm-blocks.price-filter > div.text > div.focused > label:hover {
-  color: #6a5acd;
 }
 .sm-blocks.price-filter > div.text > div.L > input {
   border-right-width: 0;
@@ -909,15 +892,23 @@
   height: var(--height);
   max-width: 48px;
   fill: #c0c0c0;
+  touch-action: none;
 }
 .sm-blocks.price-filter > div.text > svg > .left {
   fill: #a9a9a9;
 }
-.sm-blocks.price-filter > div.text > svg > .inputState {
-  fill: #708090;
+.sm-blocks.price-filter > div.text > svg > .state {
+  fill: transparent;
 }
 .sm-blocks.price-filter > div.text > svg > .right {
   fill: #a9a9a9;
+}
+.sm-blocks.price-filter > div.text.v > svg {
+  cursor: ew-resize;
+}
+.sm-blocks.price-filter > div.text.v > svg > .state {
+  cursor: pointer;
+  fill: #708090;
 }
 .sm-blocks.price-filter > div.text.v > div > input {
   color: #2f4f4f;
@@ -926,30 +917,59 @@
   background-color: #483d8b;
   color: #dcdcdc;
 }
-.sm-blocks.price-filter > div.text.v.hovered > svg > .inputState {
+.sm-blocks.price-filter > div.text.v > div.hovered > input {
+  border-color: #808080;
+  box-shadow: inset 0 0 0 2px #c0c0c0;
+}
+.sm-blocks.price-filter > div.text.v > div.hovered:not(.focused) > input,
+.sm-blocks.price-filter > div.text.v > div.hovered:not(.focused) > label {
+  cursor: ns-resize;
+}
+.sm-blocks.price-filter > div.text.v > div.focused > input {
+  color: #000;
+  background-color: rgba(220,220,220,0.6);
+  border-color: #808080;
+  box-shadow: inset 0 0 0 2px #c0c0c0;
+}
+.sm-blocks.price-filter > div.text.v > div.focused > label {
+  cursor: pointer;
+}
+.sm-blocks.price-filter > div.text.v > div.focused > label:hover {
+  color: #6a5acd;
+}
+.sm-blocks.price-filter > div.text.v > div.locked > input {
+  color: #2f4f4f;
+  background-color: #dcdcdc;
+  border-color: #c0c0c0;
+}
+.sm-blocks.price-filter > div.text.v > div.locked > input::selection {
+  background-color: #2f4f4f;
+  color: #dcdcdc;
+}
+.sm-blocks.price-filter > div.text.v.hovered > svg > .state {
   fill: #708090;
 }
-.sm-blocks.price-filter > div.text.v.hovered:not(.L):not(.R) > svg > .inputState {
-  fill: #6a5acd;
+.sm-blocks.price-filter > div.text.v.hovered:not(.L):not(.R) > svg > .state {
+  fill: #483d8b;
 }
-.sm-blocks.price-filter > div.text.v.hovered.L > svg > .left,
+.sm-blocks.price-filter > div.text.v.hovered.L > svg > .left {
+  fill: #708090;
+  transform: translateX(1px);
+}
+.sm-blocks.price-filter > div.text.v.hovered.R > svg > .right {
+  fill: #708090;
+  transform: translateX(-1px);
+}
 .sm-blocks.price-filter > div.text.v.focused.L > svg > .left {
   fill: #708090;
   transform: translateX(1px);
 }
-.sm-blocks.price-filter > div.text.v.hovered.R > svg > .right,
 .sm-blocks.price-filter > div.text.v.focused.R > svg > .right {
   fill: #708090;
   transform: translateX(-1px);
 }
-.sm-blocks.price-filter > div.text.v.focused.L > div.L > input {
-  color: #000;
-}
-.sm-blocks.price-filter > div.text.v.focused.R > div.R > input {
-  color: #000;
-}
-.sm-blocks.price-filter > div.text.v.focused > svg > .inputState {
-  fill: #483d8b;
+.sm-blocks.price-filter > div.text.v.active > svg > .state {
+  fill: #6a5acd;
 }
 .sm-blocks.main-section {
   width: 100%;
@@ -1172,6 +1192,9 @@
 .sm-blocks.main-section > div.focused.opened > .title > h3 {
   color: #483d8b;
 }
-.sm-blocks.main-section > div.v {
-  font-size: 1em;
+.sm-blocks.main-section > div.v.active > .title > h3 {
+  color: #483d8b;
+}
+.sm-blocks.main-section > div.v.active > .title > .arrow > button > svg {
+  fill: #6a5acd;
 }

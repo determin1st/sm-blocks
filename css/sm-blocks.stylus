@@ -935,6 +935,7 @@ WebSafeFontMono = Consolas, Courier, monospace
 				display: flex
 				flex-direction: row
 				align-items: center
+				touch-action: none
 				> input
 					width:  100%
 					height: 100%
@@ -946,6 +947,7 @@ WebSafeFontMono = Consolas, Courier, monospace
 					border: 1px solid silver
 					border-radius: 2px
 					box-shadow: inset 0 0 10px 0 silver
+					touch-action: none
 				> label
 					position:  absolute
 					top:       0
@@ -958,23 +960,6 @@ WebSafeFontMono = Consolas, Courier, monospace
 					color: slategray
 					user-select: none
 					cursor: text
-				&.hovered
-					> input
-						border-color: gray
-						box-shadow: inset 0 0 0 2px silver
-				&.hovered:not(.focused)
-					> input,
-					> label
-						cursor: ns-resize
-				&.focused
-					> input
-						background-color: alpha(gainsboro, 0.6)
-						border-color: gray
-						box-shadow: inset 0 0 0 2px silver
-					> label
-						cursor: pointer
-						&:hover
-							color: slateblue
 				&.L
 					> input
 						border-right-width: 0
@@ -998,32 +983,61 @@ WebSafeFontMono = Consolas, Courier, monospace
 			// }}}
 			> svg // {{{
 				flex: 1 3 0
-				//height: calc(var(--height) - 0.4em)
 				height: var(--height)
 				max-width: 48px
 				fill: silver
-				//stroke: black
-				//stroke-width: 0.6
+				touch-action: none
 				> .left
 					fill: darkgray
-				> .inputState
-					fill: slategray
+				> .state
+					fill: transparent
 				> .right
 					fill: darkgray
 			// }}}
 			&.v // {{{
-				> div > input
-					color: darkslategray
-					&::selection
-						background-color: darkslateblue
-						color: gainsboro
-				&.hovered
-					> svg > .inputState
+				> svg
+					cursor: ew-resize
+					> .state
+						cursor: pointer
 						fill: slategray
-					&:not(.L):not(.R) > svg > .inputState
-						fill: slateblue
-				&.hovered,
-				&.focused
+				> div
+					> input
+						color: darkslategray
+						&::selection
+							background-color: darkslateblue
+							color: gainsboro
+					&.hovered
+						> input
+							border-color: gray
+							box-shadow: inset 0 0 0 2px silver
+					&.hovered:not(.focused)
+						> input,
+						> label
+							cursor: ns-resize
+					&.focused
+						> input
+							color: black
+							background-color: alpha(gainsboro, 0.6)
+							border-color: gray
+							box-shadow: inset 0 0 0 2px silver
+						> label
+							cursor: pointer
+							&:hover
+								color: slateblue
+					&.locked
+						> input
+							color: darkslategray
+							background-color: gainsboro
+							border-color: silver
+							&::selection
+								background-color: darkslategray
+								color: gainsboro
+				////
+				&.hovered
+					> svg > .state
+						fill: slategray
+					&:not(.L):not(.R) > svg > .state
+						fill: darkslateblue
 					&.L > svg
 						> .left
 							fill: slategray
@@ -1033,12 +1047,19 @@ WebSafeFontMono = Consolas, Courier, monospace
 							fill: slategray
 							transform: translateX(-1px)
 				&.focused
-					&.L > div.L > input
-						color: black
-					&.R > div.R > input
-						color: black
-					> svg > .inputState
-						fill: darkslateblue
+					&.L
+						> svg > .left
+							fill: slategray
+							transform: translateX(1px)
+					&.R
+						> svg > .right
+							fill: slategray
+							transform: translateX(-1px)
+					//> svg > .inputState
+					//	fill: darkslateblue
+				&.active
+					> svg > .state
+						fill: slateblue
 			// }}}
 	// end
 // }}}
@@ -1288,7 +1309,12 @@ WebSafeFontMono = Consolas, Courier, monospace
 					//fill: silver
 		// }}}
 		&.v // {{{
-			font-size: 1em;
+			&.active
+				> .title
+					> h3
+						color: darkslateblue
+					> .arrow > button > svg
+						fill: slateblue
 		// }}}
 // }}}
 
