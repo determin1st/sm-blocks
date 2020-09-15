@@ -154,15 +154,13 @@ smBlocks = do ->>
 		Control = (block) !-> # {{{
 			# data
 			@block = block
-			# handlers
-			# ...
+			# callbacks
+			@onSwitch = false
 		###
 		Control.prototype = {
 			attach: !-> # {{{
-				# iterate items
 				for a of b = @block.item
 					b[a].attach!
-				# done
 			# }}}
 			detach: !-> # {{{
 				true
@@ -216,6 +214,9 @@ smBlocks = do ->>
 						item.node.classList.toggle 'opened', item.opened
 						if not @focused and item.switch
 							item.switch.focus!
+						# callback
+						if (e = block.ctrl).onSwitch
+							e.onSwitch item
 				# }}}
 			# }}}
 			return Item = (block, node, parent) !->
@@ -326,6 +327,9 @@ smBlocks = do ->>
 					# set
 					a[k] = v
 					@rootBox.classList.toggle k, !!v
+			# }}}
+			setTitle: (name) !-> # {{{
+				@rootItem.title.textContent = name
 			# }}}
 			refresh: (list) !-> # {{{
 				# iterate changed items
@@ -1615,25 +1619,45 @@ smBlocks = do ->>
 				# set
 				@locked = level
 			# }}}
+			setFocus: !-> # {{{
+				@input.0.focus!
+			# }}}
 			inputScroll: (n, direction) !-> # {{{
-				# determine step size
+				# prepare
 				c = @block.current
-				a = if c.4 > 100
-					then 0.01
-					else 0.1
-				# determine current position
 				d = c.4 - c.3
-				b = (+@values[n] - c.3) / d
-				# check the direction and
-				# increment or decrement current
-				if direction
-					b += 1.5 * a
+				# determine step and 0-alignment
+				# {{{
+				if d > 200
+					# 1% of the range
+					a = d / 100 .|. 0
+					b = '' + a
+					# check alignment possible
+					if (e = b.length) > 1
+						# determine aligned step
+						e = if e > 2
+							then e - 2
+							else 1
+						b = (b.slice 0, -e) + ('0'.repeat e)
+						a = +b
+					else
+						e = 0
 				else
-					b -= 0.5 * a
-				# clamp to the step and
-				# determine new position
-				b = a * (b/a .|. 0)
-				a = c.3 + b * d .|. 0
+					# simpliest
+					e = 0
+					a = 1
+				# }}}
+				# determine current
+				b = +@values[n]
+				# increment
+				if direction
+					b += a
+				else
+					b -= a
+				# align
+				a = if e
+					then +(((''+b).slice 0, -e) + ('0'.repeat e))
+					else b
 				# determine new range
 				if n
 					b = a
@@ -1848,15 +1872,16 @@ smBlocks = do ->>
 		# }}}
 		Block = (root, state) !-> # {{{
 			# {{{
-			# containers
+			# base
 			@root    = root
 			@rootBox = box = root.firstChild
+			@config  = JSON.parse root.dataset.cfg
 			# determine UI mode
 			mode = if box.classList.contains 'text'
 				then 0
 				else 1
 			# controls
-			@ctrl = if mode == 0
+			@inputs = if mode == 0
 				then new TextInputs @
 				else null
 			box = root.parentNode.parentNode.parentNode
@@ -1871,15 +1896,19 @@ smBlocks = do ->>
 				.then (x) ~>
 					# activate controls
 					if x
-						@ctrl.attach!
+						@inputs.attach!
 						@root.classList.add 'v'
+						if @config.sectionSwitch
+							box.ctrl.onSwitch = @onSwitch @
 					# done
 					return x
 			# }}}
 		Block.prototype =
 			init: (cfg) !-> # {{{
-				@ctrl.init cfg
-				@refresh!
+				#@section.setTitle cfg.title if cfg.title
+				@inputs.init cfg
+				d = @state.data
+				@inputs.set d.3, d.4
 			# }}}
 			refresh: !-> # {{{
 				# prepare
@@ -1891,10 +1920,7 @@ smBlocks = do ->>
 					@section.setClass 'active', a.0
 				# check current changed
 				if a.0 != b.0 or a.1 != b.1 or a.2 != b.2
-					@ctrl.set a.1, a.2
-				# check range limits (TODO: delete)
-				if a.3 != b.3 or a.4 != b.4
-					@ctrl.set a.3, a.4
+					@inputs.set a.1, a.2
 				# sync
 				b[0 to 4] = a
 			# }}}
@@ -1918,7 +1944,7 @@ smBlocks = do ->>
 					# full lock
 					switch @locked
 					case 1
-						@ctrl.lock 1
+						@inputs.lock 1
 						fallthrough
 					case 0
 						@rootBox.classList.remove 'v'
@@ -1927,7 +1953,7 @@ smBlocks = do ->>
 				case 1
 					# partial lock
 					if not @locked
-						@ctrl.lock 1
+						@inputs.lock 1
 					###
 				default
 					# full unlock
@@ -1937,10 +1963,28 @@ smBlocks = do ->>
 						@rootBox.classList.add 'v'
 						fallthrough
 					case 1
-						@ctrl.lock 0
+						@inputs.lock 0
 					###
 				# set
 				@locked = level
+			# }}}
+			onSwitch: -> (item) !~> # {{{
+				# check root
+				if not item.parent
+					# check state
+					c = @current
+					if item.opened
+						# enable filter
+						if not c.0 and (c.1 >= 0 or c.2 >= 0)
+							c.0 = true
+							@submit!
+						# focus inputs
+						@inputs.setFocus!
+					else
+						# disable filter
+						if c.0
+							c.0 = false
+							@submit!
 			# }}}
 		# }}}
 		# initialize

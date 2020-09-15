@@ -4,7 +4,7 @@
 * Description: A fully-asynchronous product catalogue for WooCommerce
 * Plugin URI: github.com/determin1st/sm-blocks
 * Author: determin1st
-* Version: 0
+* Version: 1
 * Requires at least: 5.4
 * Requires PHP: 7.2
 * License: UNLICENSE
@@ -228,10 +228,6 @@ class StorefrontModernBlocks {
             'type'        => 'string',
             'default'     => 'custom',
           ],
-          'dumbMode'      => [
-            'type'        => 'boolean',
-            'default'     => true,
-          ],
           ###
           'sectionTitle'  => [
             'type'        => 'string',
@@ -240,6 +236,10 @@ class StorefrontModernBlocks {
           'sectionMode'   => [
             'type'        => 'number',
             'default'     => 1|2|4|16|32,
+          ],
+          'sectionSwitch' => [
+            'type'        => 'boolean',
+            'default'     => true,
           ],
           'baseUI'        => [
             'type'        => 'number',
@@ -530,7 +530,7 @@ class StorefrontModernBlocks {
       # }}}
       'price-filter' => [ # {{{
         'main' => '
-        <div class="sm-blocks price-filter {{custom}}">
+        <div class="sm-blocks price-filter {{custom}}" data-cfg=\'{{cfg}}\'>
           {{content}}{{placeholder}}
         </div>
         ',
@@ -608,14 +608,18 @@ class StorefrontModernBlocks {
         </div>
         ',
         'topLine' => '
-        <hr class="top">
+        <svg class="A" preserveAspectRatio="none" viewBox="0 0 100 5">
+          <polygon points="2,0 98.001,0 100,4 100,5 0,5 0,4 "/>
+        </svg>
         ',
         'bottomLine' => '
-        <hr class="bottom">
+        <svg class="B" preserveAspectRatio="none" viewBox="0 0 100 5">
+          <polygon points="0,0 100,0 100,1 98.001,5 2,5 0,1 "/>
+        </svg>
         ',
         'arrow' => '
         <svg preserveAspectRatio="none" viewBox="0 0 16 16">
-          <path stroke-linejoin="round" d="M8 12l2.5-4L13 4H3l2.5 4z"/>
+          <path class="a" stroke-linejoin="round" d="M8 12l2.5-4L13 4H3l2.5 4z"/>
         </svg>
         ',
       ],
@@ -750,7 +754,7 @@ class StorefrontModernBlocks {
     return self::$ref;
   }
   # }}}
-  # ssr rendering
+  # ssr (rendering)
   # grid {{{
   public function renderGrid($attr, $content)
   {
@@ -1126,6 +1130,9 @@ EOD;
       'custom'  => $attr['customClass'],
       'content' => $content,
       'placeholder' => $this->templates['svg']['placeholder'],
+      'cfg' => json_encode([
+        'sectionSwitch' => $attr['sectionSwitch'],
+      ]),
     ]);
     # wrap into section
     return $this->renderSection([
@@ -1161,7 +1168,7 @@ EOD;
       # zero section
       $id    = 0;
       $order = 0;
-      $class = ($mode !== 3)
+      $class = !!($mode & 1)
         ? ' opened'
         : '';
       $this->parseTemplate($T['section'], $T, [
@@ -1171,8 +1178,8 @@ EOD;
     }
     # determine main section parameters
     $class      = !!($mode &  1) # opened section
-      ? ' main opened'
-      : ' main';
+      ? ' opened'
+      : '';
     $titleBox   = !!($mode &  2);# has title
     $arrowBox   = !!($mode &  4);# may be opened/closed
     $extraBox   = !!($mode &  8);# extended title
@@ -1782,8 +1789,8 @@ EOD;
     $q = <<<EOD
 
       SELECT
-        MIN(CONVERT(m.meta_value, UNSIGNED)),
-        MAX(CONVERT(m.meta_value, UNSIGNED))
+        MIN(CAST(m.meta_value AS SIGNED)),
+        MAX(CAST(m.meta_value AS SIGNED))
       FROM {$wp_}posts AS p
         JOIN {$wp_}postmeta AS m
           ON m.meta_key = '_price' AND
@@ -1805,8 +1812,12 @@ EOD;
       return $x;
     }
     $a = $a[0];
-    $a[0] = intval($a[0]);
-    $a[1] = intval($a[1]) + 1;# close mantissa
+    if (($a[0] = intval($a[0])) < 0) {
+      $a[0] = 0;
+    }
+    if (($a[1] = intval($a[1]) + 1) < 1) {
+      $a[1] = 1;
+    }
     # done
     return $a;
   }

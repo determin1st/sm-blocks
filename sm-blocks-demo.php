@@ -2,29 +2,22 @@
 /**
 * demo-shop template
 */
-# standard guard
 defined('ABSPATH') || exit();
-# output header
 get_header('shop');
-# create block configuration
-# products
-$o = json_encode([
-  ##
-  ## grid
+# configuration
+# {{{
+# products grid
+$og = json_encode([
   ##
   "size"        => 8,
   "columns"     => 4,
   "columnsMin"  => 2,
   "order"       => "default",
   ##
-  ## card (grid's element)
-  ##
   "maxX" => 288,
   "maxY" => 400,
   "fontSize" => 24,
   "itemSizeBalance" => "55:17:28",
-  ##
-  ## inner blocks (card's elements)
   ##
   "itemImage"    => true,
   "itemIcon"     => false,
@@ -32,45 +25,48 @@ $o = json_encode([
   "itemPrice"    => true,
   "itemControls" => true,
 ]);
-$po = json_encode([
+# paginator
+$op = json_encode([
   "rangeMode" => 2,
   #"rangePlus"  => 2,
   #"rangeMinus" => 2,
 ]);
+# orderer
 $oo = json_encode([
   "switchMode" => 1,
 ]);
-/***
-$oo = '';
-$i = -1;
-while (++$i < 50)
-{
-  $j = rand(0, 2);
-  $oo .= '<!-- wp:sm-blocks/orderer {"switchMode":"'.$j.'"} /-->';
-}
-/***/
-# generate and output page content
+# price filter
+$opf = json_encode([
+  "sectionMode" => 1|2|4|16|32,
+]);
+# page title
+$o = substr(get_locale(), 0, 2) === 'en'
+  ? 'test version'
+  : 'версия для тестирования';
+# }}}
+# generate content
 $o = <<<EOD
 
 <div id="sm-demo">
   <div class="a">
+    <!-- wp:sm-blocks/price-filter {$opf} /-->
     <!-- wp:sm-blocks/category-filter /-->
     <!-- :sm-blocks/category-filter {"hasEmpty":true,"baseCategory":"санки"} /-->
     <!-- :sm-blocks/category-filter {"hasEmpty":true,"baseCategory":"инвентарь"} /-->
-    <!-- wp:sm-blocks/price-filter /-->
   </div>
   <div class="b">
+    <h3>{$o}</h3>
     <div class="c">
-      <!-- wp:sm-blocks/paginator {$po} /-->
+      <!-- wp:sm-blocks/paginator {$op} /-->
       <!-- wp:sm-blocks/orderer {$oo} /-->
     </div>
-    <!-- wp:sm-blocks/grid {$o} /-->
+    <!-- wp:sm-blocks/grid {$og} /-->
   </div>
 </div>
 
 EOD;
+# output
 echo apply_filters('the_content', $o);
-# output footer
-get_footer('shop');
 # done
+get_footer('shop');
 ?>

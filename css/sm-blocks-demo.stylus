@@ -10,6 +10,10 @@
 		padding-right: 8px
 	> .b
 		flex: 1 1 0
+		> h3
+			margin: 0
+			padding 1px 0 2px 4px
+			color: darkslategray
 		> .c
 			display: flex
 			//flex-wrap: wrap
@@ -19,3 +23,5 @@
 			> .paginator
 				flex: 2 1 0
 				justify-content: flex-end
+
+

@@ -13,6 +13,11 @@
 #sm-demo > .b {
   flex: 1 1 0;
 }
+#sm-demo > .b > h3 {
+  margin: 0;
+  padding: 1px 0 2px 4px;
+  color: #2f4f4f;
+}
 #sm-demo > .b > .c {
   display: flex;
 }

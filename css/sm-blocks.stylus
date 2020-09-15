@@ -996,7 +996,7 @@ WebSafeFontMono = Consolas, Courier, monospace
 			// }}}
 			&.v // {{{
 				> svg
-					cursor: ew-resize
+					//cursor: ew-resize
 					> .state
 						cursor: pointer
 						fill: slategray
@@ -1058,8 +1058,10 @@ WebSafeFontMono = Consolas, Courier, monospace
 					//> svg > .inputState
 					//	fill: darkslateblue
 				&.active
-					> svg > .state
-						fill: slateblue
+					> svg
+						filter: brightness(110%)
+						> .state
+							fill: slateblue
 			// }}}
 	// end
 // }}}
@@ -1068,14 +1070,12 @@ WebSafeFontMono = Consolas, Courier, monospace
 	// root
 	width:  100%
 	height: auto
-	padding: 4px 0 4px 0
+	padding: 0 0 4px 0
 	// rootBox
 	> div
 		display: flex
 		flex-direction: column
-		////
-		// {{{
-		> .title
+		> .title // {{{
 			position: relative
 			display: flex
 			flex-direction: row
@@ -1099,16 +1099,11 @@ WebSafeFontMono = Consolas, Courier, monospace
 					background-color: transparent
 					padding: 0.2em
 					> svg
-						stroke: black
 						fill: silver
-						transform: rotate(90deg);
-		> .line
-			height: 4px
-			margin: 0
-			color: lightgray
-		&.main > .section
-			//padding: 4px 0 4px 4px
-			padding: 0
+						stroke: darkslategray
+						> .a
+							transform-origin: 50% 50%
+							transform: rotate(90deg)
 		// }}}
 		.section // {{{
 			display:    none
@@ -1264,57 +1259,66 @@ WebSafeFontMono = Consolas, Courier, monospace
 					// }}}
 			// }}}
 		// }}}
-		////
+		> .section // {{{
+			padding: 0
+		// }}}
+		> svg // {{{
+			height: 3px
+			fill: gainsboro
+		// }}}
 		&.opened // {{{
 			> .title
 				> h3
 					color: darkslategray
 				> .arrow > button > svg
-					stroke: darkslategray
-					fill: black
-					transform: rotate(0deg);
+					fill: darkslategray
+					stroke: slategray
+					> .a
+						//transform: rotate(0deg)
+						transform: rotate(0deg)
 			> .section
 				display: block
 				height:  auto
 				opacity: 1
 		// }}}
-		&.hovered,&.focused // {{{
-			> .title
-				> h3
-					color: darkslategray
-				> .arrow > button > svg
-					stroke: silver
-					fill: black
-			> .line
-				fill: gray
-			&.opened > .title
-				> h3
-					color: slategray
-				> .arrow > button > svg
-					stroke: black
-					fill: silver
-		// }}}
-		&.focused // {{{
-			> .title
-				> h3
-					color darkslateblue
-				> .arrow > button > svg
-					//stroke: silver
-					//fill: darkslateblue
-			&.opened > .title
-				> h3
-					color darkslateblue
-				> .arrow > button > svg
-					//stroke: darkslateblue
-					//fill: silver
-		// }}}
 		&.v // {{{
-			&.active
+			//=== CLOSED
+			&.hovered
+				> .title
+					> h3
+						color: darkslategray
+					> .arrow > button > svg
+						fill: darkslategray
+						stroke: gainsboro
+			&.focused
 				> .title
 					> h3
 						color: darkslateblue
 					> .arrow > button > svg
-						fill: slateblue
+						fill: darkslateblue
+						stroke: gainsboro
+			//===
+			&.opened
+				&.hovered
+					> .title
+						> h3
+							color: alpha(darkslategray, 0.8)
+						> .arrow > button > svg
+							stroke: gainsboro
+				&.focused
+					> .title
+						> h3
+							color: alpha(darkslateblue, 0.8)
+						> .arrow > button > svg
+							fill: alpha(darkslateblue, 0.8)
+							stroke: gainsboro
+			&.active
+				> .title
+					> h3
+						color: slateblue
+						filter: brightness(80%)
+				> svg
+					fill: alpha(darkslateblue, 0.4)
 		// }}}
 // }}}
 

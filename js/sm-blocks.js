@@ -130,6 +130,7 @@ smBlocks = async function(){
     var Control, Item, Block;
     Control = function(block){
       this.block = block;
+      this.onSwitch = false;
     };
     Control.prototype = {
       attach: function(){
@@ -185,6 +186,9 @@ smBlocks = async function(){
             item.node.classList.toggle('opened', item.opened);
             if (!this$.focused && item['switch']) {
               item['switch'].focus();
+            }
+            if ((e = block.ctrl).onSwitch) {
+              e.onSwitch(item);
             }
           }
         };
@@ -292,6 +296,9 @@ smBlocks = async function(){
           a[k] = v;
           this.rootBox.classList.toggle(k, !!v);
         }
+      },
+      setTitle: function(name){
+        this.rootItem.title.textContent = name;
       },
       refresh: function(list){
         var i$, len$, a, b, ref$;
@@ -1447,19 +1454,34 @@ smBlocks = async function(){
         }
         this.locked = level;
       },
+      setFocus: function(){
+        this.input[0].focus();
+      },
       inputScroll: function(n, direction){
-        var c, a, d, b;
+        var c, d, a, b, e;
         c = this.block.current;
-        a = c[4] > 100 ? 0.01 : 0.1;
         d = c[4] - c[3];
-        b = (+this.values[n] - c[3]) / d;
-        if (direction) {
-          b += 1.5 * a;
+        if (d > 200) {
+          a = d / 100 | 0;
+          b = '' + a;
+          if ((e = b.length) > 1) {
+            e = e > 2 ? e - 2 : 1;
+            b = b.slice(0, -e) + '0'.repeat(e);
+            a = +b;
+          } else {
+            e = 0;
+          }
         } else {
-          b -= 0.5 * a;
+          e = 0;
+          a = 1;
         }
-        b = a * (b / a | 0);
-        a = c[3] + b * d | 0;
+        b = +this.values[n];
+        if (direction) {
+          b += a;
+        } else {
+          b -= a;
+        }
+        a = e ? +(('' + b).slice(0, -e) + '0'.repeat(e)) : b;
         if (n) {
           b = a;
           a = +this.values[0];
@@ -1669,8 +1691,9 @@ smBlocks = async function(){
       var box, mode, ref$, this$ = this;
       this.root = root;
       this.rootBox = box = root.firstChild;
+      this.config = JSON.parse(root.dataset.cfg);
       mode = box.classList.contains('text') ? 0 : 1;
-      this.ctrl = mode === 0 ? new TextInputs(this) : null;
+      this.inputs = mode === 0 ? new TextInputs(this) : null;
       box = root.parentNode.parentNode.parentNode;
       this.section = box = new sMainSection(box);
       this.mode = mode;
@@ -1679,16 +1702,21 @@ smBlocks = async function(){
       this.current = [false, -1, -1, -1, -1];
       (ref$ = state.ready)[ref$.length] = box.init().then(function(x){
         if (x) {
-          this$.ctrl.attach();
+          this$.inputs.attach();
           this$.root.classList.add('v');
+          if (this$.config.sectionSwitch) {
+            box.ctrl.onSwitch = this$.onSwitch(this$);
+          }
         }
         return x;
       });
     };
     Block.prototype = {
       init: function(cfg){
-        this.ctrl.init(cfg);
-        this.refresh();
+        var d;
+        this.inputs.init(cfg);
+        d = this.state.data;
+        this.inputs.set(d[3], d[4]);
       },
       refresh: function(){
         var a, b;
@@ -1699,10 +1727,7 @@ smBlocks = async function(){
           this.section.setClass('active', a[0]);
         }
         if (a[0] !== b[0] || a[1] !== b[1] || a[2] !== b[2]) {
-          this.ctrl.set(a[1], a[2]);
-        }
-        if (a[3] !== b[3] || a[4] !== b[4]) {
-          this.ctrl.set(a[3], a[4]);
+          this.inputs.set(a[1], a[2]);
         }
         b[0] = a[0], b[1] = a[1], b[2] = a[2], b[3] = a[3], b[4] = a[4];
       },
@@ -1722,7 +1747,7 @@ smBlocks = async function(){
         case 2:
           switch (this.locked) {
           case 1:
-            this.ctrl.lock(1);
+            this.inputs.lock(1);
             // fallthrough
           case 0:
             this.rootBox.classList.remove('v');
@@ -1731,7 +1756,7 @@ smBlocks = async function(){
           break;
         case 1:
           if (!this.locked) {
-            this.ctrl.lock(1);
+            this.inputs.lock(1);
           }
           break;
         default:
@@ -1741,10 +1766,31 @@ smBlocks = async function(){
             this.rootBox.classList.add('v');
             // fallthrough
           case 1:
-            this.ctrl.lock(0);
+            this.inputs.lock(0);
           }
         }
         this.locked = level;
+      },
+      onSwitch: function(){
+        var this$ = this;
+        return function(item){
+          var c;
+          if (!item.parent) {
+            c = this$.current;
+            if (item.opened) {
+              if (!c[0] && (c[1] >= 0 || c[2] >= 0)) {
+                c[0] = true;
+                this$.submit();
+              }
+              this$.inputs.setFocus();
+            } else {
+              if (c[0]) {
+                c[0] = false;
+                this$.submit();
+              }
+            }
+          }
+        };
       }
     };
     state = new BlockState('price', 2, function(event, data){

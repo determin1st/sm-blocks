@@ -903,9 +903,6 @@
 .sm-blocks.price-filter > div.text > svg > .right {
   fill: #a9a9a9;
 }
-.sm-blocks.price-filter > div.text.v > svg {
-  cursor: ew-resize;
-}
 .sm-blocks.price-filter > div.text.v > svg > .state {
   cursor: pointer;
   fill: #708090;
@@ -968,13 +965,16 @@
   fill: #708090;
   transform: translateX(-1px);
 }
+.sm-blocks.price-filter > div.text.v.active > svg {
+  filter: brightness(110%);
+}
 .sm-blocks.price-filter > div.text.v.active > svg > .state {
   fill: #6a5acd;
 }
 .sm-blocks.main-section {
   width: 100%;
   height: auto;
-  padding: 4px 0 4px 0;
+  padding: 0 0 4px 0;
 }
 .sm-blocks.main-section > div {
   display: flex;
@@ -1008,17 +1008,12 @@
   padding: 0.2em;
 }
 .sm-blocks.main-section > div > .title > .arrow > button > svg {
-  stroke: #000;
   fill: #c0c0c0;
+  stroke: #2f4f4f;
+}
+.sm-blocks.main-section > div > .title > .arrow > button > svg > .a {
+  transform-origin: 50% 50%;
   transform: rotate(90deg);
-}
-.sm-blocks.main-section > div > .line {
-  height: 4px;
-  margin: 0;
-  color: #d3d3d3;
-}
-.sm-blocks.main-section > div.main > .section {
-  padding: 0;
 }
 .sm-blocks.main-section > div .section {
   display: none;
@@ -1151,12 +1146,21 @@
   transform: rotate(0deg);
   fill: #000;
 }
+.sm-blocks.main-section > div > .section {
+  padding: 0;
+}
+.sm-blocks.main-section > div > svg {
+  height: 3px;
+  fill: #dcdcdc;
+}
 .sm-blocks.main-section > div.opened > .title > h3 {
   color: #2f4f4f;
 }
 .sm-blocks.main-section > div.opened > .title > .arrow > button > svg {
-  stroke: #2f4f4f;
-  fill: #000;
+  fill: #2f4f4f;
+  stroke: #708090;
+}
+.sm-blocks.main-section > div.opened > .title > .arrow > button > svg > .a {
   transform: rotate(0deg);
 }
 .sm-blocks.main-section > div.opened > .section {
@@ -1164,37 +1168,37 @@
   height: auto;
   opacity: 1;
 }
-.sm-blocks.main-section > div.hovered > .title > h3,
-.sm-blocks.main-section > div.focused > .title > h3 {
+.sm-blocks.main-section > div.v.hovered > .title > h3 {
   color: #2f4f4f;
 }
-.sm-blocks.main-section > div.hovered > .title > .arrow > button > svg,
-.sm-blocks.main-section > div.focused > .title > .arrow > button > svg {
-  stroke: #c0c0c0;
-  fill: #000;
+.sm-blocks.main-section > div.v.hovered > .title > .arrow > button > svg {
+  fill: #2f4f4f;
+  stroke: #dcdcdc;
 }
-.sm-blocks.main-section > div.hovered > .line,
-.sm-blocks.main-section > div.focused > .line {
-  fill: #808080;
-}
-.sm-blocks.main-section > div.hovered.opened > .title > h3,
-.sm-blocks.main-section > div.focused.opened > .title > h3 {
-  color: #708090;
-}
-.sm-blocks.main-section > div.hovered.opened > .title > .arrow > button > svg,
-.sm-blocks.main-section > div.focused.opened > .title > .arrow > button > svg {
-  stroke: #000;
-  fill: #c0c0c0;
-}
-.sm-blocks.main-section > div.focused > .title > h3 {
+.sm-blocks.main-section > div.v.focused > .title > h3 {
   color: #483d8b;
 }
-.sm-blocks.main-section > div.focused.opened > .title > h3 {
-  color: #483d8b;
+.sm-blocks.main-section > div.v.focused > .title > .arrow > button > svg {
+  fill: #483d8b;
+  stroke: #dcdcdc;
+}
+.sm-blocks.main-section > div.v.opened.hovered > .title > h3 {
+  color: rgba(47,79,79,0.8);
+}
+.sm-blocks.main-section > div.v.opened.hovered > .title > .arrow > button > svg {
+  stroke: #dcdcdc;
+}
+.sm-blocks.main-section > div.v.opened.focused > .title > h3 {
+  color: rgba(72,61,139,0.8);
+}
+.sm-blocks.main-section > div.v.opened.focused > .title > .arrow > button > svg {
+  fill: rgba(72,61,139,0.8);
+  stroke: #dcdcdc;
 }
 .sm-blocks.main-section > div.v.active > .title > h3 {
-  color: #483d8b;
+  color: #6a5acd;
+  filter: brightness(80%);
 }
-.sm-blocks.main-section > div.v.active > .title > .arrow > button > svg {
-  fill: #6a5acd;
+.sm-blocks.main-section > div.v.active > svg {
+  fill: rgba(72,61,139,0.4);
 }
