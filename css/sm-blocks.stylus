@@ -26,7 +26,7 @@ WebSafeFontMono = Consolas, Courier, monospace
 		padding: 0
 		outline: 0
 		background-color: transparent
-	button,input,optgroup,select,textarea,label
+	button,input,optgroup,select,textarea,label,h3
 		font-family: inherit
 		font-size:   1em
 		font-weight: bold
@@ -415,189 +415,6 @@ WebSafeFontMono = Consolas, Courier, monospace
 				background-color: transparent
 		// }}}
 // }}}
-.sm-blocks.category-filter // {{{
-	/////
-	/////
-	> div
-		display: flex
-		flex-direction: column
-		////
-		> .title
-			display: flex
-			> h3
-				flex: 1 1 0
-				font-size: 2em
-				font-weight: bold
-				margin: 0
-		> hr
-			height: 1px
-			margin: 0
-			color: lightgray
-		> .section // root
-			padding-top:    4px
-			padding-bottom: 4px
-			padding-left:   4px
-			padding-right:  0
-			.item
-				> .name // {{{
-				{
-					padding-top:    0;
-					padding-bottom: 0;
-					display: flex;
-					flex-direction: row;
-					> div
-					{
-						display: flex;
-						flex-direction: row;
-						align-items: center;
-					}
-					> .box // {{{
-					{
-						flex: 1 1 0;
-						min-width: 0;
-						padding-top:    8px;
-						padding-bottom: 8px;
-						cursor: pointer;
-						> input // always hidden, used for focusing
-						{
-							flex: 0 0 0;
-							width: 0;
-							height: 0;
-							min-width: 0;
-							min-height: 0;
-							margin: 0;
-							padding: 0;
-							border-style: none;
-							border-width: 0;
-							opacity: 0;
-							//min-width: 20px;
-							//min-height: 20px;
-							position: static;
-							outline: none;
-							&:focus ~ .check
-							{
-								border-width: 2px;
-							}
-						}
-						> .check // box
-						{
-							flex: 0 0 0;
-							min-width:  20px;
-							min-height: 20px;
-							border: 1px solid slategray;
-							border-radius: 2px;
-							background-color: white;
-							position: relative;
-							> svg
-							{
-								position: absolute;
-								top:  0;
-								left: 0;
-								width:  100%;
-								height: 100%;
-								opacity: 0;
-								fill: white;
-								stroke: silver;
-							}
-							&.checked
-							{
-								> svg:nth-child(1) {
-									opacity: 1;
-								}
-								background-color: black;
-							}
-							&.indeterminated
-							{
-								> svg:nth-child(2) {
-									opacity: 1;
-								}
-								background-color: black;
-							}
-							&.disabled
-							{
-								background-color: gainsboro;
-							}
-						}
-						> label
-						{
-							flex: 1 1 0;
-							padding-top:    1px;
-							padding-bottom: 0;
-							padding-left:   8px;
-							padding-right:  0;
-							min-width: 0;
-							margin: 0;
-							line-height: 1;
-							white-space: nowrap;
-							overflow: hidden;
-							text-overflow: ellipsis;
-							cursor: pointer;
-							user-select: none;
-							font-weight: normal;
-							color: black;
-						}
-						&:hover
-						{
-							padding-left: 1px;
-							> .check
-							{
-								border-width: 2px;
-							}
-						}
-					}
-					// }}}
-					> .count // {{{
-					{
-						flex: 0 0 auto;
-						white-space: nowrap;
-					}
-					// }}}
-					> .arrow // {{{
-					{
-						flex: 1 1 0;
-						min-width: 20px;
-						max-width: 48px;
-						justify-content: flex-end;
-						cursor: pointer;
-						> svg
-						{
-							width:  auto;
-							height: 100%;
-							max-height: 24px;
-							transform: rotate(90deg);
-							fill: silver;
-							stroke: black;
-						}
-						&:hover > svg
-						{
-							fill: black;
-							stroke: silver;
-						}
-						&.opened
-						{
-							> svg
-							{
-								transform: rotate(0deg);
-								fill: black;
-							}
-						}
-					}
-					// }}}
-				}
-				// }}}
-				> .section // {{{
-				{
-					display: none;
-					opacity: 0;
-					padding-left: 20px;
-					&.opened
-					{
-						display: block;
-						opacity: 1;
-					}
-				}
-				// }}}
-// }}}
 .sm-blocks.paginator // {{{
 	// configuration
 	--width: calc(1.35 * var(--height))
@@ -914,6 +731,339 @@ WebSafeFontMono = Consolas, Courier, monospace
 				border-color: darkslategray
 		// }}}
 // }}}
+.sm-blocks.category-filter_backup // {{{
+	/////
+	/////
+	> div
+		display: flex
+		flex-direction: column
+		////
+		> .title
+			display: flex
+			> h3
+				flex: 1 1 0
+				font-size: 2em
+				font-weight: bold
+				margin: 0
+		> hr
+			height: 1px
+			margin: 0
+			color: lightgray
+		> .section // root
+			padding-top:    4px
+			padding-bottom: 4px
+			padding-left:   4px
+			padding-right:  0
+			.item
+				> .name // {{{
+				{
+					padding-top:    0;
+					padding-bottom: 0;
+					display: flex;
+					flex-direction: row;
+					> div
+					{
+						display: flex;
+						flex-direction: row;
+						align-items: center;
+					}
+					> .box // {{{
+					{
+						flex: 1 1 0;
+						min-width: 0;
+						padding-top:    8px;
+						padding-bottom: 8px;
+						cursor: pointer;
+						> input // always hidden, used for focusing
+						{
+							flex: 0 0 0;
+							width: 0;
+							height: 0;
+							min-width: 0;
+							min-height: 0;
+							margin: 0;
+							padding: 0;
+							border-style: none;
+							border-width: 0;
+							opacity: 0;
+							//min-width: 20px;
+							//min-height: 20px;
+							position: static;
+							outline: none;
+							&:focus ~ .check
+							{
+								border-width: 2px;
+							}
+						}
+						> .check // box
+						{
+							flex: 0 0 0;
+							min-width:  20px;
+							min-height: 20px;
+							border: 1px solid slategray;
+							border-radius: 2px;
+							background-color: white;
+							position: relative;
+							> svg
+							{
+								position: absolute;
+								top:  0;
+								left: 0;
+								width:  100%;
+								height: 100%;
+								opacity: 0;
+								fill: white;
+								stroke: silver;
+							}
+							&.checked
+							{
+								> svg:nth-child(1) {
+									opacity: 1;
+								}
+								background-color: black;
+							}
+							&.indeterminated
+							{
+								> svg:nth-child(2) {
+									opacity: 1;
+								}
+								background-color: black;
+							}
+							&.disabled
+							{
+								background-color: gainsboro;
+							}
+						}
+						> label
+						{
+							flex: 1 1 0;
+							padding-top:    1px;
+							padding-bottom: 0;
+							padding-left:   8px;
+							padding-right:  0;
+							min-width: 0;
+							margin: 0;
+							line-height: 1;
+							white-space: nowrap;
+							overflow: hidden;
+							text-overflow: ellipsis;
+							cursor: pointer;
+							user-select: none;
+							font-weight: normal;
+							color: black;
+						}
+						&:hover
+						{
+							padding-left: 1px;
+							> .check
+							{
+								border-width: 2px;
+							}
+						}
+					}
+					// }}}
+					> .count // {{{
+					{
+						flex: 0 0 auto;
+						white-space: nowrap;
+					}
+					// }}}
+					> .arrow // {{{
+					{
+						flex: 1 1 0;
+						min-width: 20px;
+						max-width: 48px;
+						justify-content: flex-end;
+						cursor: pointer;
+						> svg
+						{
+							width:  auto;
+							height: 100%;
+							max-height: 24px;
+							transform: rotate(90deg);
+							fill: silver;
+							stroke: black;
+						}
+						&:hover > svg
+						{
+							fill: black;
+							stroke: silver;
+						}
+						&.opened
+						{
+							> svg
+							{
+								transform: rotate(0deg);
+								fill: black;
+							}
+						}
+					}
+					// }}}
+				}
+				// }}}
+				> .section // {{{
+				{
+					display: none;
+					opacity: 0;
+					padding-left: 20px;
+					&.opened
+					{
+						display: block;
+						opacity: 1;
+					}
+				}
+				// }}}
+// }}}
+// ===
+.sm-blocks.main-section // {{{
+	// root
+	width:  100%
+	height: auto
+	padding: 0 0 4px 0
+	// content
+	.item // {{{
+		//=== DISABLED
+		//=== CLOSED {{{
+		> .title
+			position: relative
+			display: flex
+			flex-direction: row
+			height: 2em
+			padding: 0.1em 0 0.1em 0
+			> h3
+				flex: 1 1 0
+				order: 1
+				font-family: WebSafeFontSans
+				font-size: 1em
+				font-weight: bold
+				//font-weight: bold
+				display: flex
+				align-items: center
+				color: slategray
+				background-color: transparent
+				border-radius: 4px
+				cursor: pointer
+				user-select: none
+			> button
+				background-color: transparent
+				display: none
+				&.v
+					display: block
+				&.arrow
+					flex: 0 0 0
+					order: 2
+					min-width: 2.8em
+					padding: 0.1em 0.1em 0.1em 1.1em
+					height: 100%
+					background-color: transparent
+					border-radius: 4px
+					> svg
+						fill: silver
+						stroke: slategray
+						> .a
+							transform-origin: 50% 50%
+							transform: rotate(90deg)
+		> .section
+			width: 100%
+			min-height: 0
+			overflow: hidden
+			////
+			display: none
+			height:  0
+			opacity: 0
+		// }}}
+		//=== OPENED {{{
+		&.opened
+			> .title > button.arrow
+				> svg
+					fill: slategray
+					stroke: silver
+					> .a
+						transform: rotate(0deg)
+			> .section
+				display: block
+				height:  auto
+				opacity: 1
+		// }}}
+		//=== ENABLED
+		&.v
+			//=== CLOSED {{{
+			&.hovered
+				> .title
+					> h3.h
+						color: darkslategray
+					> h3
+						background-color: alpha(lightslategray, 0.04)
+					> button.arrow.h
+						background-color: alpha(lightslategray, 0.04)
+						> svg
+							fill: darkslategray
+							stroke: gainsboro
+			&.focused
+				> .title
+					> h3.f
+						color: darkslateblue
+					> h3
+						background-color: alpha(mediumslateblue, 0.04)
+					> button.arrow.f
+						background-color: alpha(mediumslateblue, 0.04)
+						> svg
+							fill: slateblue
+							stroke: silver
+			// }}}
+			//=== OPENED {{{
+			&.opened
+				> .title
+					> h3
+						color: darkslategray
+					> button.arrow > svg
+						fill: darkslategray
+				&.hovered
+					> .title
+						> h3.h
+							color: alpha(darkslategray, 0.8)
+						> button.arrow.h > svg
+							fill: silver
+							stroke: slategray
+				&.focused
+					> .title
+						> h3.f
+							color: alpha(darkslateblue, 0.8)
+						> button.arrow.f > svg
+							fill: slateblue
+							stroke: mediumslateblue
+			// }}}
+			&.active
+				> .title
+					> h3
+						color: slateblue
+						filter: brightness(80%)
+				> svg
+					fill: alpha(slateblue, 0.4)
+	// }}}
+	// rootBox (first .item)
+	> div.item
+		display: flex
+		flex-direction: column
+		> .title // {{{
+			height: 3em
+			padding: 0.4em 0 0.2em 0
+			> h3
+				font-size: 2em
+				font-weight: bold
+			> button.arrow
+				height: 100%
+				min-width: 2.2em
+				padding: 0.2em
+		// }}}
+		> .section // {{{
+			padding: 0
+		// }}}
+		> svg // {{{
+			height: 3px
+			fill: gainsboro
+		// }}}
+// }}}
 .sm-blocks.price-filter // {{{
 	// root
 	width:  100%
@@ -1065,260 +1215,91 @@ WebSafeFontMono = Consolas, Courier, monospace
 			// }}}
 	// end
 // }}}
-// ===
-.sm-blocks.main-section // {{{
-	// root
-	width:  100%
-	height: auto
-	padding: 0 0 4px 0
-	// rootBox
-	> div
-		display: flex
-		flex-direction: column
-		> .title // {{{
-			position: relative
-			display: flex
-			flex-direction: row
-			height: 3em
-			padding: 0.6em 0 0.4em 0
-			> h3
-				flex: 1 1 0
-				font-size: 2em
-				font-weight: bold
-				display: flex
-				align-items: center
-				color: slategray
-				cursor: pointer
-				user-select: none
-			> .arrow
+.sm-blocks.main-section.category-filter // {{{
+	////
+	.item
+		> .title
+			> button.checkbox
 				flex: 0 0 0
+				order: 0
+				min-width: 2.2em
 				height: 100%
-				min-width: 2em
-				> button
-					height: 100%
-					background-color: transparent
-					padding: 0.2em
-					> svg
-						fill: silver
-						stroke: darkslategray
-						> .a
-							transform-origin: 50% 50%
-							transform: rotate(90deg)
-		// }}}
-		.section // {{{
-			display:    none
-			width:      100%
-			height:     0
-			min-height: 0
-			opacity:    0
-			padding-left: 1em
-			overflow: hidden
-			> .item // {{{
-				> .title
-					padding-top:    0;
-					padding-bottom: 0;
-					display: flex;
-					flex-direction: row;
-					> h3
-						cursor: pointer
-					> div
-						display: flex;
-						flex-direction: row;
-						align-items: center;
-					> .box // {{{
-					{
-						flex: 1 1 0;
-						min-width: 0;
-						padding-top:    8px;
-						padding-bottom: 8px;
-						cursor: pointer;
-						> input // always hidden, used for focusing
-						{
-							flex: 0 0 0;
-							width: 0;
-							height: 0;
-							min-width: 0;
-							min-height: 0;
-							margin: 0;
-							padding: 0;
-							border-style: none;
-							border-width: 0;
-							opacity: 0;
-							//min-width: 20px;
-							//min-height: 20px;
-							position: static;
-							outline: none;
-							&:focus ~ .check
-							{
-								border-width: 2px;
-							}
-						}
-						> .check // box
-						{
-							flex: 0 0 0;
-							min-width:  20px;
-							min-height: 20px;
-							border: 1px solid slategray;
-							border-radius: 2px;
-							background-color: white;
-							position: relative;
-							> svg
-							{
-								position: absolute;
-								top:  0;
-								left: 0;
-								width:  100%;
-								height: 100%;
-								opacity: 0;
-								fill: white;
-								stroke: silver;
-							}
-							&.checked
-							{
-								> svg:nth-child(1) {
-									opacity: 1;
-								}
-								background-color: black;
-							}
-							&.indeterminated
-							{
-								> svg:nth-child(2) {
-									opacity: 1;
-								}
-								background-color: black;
-							}
-							&.disabled
-							{
-								background-color: gainsboro;
-							}
-						}
-						> label
-						{
-							flex: 1 1 0;
-							padding-top:    1px;
-							padding-bottom: 0;
-							padding-left:   8px;
-							padding-right:  0;
-							min-width: 0;
-							margin: 0;
-							line-height: 1;
-							white-space: nowrap;
-							overflow: hidden;
-							text-overflow: ellipsis;
-							cursor: pointer;
-							user-select: none;
-							font-weight: normal;
-							color: black;
-						}
-						&:hover
-						{
-							padding-left: 1px;
-							> .check
-							{
-								border-width: 2px;
-							}
-						}
-					}
-					// }}}
-					> .count // {{{
-					{
-						flex: 0 0 auto;
-						white-space: nowrap;
-					}
-					// }}}
-					> .arrow // {{{
-					{
-						flex: 1 1 0;
-						min-width: 20px;
-						max-width: 48px;
-						justify-content: flex-end;
-						cursor: pointer;
-						> svg
-						{
-							width:  auto;
-							height: 100%;
-							max-height: 24px;
-							transform: rotate(90deg);
-							fill: silver;
-							stroke: black;
-						}
-						&:hover > svg
-						{
-							fill: black;
-							stroke: silver;
-						}
-						&.opened
-						{
-							> svg
-							{
-								transform: rotate(0deg);
-								fill: black;
-							}
-						}
-					}
-					// }}}
-			// }}}
-		// }}}
-		> .section // {{{
-			padding: 0
-		// }}}
-		> svg // {{{
-			height: 3px
-			fill: gainsboro
-		// }}}
-		&.opened // {{{
-			> .title
-				> h3
+				padding: 0 0.4em 0 0
+				> svg
+					background-color: alpha(gainsboro, 0.2)
+					border: 1px solid slategray
+					border-radius: 2px
+					fill: transparent
+					stroke: transparent
+		> .section
+			padding: 0 0 0 0.6em
+		//===
+		&.v
+			//=== CLOSED {{{
+			&.checked
+				> .title > h3
 					color: darkslategray
-				> .arrow > button > svg
-					fill: darkslategray
-					stroke: slategray
-					> .a
-						//transform: rotate(0deg)
-						transform: rotate(0deg)
-			> .section
-				display: block
-				height:  auto
-				opacity: 1
-		// }}}
-		&.v // {{{
-			//=== CLOSED
-			&.hovered
+				&.c1 > .title > button.checkbox > svg
+					background-color: black
+					> .c1
+						fill: white
+				&.c2 > .title > button.checkbox > svg
+					background-color: black
+					> .c2
+						fill: white
+			&.hovered-2
 				> .title
+					> button.checkbox
+						background-color: alpha(lightslategray, 0.04)
+						> svg
+							background-color: alpha(gainsboro, 0.4)
+							border-color: slateblue
 					> h3
 						color: darkslategray
-					> .arrow > button > svg
-						fill: darkslategray
-						stroke: gainsboro
-			&.focused
+						background-color: alpha(lightslategray, 0.04)
+					> button.arrow
+						background-color: transparent
+						> svg
+							fill: silver
+							stroke: slategray
+			&.focused-2
 				> .title
 					> h3
 						color: darkslateblue
-					> .arrow > button > svg
-						fill: darkslateblue
-						stroke: gainsboro
-			//===
+						background-color: alpha(mediumslateblue, 0.04)
+					> button.checkbox
+						background-color: alpha(mediumslateblue, 0.04)
+						> svg
+							box-shadow: inset 0 0 0 1px mediumslateblue
+							border-color: darkslateblue
+				&.checked
+					&.c1 > .title > button.checkbox > svg
+						background-color: darkslateblue
+					&.c2 > .title > button.checkbox > svg
+						background-color: darkslateblue
+			// }}}
+			//=== OPENED {{{
 			&.opened
-				&.hovered
+				> .title
+					> h3
+						color: darkslategray
+					> button.arrow > svg
+						fill: darkslategray
+				&.hovered-2
 					> .title
 						> h3
 							color: alpha(darkslategray, 0.8)
-						> .arrow > button > svg
-							stroke: gainsboro
-				&.focused
+						> button.arrow > svg
+							fill: silver
+							stroke: slategray
+				&.focused-2
 					> .title
 						> h3
 							color: alpha(darkslateblue, 0.8)
-						> .arrow > button > svg
-							fill: alpha(darkslateblue, 0.8)
-							stroke: gainsboro
-			&.active
-				> .title
-					> h3
-						color: slateblue
-						filter: brightness(80%)
-				> svg
-					fill: alpha(darkslateblue, 0.4)
-		// }}}
+			// }}}
+		////
+	> .item
+		> .section
+			padding: 4px 0 4px 0
 // }}}
 

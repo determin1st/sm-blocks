@@ -2,7 +2,7 @@
 "use strict";
 var smBlocks, slice$ = [].slice, arrayFrom$ = Array.from || function(x){return slice$.call(x);};
 smBlocks = async function(){
-  var BRAND, soFetch, newPromise, delay, querySelectorChildren, querySelectorChild, newMetaObject, BlockState, sMainSection, sCart, sGridCard, KING, mProductsGrid, mCategoryFilter, mPriceFilter, mPaginator, mOrderer;
+  var BRAND, soFetch, newPromise, delay, querySelectorChildren, querySelectorChild, newMetaObject, BlockState, sMainSection, sCart, sGridCard, KING, mCategoryFilter, mProductsGrid, mCategoryFilter_backup, mPriceFilter, mPaginator, mOrderer;
   BRAND = 'sm-blocks';
   soFetch = httpFetch.create({
     baseUrl: '/?rest_route=/' + BRAND + '/kiss',
@@ -127,120 +127,144 @@ smBlocks = async function(){
     }
   };
   sMainSection = function(){
-    var Control, Item, Block;
-    Control = function(block){
+    var Item, Block;
+    Item = function(block, node, parent){
+      var box, sect, a, i$, len$, c, b, this$ = this;
       this.block = block;
-      this.onSwitch = false;
-    };
-    Control.prototype = {
-      attach: function(){
-        var a, b;
-        for (a in b = this.block.item) {
-          b[a].attach();
+      this.node = node;
+      this.parent = parent;
+      this.config = JSON.parse(node.dataset.cfg);
+      this.hovered = false;
+      this.focused = false;
+      this.opened = node.classList.contains('opened');
+      this.titleBox = box = querySelectorChild(node, '.title');
+      this.section = sect = querySelectorChild(node, '.section');
+      if (box) {
+        this.title = querySelectorChild(box, 'h3');
+        this.arrow = querySelectorChild(box, '.arrow');
+      } else {
+        this.title = null;
+        this.arrow = null;
+      }
+      this.hover = function(e){
+        e.preventDefault();
+        if (!this$.block.locked) {
+          e.currentTarget.classList.add('h');
+          if (!this$.hovered && (!this$.config.extra || e.currentTarget === this$.arrow)) {
+            this$.hovered = true;
+            this$.node.classList.add('hovered');
+            if (!this$.config.extra) {
+              if (e.currentTarget === this$.title) {
+                this$.arrow.classList.add('h');
+              } else {
+                this$.title.classList.add('h');
+              }
+            }
+          }
         }
-      },
-      detach: function(){
-        true;
+      };
+      this.unhover = function(e){
+        e.preventDefault();
+        if (!this$.block.locked) {
+          e.currentTarget.classList.remove('h');
+          if (this$.hovered) {
+            this$.hovered = false;
+            this$.node.classList.remove('hovered');
+            if (!this$.config.extra) {
+              if (e.currentTarget === this$.title) {
+                this$.arrow.classList.remove('h');
+              } else {
+                this$.title.classList.remove('h');
+              }
+            }
+          }
+        }
+      };
+      this.focus = function(e){
+        e.preventDefault();
+        if (!this$.block.locked && !this$.focused) {
+          this$.focused = true;
+          this$.node.classList.add('focused');
+          this$.arrow.classList.add('f');
+          if (!this$.config.extra) {
+            this$.title.classList.add('f');
+          }
+        }
+      };
+      this.unfocus = function(e){
+        e.preventDefault();
+        if (!this$.block.locked && this$.focused) {
+          this$.focused = false;
+          this$.node.classList.remove('focused');
+          this$.arrow.classList.remove('f');
+          if (!this$.config.extra) {
+            this$.title.classList.remove('f');
+          }
+        }
+      };
+      this['switch'] = function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        if (!this$.block.locked && this$.config.arrow && (!this$.config.extra || e.currentTarget === this$.arrow)) {
+          this$.opened = !this$.opened;
+          this$.node.classList.toggle('opened', this$.opened);
+          if (!this$.focused && this$.arrow) {
+            this$.arrow.focus();
+          }
+          if (e = this$.block.onChange) {
+            e(this$);
+          }
+        }
+      };
+      if ((a = querySelectorChildren(sect, '.item')).length) {
+        this.children = a;
+        for (i$ = 0, len$ = a.length; i$ < len$; ++i$) {
+          c = i$;
+          b = a[i$];
+          a[c] = new Item(block, b, this);
+        }
+      } else {
+        this.children = null;
       }
     };
-    Item = function(){
-      var Events, Item;
-      Events = function(item){
-        var block, this$ = this;
-        this.item = item;
-        this.hovered = false;
-        this.focused = false;
-        block = item.block;
-        this.switchHover = function(e){
-          e.preventDefault();
-          if (!block.locked && !this$.hovered) {
-            item.node.classList.add('hovered');
-            this$.hovered = true;
-          }
-        };
-        this.switchUnhover = function(e){
-          e.preventDefault();
-          if (this$.hovered) {
-            item.node.classList.remove('hovered');
-            this$.hovered = false;
-          }
-        };
-        this.switchFocus = function(e){
-          e.preventDefault();
-          if (!block.locked && !this$.focused) {
-            item.node.classList.add('focused');
-            this$.focused = true;
-          }
-        };
-        this.switchUnfocus = function(e){
-          e.preventDefault();
-          if (!block.locked && this$.focused) {
-            item.node.classList.remove('focused');
-            this$.focused = false;
-          }
-        };
-        this['switch'] = function(e){
-          e.preventDefault();
-          if (!block.locked) {
-            item.opened = !item.opened;
-            item.node.classList.toggle('opened', item.opened);
-            if (!this$.focused && item['switch']) {
-              item['switch'].focus();
-            }
-            if ((e = block.ctrl).onSwitch) {
-              e.onSwitch(item);
-            }
-          }
-        };
-      };
-      return Item = function(block, node, parent){
-        var box, arrow, sect, a, i$, len$, c, b;
-        this.block = block;
-        this.node = node;
-        this.id = +node.dataset.id;
-        this.order = +node.dataset.order;
-        this.parent = parent;
-        this.opened = node.classList.contains('opened');
-        this.titleBox = box = node.firstChild;
-        this.arrowBox = arrow = querySelectorChild(box, '.arrow');
-        this.extraBox = querySelectorChild(box, '.extra');
-        this.section = sect = querySelectorChild(node, '.section');
-        this.title = box.firstChild;
-        this['switch'] = arrow ? querySelectorChild(arrow, '.switch') : null;
-        if ((a = querySelectorChildren(sect, '.item')).length) {
-          this.children = a;
-          for (i$ = 0, len$ = a.length; i$ < len$; ++i$) {
-            c = i$;
-            b = a[i$];
-            a[c] = new Item(block, b, this);
-          }
-        } else {
-          this.children = null;
-        }
-        this.events = new Events(this);
-      };
-    }();
     Item.prototype = {
       attach: function(){
-        var B, E, a;
+        var B, a, i$, len$, b;
         B = this.block;
-        E = this.events;
-        if (B.mode & 4) {
-          if (a = this['switch']) {
-            a.addEventListener('click', E['switch']);
-            a.addEventListener('pointerenter', E.switchHover);
-            a.addEventListener('pointerleave', E.switchUnhover);
-            a.addEventListener('focusin', E.switchFocus);
-            a.addEventListener('focusout', E.switchUnfocus);
+        if (this.block.rootItem.config.mode & 4) {
+          if (a = this.arrow) {
+            a.addEventListener('pointerenter', this.hover);
+            a.addEventListener('pointerleave', this.unhover);
+            a.addEventListener('focusin', this.focus);
+            a.addEventListener('focusout', this.unfocus);
+            a.addEventListener('click', this['switch']);
           }
-          a = this.title;
-          a.addEventListener('click', E['switch']);
-          a.addEventListener('pointerenter', E.switchHover);
-          a.addEventListener('pointerleave', E.switchUnhover);
+          if (a = this.title) {
+            a.addEventListener('pointerenter', this.hover);
+            a.addEventListener('pointerleave', this.unhover);
+            a.addEventListener('click', this['switch']);
+          }
+        }
+        if (a = this.children) {
+          for (i$ = 0, len$ = a.length; i$ < len$; ++i$) {
+            b = a[i$];
+            b.attach();
+          }
         }
       },
       detach: function(){
         true;
+      },
+      setClass: function(name, flag){
+        var a, i$, len$, b;
+        flag == null && (flag = true);
+        if (a = this.children) {
+          for (i$ = 0, len$ = a.length; i$ < len$; ++i$) {
+            b = a[i$];
+            b.setClass(name, flag);
+          }
+        }
+        this.node.classList.toggle(name, flag);
       }
     };
     Block = function(root, state){
@@ -248,30 +272,26 @@ smBlocks = async function(){
       this.root = root;
       this.rootBox = box = root.firstChild;
       this.rootItem = root = new Item(this, box, null);
-      this.lines = querySelectorChildren(box, 'hr');
-      sect = {};
-      item = {};
-      list = [root];
+      this.lines = querySelectorChildren(box, 'svg');
+      this.sect = sect = {};
+      this.item = item = {};
+      this.list = list = [root];
       a = -1;
       while (++a < list.length) {
         if ((b = list[a]).children) {
-          sect[b.id] = b;
-          list = list.concat(b.children);
+          sect[b.config.id] = b;
+          list.push.apply(list, b.children);
         }
-        item[b.id] = b;
+        item[b.config.id] = b;
       }
-      this.sect = sect;
-      this.item = item;
-      this.list = list;
-      this.mode = +box.dataset.mode;
       this.state = state;
       this.locked = 1;
       this['class'] = {};
-      this.ctrl = new Control(this);
+      this.onChange = false;
     };
     Block.prototype = {
       init: async function(){
-        this.ctrl.attach();
+        this.rootItem.attach();
         this.root.classList.add('v');
         return true;
       },
@@ -279,12 +299,12 @@ smBlocks = async function(){
         switch (level) {
         case 1:
           if (!this.locked) {
-            this.rootBox.classList.remove('v');
+            this.rootItem.setClass('v', false);
           }
           break;
         default:
           if (this.locked) {
-            this.rootBox.classList.add('v');
+            this.rootItem.setClass('v', true);
           }
         }
         this.locked = level;
@@ -300,42 +320,10 @@ smBlocks = async function(){
       setTitle: function(name){
         this.rootItem.title.textContent = name;
       },
-      refresh: function(list){
-        var i$, len$, a, b, ref$;
-        for (i$ = 0, len$ = list.length; i$ < len$; ++i$) {
-          a = list[i$];
-          a = this.item[a];
-          if (b = a.state._checked) {
-            a.checkbox.classList.remove(b === 2 ? 'indeterminated' : 'checked');
-          }
-          if (b = a.state.checked) {
-            a.checkbox.classList.add(b === 2 ? 'indeterminated' : 'checked');
-          }
-        }
-        list = [];
-        for (a in ref$ = this.item) {
-          b = ref$[a];
-          a = b.id;
-          b = b.state;
-          if (b.checked === 1 && b.count > 0) {
-            list[list.length] = a;
-          }
-        }
-        b = state.data[this.index][1];
-        if (b.length === list.length) {
-          a = list.every(function(a){
-            return b.indexOf(a) !== -1;
-          });
-          if (a) {
-            return;
-          }
-        }
-        state.data[this.index][1] = list;
-        state.change();
-      },
+      refresh: function(){},
       finit: function(){
         this.root.classList.remove('v');
-        this.ctrl.detach();
+        this.rootItem.detach();
       }
     };
     return function(node, state){
@@ -414,6 +402,7 @@ smBlocks = async function(){
       pageCount: 0,
       pageIndex: 0,
       orderFilter: ['', 0],
+      catFilter: [],
       priceFilter: [false, -1, -1, -1, -1]
     };
     gridLock = async function(){
@@ -422,7 +411,7 @@ smBlocks = async function(){
       b = soFetch({
         func: 'config',
         lang: '',
-        category: null
+        category: gridState.catFilter
       });
       c = gridState.config;
       d = (await Promise.all([a, b]));
@@ -537,14 +526,13 @@ smBlocks = async function(){
       res = null;
       req = {
         func: 'grid',
-        limit: gridList.length,
-        offset: 0,
-        category: null,
+        category: gridState.catFilter,
+        price: gridState.priceFilter,
         order: gridState.orderFilter,
-        price: gridState.priceFilter
+        offset: 0,
+        limit: gridList.length
       };
       setState = function(s){
-        var a, b, i$, ref$, len$, c, j$, ref1$, len1$, d;
         if (gridState.level > s.level) {
           return false;
         }
@@ -553,29 +541,9 @@ smBlocks = async function(){
         }
         switch (s.name) {
         case 'category':
-          a = [];
-          b = [];
-          for (i$ = 0, len$ = (ref$ = s.data).length; i$ < len$; ++i$) {
-            c = ref$[i$];
-            switch (c[0]) {
-            case 'AND':
-              if (c[1].length) {
-                a[a.length] = c[1];
-              }
-              break;
-            case 'OR':
-              for (j$ = 0, len1$ = (ref1$ = c[1]).length; j$ < len1$; ++j$) {
-                d = ref1$[j$];
-                if (b.indexOf(d) === -1) {
-                  b[b.length] = d;
-                }
-              }
-            }
-          }
-          if (b.length) {
-            a[a.length] = b;
-          }
-          req.category = a.length ? a : null;
+          req.offset = gridState.pageIndex = 0;
+          break;
+        case 'price':
           req.offset = gridState.pageIndex = 0;
           break;
         case 'page':
@@ -999,6 +967,275 @@ smBlocks = async function(){
       }
     };
   }();
+  mCategoryFilter = function(){
+    var Checkbox, Block, state, blocks, i$, len$, b, a;
+    Checkbox = function(block, item, parent){
+      var cbox, a, i$, ref$, len$, b, c, this$ = this;
+      parent == null && (parent = null);
+      this.block = block;
+      this.item = item;
+      this.parent = parent;
+      this.checkbox = cbox = item.titleBox ? querySelectorChild(item.titleBox, '.checkbox') : null;
+      this.hovered = false;
+      this.focused = false;
+      this.state = 0;
+      this.hover = function(e){
+        e.preventDefault();
+        if (!this$.block.locked && !this$.hovered) {
+          this$.item.node.classList.add('hovered-2');
+          this$.hovered = true;
+        }
+      };
+      this.unhover = function(e){
+        e.preventDefault();
+        if (this$.hovered) {
+          this$.item.node.classList.remove('hovered-2');
+          this$.hovered = false;
+        }
+      };
+      this.focus = function(e){
+        if (!this$.block.locked && !this$.focused) {
+          this$.item.node.classList.add('focused-2');
+          this$.focused = true;
+        } else {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+        }
+      };
+      this.unfocus = function(e){
+        e.preventDefault();
+        if (this$.focused) {
+          this$.item.node.classList.remove('focused-2');
+          this$.focused = false;
+        }
+      };
+      this.check = function(e){
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if (this$.block.locked) {
+          return;
+        }
+        this$.block.refresh(this$.toggleCheckbox());
+        this$.checkbox.focus();
+      };
+      if (item.children) {
+        this.children = a = [];
+        for (i$ = 0, len$ = (ref$ = item.children).length; i$ < len$; ++i$) {
+          b = i$;
+          c = ref$[i$];
+          a[b] = new Checkbox(block, c, this);
+        }
+      } else {
+        this.children = null;
+      }
+      if (cbox) {
+        a = cbox.parentNode;
+        a.removeChild(cbox);
+        a.insertBefore(cbox, a.firstChild);
+      }
+    };
+    Checkbox.prototype = {
+      attach: function(){
+        var a, i$, len$, c;
+        if (a = this.checkbox) {
+          a.addEventListener('pointerenter', this.hover);
+          a.addEventListener('pointerleave', this.unhover);
+          a.addEventListener('focusin', this.focus);
+          a.addEventListener('focusout', this.unfocus);
+          a.addEventListener('click', this.check);
+          a = this.item.title;
+          a.addEventListener('pointerenter', this.hover);
+          a.addEventListener('pointerleave', this.unhover);
+          a.addEventListener('click', this.check);
+        }
+        if (a = this.children) {
+          for (i$ = 0, len$ = a.length; i$ < len$; ++i$) {
+            c = a[i$];
+            c.attach();
+          }
+        }
+      },
+      detach: function(){
+        true;
+      },
+      setChildren: function(items, v){
+        var list, i$, len$, a;
+        list = [];
+        for (i$ = 0, len$ = items.length; i$ < len$; ++i$) {
+          a = items[i$];
+          if (a.state !== v) {
+            a.state = v;
+            list[list.length] = a;
+            if (a.children) {
+              list.push.apply(list, this.setChildren(a.children, v));
+            }
+          }
+        }
+        return list;
+      },
+      setParent: function(item, v){
+        var a, i$, ref$, len$, b;
+        if (v === 2) {
+          a = 2;
+        } else {
+          a = v;
+          for (i$ = 0, len$ = (ref$ = item.children).length; i$ < len$; ++i$) {
+            b = ref$[i$];
+            if (b.state !== a) {
+              a = 2;
+              break;
+            }
+          }
+        }
+        if (item.state === a) {
+          b = [];
+        } else {
+          item.state = a;
+          b = [item];
+        }
+        return item.parent ? this.setParent(item.parent, a).concat(b) : b;
+      },
+      toggleCheckbox: function(){
+        var list;
+        this.state = this.state === 2
+          ? 1
+          : this.state ? 0 : 1;
+        list = [this];
+        if (this.parent) {
+          list.push.apply(list, this.setParent(this.parent, this.state));
+        }
+        if (this.children) {
+          list.push.apply(list, this.setChildren(this.children, this.state));
+        }
+        return list;
+      },
+      getCheckedIds: function(){
+        var list, i$, ref$, len$, a;
+        list = this.state === 1 && this.item.config.count > 0
+          ? [this.item.config.id]
+          : [];
+        if (this.children) {
+          for (i$ = 0, len$ = (ref$ = this.children).length; i$ < len$; ++i$) {
+            a = ref$[i$];
+            list.push.apply(list, a.getCheckedIds());
+          }
+        }
+        return list;
+      }
+    };
+    Block = function(root, state){
+      var rootBox, box, ref$, this$ = this;
+      this.root = root;
+      this.rootBox = rootBox = root.firstChild;
+      this.section = box = sMainSection(root);
+      this.checks = new Checkbox(this, box.rootItem);
+      this.state = state;
+      this.index = -1;
+      this.locked = true;
+      (ref$ = state.ready)[ref$.length] = box.init().then(function(x){
+        if (x) {
+          this$.checks.attach();
+        }
+        return x;
+      });
+    };
+    Block.prototype = {
+      init: function(index){
+        this.index = index;
+        this.state.data[index] = [];
+      },
+      refresh: function(list){
+        var i$, len$, a, b, d, c;
+        if (list) {
+          for (i$ = 0, len$ = list.length; i$ < len$; ++i$) {
+            a = list[i$];
+            b = a.item.node.classList;
+            switch (a.state) {
+            case 2:
+              b.add('checked', 'c2');
+              b.remove('c1');
+              break;
+            case 1:
+              b.add('checked', 'c1');
+              b.remove('c2');
+              break;
+            default:
+              b.remove('checked', 'c1', 'c2');
+            }
+          }
+        }
+        if (this.index < 0) {
+          return;
+        }
+        a = this.checks.getCheckedIds();
+        b = this.state.data[this.index];
+        if (d = (c = a.length) === b.length) {
+          while (--c >= 0) {
+            if (a[c] !== b[c]) {
+              d = false;
+              break;
+            }
+          }
+        }
+        if (!d) {
+          b.length = c = a.length;
+          while (--c >= 0) {
+            b[c] = a[c];
+          }
+          state.change();
+        }
+      },
+      lock: function(level){
+        switch (level) {
+        case 1:
+          if (!this.locked) {
+            this.section.lock(1);
+          }
+          break;
+        default:
+          if (this.locked) {
+            this.section.lock(0);
+          }
+        }
+        this.locked = level;
+      }
+    };
+    state = new BlockState('category', 2, function(event, data){
+      var i$, ref$, len$, b, a;
+      switch (event) {
+      case 'init':
+        this.data = data.catFilter;
+        for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
+          b = i$;
+          a = ref$[i$];
+          a.init(b);
+        }
+        break;
+      case 'change':
+        true;
+        break;
+      case 'lock':
+        for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
+          a = ref$[i$];
+          a.lock(1);
+        }
+        break;
+      case 'load':
+        for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
+          a = ref$[i$];
+          a.lock(0);
+        }
+      }
+      return true;
+    });
+    blocks = arrayFrom$(document.querySelectorAll('.sm-blocks.category-filter'));
+    for (i$ = 0, len$ = blocks.length; i$ < len$; ++i$) {
+      b = i$;
+      a = blocks[i$];
+      blocks[b] = new Block(a, state, b);
+    }
+    return state;
+  }();
   mProductsGrid = function(){
     var Block, State, state;
     Block = function(root){
@@ -1023,8 +1260,8 @@ smBlocks = async function(){
     });
     return state;
   }();
-  mCategoryFilter = function(){
-    var Item, ItemState, ItemEvents, Block, state, blocks;
+  mCategoryFilter_backup = function(){
+    var Item, ItemState, ItemEvents, Block;
     Item = function(block, node){
       var name;
       this.block = block;
@@ -1217,32 +1454,30 @@ smBlocks = async function(){
         this.locked = false;
       }
     };
-    state = new BlockState('category', 2, function(event, data){
-      var i$, ref$, len$, b, a;
-      switch (event) {
-      case 'init':
-        for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
-          b = i$;
-          a = ref$[i$];
-          a.init(b);
-        }
-        break;
-      case 'load':
-        for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
-          a = ref$[i$];
-          if (a.locked) {
-            a.unlock();
-          }
-        }
-      }
-      return true;
-    });
-    state.data = [];
-    blocks = arrayFrom$(document.querySelectorAll('.sm-blocks.category-filter'));
-    blocks = blocks.map(function(root){
-      return new Block(root);
-    });
-    return state;
+    /***
+    # {{{
+    # create common state
+    state = new BlockState 'category', 2, (event, data) ->
+    	switch event
+    	case 'init'
+    		# initialize
+    		for a,b in blocks
+    			a.init b
+    	case 'load'
+    		# check locked
+    		for a in blocks when a.locked
+    			a.unlock!
+    	# done
+    	return true
+    # create widget's data
+    state.data = []
+    # create individual blocks
+    blocks = [...(document.querySelectorAll '.sm-blocks.category-filter')]
+    blocks = blocks.map (root) -> new Block root
+    # }}}
+    return state
+    /***/
+    return null;
   }();
   mPriceFilter = function(){
     var TextInputs, Block, state, blocks;
@@ -1695,7 +1930,7 @@ smBlocks = async function(){
       mode = box.classList.contains('text') ? 0 : 1;
       this.inputs = mode === 0 ? new TextInputs(this) : null;
       box = root.parentNode.parentNode.parentNode;
-      this.section = box = new sMainSection(box);
+      this.section = box = sMainSection(box);
       this.mode = mode;
       this.state = state;
       this.locked = 2;
@@ -1705,7 +1940,7 @@ smBlocks = async function(){
           this$.inputs.attach();
           this$.root.classList.add('v');
           if (this$.config.sectionSwitch) {
-            box.ctrl.onSwitch = this$.onSwitch(this$);
+            box.onChange = this$.sectionChange();
           }
         }
         return x;
@@ -1751,7 +1986,7 @@ smBlocks = async function(){
             // fallthrough
           case 0:
             this.rootBox.classList.remove('v');
-            this.section.lock();
+            this.section.lock(1);
           }
           break;
         case 1:
@@ -1771,7 +2006,7 @@ smBlocks = async function(){
         }
         this.locked = level;
       },
-      onSwitch: function(){
+      sectionChange: function(){
         var this$ = this;
         return function(item){
           var c;

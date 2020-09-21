@@ -4,7 +4,7 @@
 */
 defined('ABSPATH') || exit();
 get_header('shop');
-# configuration
+# initial state
 # {{{
 # products grid
 $og = json_encode([
@@ -37,22 +37,24 @@ $oo = json_encode([
 ]);
 # price filter
 $opf = json_encode([
-  "sectionMode" => 1|2|4|16|32,
+  "sectionMode" => 1|2|4|8|16,
+]);
+# category filter
+$ocf = json_encode([
+  "hasEmpty" => true,
 ]);
 # page title
 $o = substr(get_locale(), 0, 2) === 'en'
   ? 'test version'
   : 'версия для тестирования';
 # }}}
-# generate content
+# generate markup
 $o = <<<EOD
 
 <div id="sm-demo">
   <div class="a">
     <!-- wp:sm-blocks/price-filter {$opf} /-->
-    <!-- wp:sm-blocks/category-filter /-->
-    <!-- :sm-blocks/category-filter {"hasEmpty":true,"baseCategory":"санки"} /-->
-    <!-- :sm-blocks/category-filter {"hasEmpty":true,"baseCategory":"инвентарь"} /-->
+    <!-- wp:sm-blocks/category-filter {$ocf} /-->
   </div>
   <div class="b">
     <h3>{$o}</h3>

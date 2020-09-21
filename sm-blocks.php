@@ -101,10 +101,19 @@ class StorefrontModernBlocks {
             'default'     => 'custom',
           ],
           ###
-          'mode'          => [
+          'sectionTitle'  => [
             'type'        => 'string',
-            'default'     => 'compact',
+            'default'     => '{"en":"Categories","ru":"Категории"}',
           ],
+          'sectionMode'   => [
+            'type'        => 'number',
+            'default'     => 1|2|4|8|16,
+          ],
+          'sectionOpened' => [
+            'type'        => 'boolean',
+            'default'     => false,
+          ],
+          ### TODO
           'operator'      => [
             'type'        => 'string',
             'default'     => 'OR',
@@ -113,19 +122,11 @@ class StorefrontModernBlocks {
             'type'        => 'string',
             'default'     => '',
           ],
-          'baseTitle'     => [
-            'type'        => 'string',
-            'default'     => '{"en":"Categories","ru":"Категории"}',
-          ],
           'hasCount'      => [
             'type'        => 'boolean',
             'default'     => true,
           ],
           'hasEmpty'      => [
-            'type'        => 'boolean',
-            'default'     => false,
-          ],
-          'subOpened'     => [
             'type'        => 'boolean',
             'default'     => false,
           ],
@@ -235,7 +236,7 @@ class StorefrontModernBlocks {
           ],
           'sectionMode'   => [
             'type'        => 'number',
-            'default'     => 1|2|4|16|32,
+            'default'     => 1|2|4|8|16,
           ],
           'sectionSwitch' => [
             'type'        => 'boolean',
@@ -371,63 +372,15 @@ class StorefrontModernBlocks {
       ],
       # }}}
       'category-filter' => [ # {{{
-        'main' => '
-        <div class="sm-blocks category-filter {{custom}}">
-          <div data-op="{{operator}}">
-            {{title}}{{topLine}}{{section}}{{bottomLine}}
-          </div>
-          {{placeholder}}
-        </div>
-        ',
-        'title' => '
-        <div class="title" data-id="0">
-          <h3>{{name}}</h3>
-          {{arrowBox}}
-        </div>
-        ',
-        'item' => '
-        <div class="item{{class}}" data-id="{{id}}" data-order="{{order}}" data-count="{{count}}">
-          <div class="name">
-            <div class="box">
-              <input type="checkbox">
-              <div class="check">{{checkmark}}{{indeterminate}}</div>
-              <label>{{name}}</label>
-            </div>
-            {{countBox}}
-            {{arrowBox}}
-          </div>
-          {{section}}
-        </div>
-        ',
-        'section' => '
-        <div class="section{{class}}">{{items}}</div>
-        ',
-        'countBox' => '
-        <div class="count">({{count}})</div>
-        ',
-        'arrowBox' => '
-        <div class="arrow">{{arrow}}</div>
-        ',
-        'topLine' => '
-        <hr class="top">
-        ',
-        'bottomLine' => '
-        <hr class="bottom">
-        ',
-        # icons
-        'arrow' => '
-        <svg preserveAspectRatio="none" viewBox="0 0 16 16">
-          <path stroke-linejoin="round" d="M8 12l2.5-4L13 4H3l2.5 4z"/>
-        </svg>
+        'extra' => '
+        <button class="checkbox v" type="button">
+          {{checkmark}}
+        </button>
         ',
         'checkmark' => '
-        <svg preserveAspectRatio="none" viewBox="0 0 16 16">
-          <path stroke-linejoin="round" d="M5 6l3 3 5-6h1L8 13 3 7z"/>
-        </svg>
-        ',
-        'indeterminate' => '
-        <svg preserveAspectRatio="none" viewBox="0 0 16 16">
-          <path stroke-linejoin="round" d="M3 6.5h10v3H3z"/>
+        <svg preserveAspectRatio="none" viewBox="0 0 48 48">
+          <polygon class="c1" points="13,17 24,27 40,8 42,10 25,38 23,38 9,21 "/>
+          <polygon class="c2" points="9,20 10,19 38,19 39,20 39,28 38,29 10,29 9,28 "/>
         </svg>
         ',
       ],
@@ -574,52 +527,48 @@ class StorefrontModernBlocks {
       'section' => [ # {{{
         'main' => '
         <div class="sm-blocks main-section {{custom}}">
-          <div class="item{{class}}" {{data}}>
-            {{titleBox}}
-            {{topLine}}
-            {{section}}
-            {{bottomLine}}
+          <div class="item{{class}}" data-cfg=\'{{cfg}}\'>
+            {{titleMain}}
+            {{sep1}}{{section}}{{sep2}}
           </div>
           {{placeholder}}
         </div>
         ',
-        'item' => '
-        <div class="item{{class}}" data-id="{{id}}" data-order="{{order}}"{{extraData}}>
-          {{titleBox}}
-          {{section}}
-        </div>
-        ',
-        'titleBox' => '
+        'titleMain' => '
         <div class="title">
           <h3>{{title}}</h3>
-          {{arrowBox}}
-          {{extraBox}}
+          <button class="arrow{{arrow}}" type="button">{{arrowIcon}}</button>
+          {{extraMain}}
+        </div>
+        ',
+        'item' => '
+        <div class="item{{class}}" data-cfg=\'{{cfg}}\'>
+          <div class="title">
+            <h3>{{title}}</h3>
+            <button class="arrow{{arrow}}" type="button">{{arrowIcon}}</button>
+            {{extra}}
+          </div>
+          {{section}}
         </div>
         ',
         'section' => '
         <div class="section">{{items}}</div>
         ',
-        'extraBox' => '
-        <div class="extra">{{extra}}</div>
+        'arrow' => '
         ',
-        'arrowBox' => '
-        <div class="arrow">
-          <button type="button" class="switch">{{arrow}}</button>
-        </div>
+        'arrowIcon' => '
+        <svg preserveAspectRatio="none" viewBox="0 0 16 16">
+          <path class="a" stroke-linejoin="round" d="M8 12l2.5-4L13 4H3l2.5 4z"/>
+        </svg>
         ',
-        'topLine' => '
+        'sep1' => '
         <svg class="A" preserveAspectRatio="none" viewBox="0 0 100 5">
           <polygon points="2,0 98.001,0 100,4 100,5 0,5 0,4 "/>
         </svg>
         ',
-        'bottomLine' => '
+        'sep2' => '
         <svg class="B" preserveAspectRatio="none" viewBox="0 0 100 5">
           <polygon points="0,0 100,0 100,1 98.001,5 2,5 0,1 "/>
-        </svg>
-        ',
-        'arrow' => '
-        <svg preserveAspectRatio="none" viewBox="0 0 16 16">
-          <path class="a" stroke-linejoin="round" d="M8 12l2.5-4L13 4H3l2.5 4z"/>
         </svg>
         ',
       ],
@@ -837,95 +786,24 @@ class StorefrontModernBlocks {
   # category-filter {{{
   public function renderCategoryFilter($attr, $content)
   {
-    # get data
+    # prepare
+    $T = $this->templates['category-filter'];
+    # extract data
     $a = $attr['baseCategory'];
     $b = $attr['hasEmpty'];
     if (!($root = $this->getCategoryTree($a, $b))) {
       return '';
     }
-    # set root title
-    if (empty($a)) {
-      $root['name'] = $this->parseLocalName($attr['baseTitle']);
-    }
-    # get templates
-    $T = $this->templates['category-filter'];
-    # create recursive helper
-    $f = function($node) use (&$f, $T, $attr)
-    {
-      # {{{
-      $html = '';
-      foreach ($node['list'] as $a)
-      {
-        # create item template parameters
-        if ($a['list'])
-        {
-          $b = [
-            'class'    => [
-              ' sub', ($attr['subOpened'] ? ' opened' : '')
-            ],
-            'id'       => $a['id'],
-            'order'    => $a['order'],
-            'count'    => $a['count'],
-            'name'     => $a['name'],
-            'countBox' => false,
-            'items'    => $f($a),
-          ];
-        }
-        else
-        {
-          $b = [
-            'class'    => '',
-            'id'       => $a['id'],
-            'order'    => $a['order'],
-            'count'    => $a['count'],
-            'name'     => $a['name'],
-            'arrowBox' => false,
-            'section'  => false,
-          ];
-        }
-        # aggregate markup
-        $html .= $this->parseTemplate($T['item'], $T, $b).$c;
-      }
-      # complete
-      return $html;
-      # }}}
-    };
-    # build categories tree
-    if (!($items = $f($root))) {
-      return '';
-    }
-    # determine main section parameters
-    switch ($b = $attr['mode']) {
-    case 'none':
-      $a = [
-        'title'      => false,
-        'topLine'    => false,
-        'bottomLine' => false,
-        'class'      => ' opened',
-      ];
-      break;
-    case 'compact':
-      $a = [
-        'name'       => $root['name'],
-        'arrowBox'   => false,
-        'class'      => ' opened',
-        'bottomLine' => false,
-      ];
-      break;
-    default:
-      $a = [
-        'name'       => $root['name'],
-        'class'      => ($b === 'collapsed' ? '' : ' opened'),
-      ];
-      break;
-    }
-    # compose
-    return $this->parseTemplate($T['main'], $T, array_merge($a, [
-      'custom'      => $attr['customClass'],
-      'operator'    => $attr['operator'],
-      'items'       => $items,
-      'placeholder' => $this->templates['svg']['placeholder'],
-    ]));
+    # create a section
+    return $this->renderSection([
+      'custom'    => 'category-filter custom',
+      'mode'      => $attr['sectionMode'],
+      'title'     => $this->parseLocalName($attr['sectionTitle']),
+      'extraMain' => '',
+      'extra'     => $this->parseTemplate($T['extra'], $T),
+      'items'     => $root,
+      'opened'    => $attr['sectionOpened'],
+    ]);
   }
   # }}}
   # paginator {{{
@@ -1134,13 +1012,14 @@ EOD;
         'sectionSwitch' => $attr['sectionSwitch'],
       ]),
     ]);
-    # wrap into section
+    # create a 0-section
     return $this->renderSection([
-      'class' => '',
-      'data'  => '',
-      'mode'  => $attr['sectionMode'],
-      'title' => $this->parseLocalName($attr['sectionTitle']),
-      'items' => $content,
+      'mode'      => $attr['sectionMode'],
+      'title'     => $this->parseLocalName($attr['sectionTitle']),
+      'extraMain' => '',
+      'extra'     => '',
+      'items'     => $content,
+      'opened'    => true,
     ]);
   }
   # }}}
@@ -1149,106 +1028,104 @@ EOD;
   {
     # preapre
     $T = $this->templates['section'];
-    # create sub-sections
-    $mode    = $attr['mode'];
-    $content = $attr['items'];
+    # determine main section parameters
+    $mode      = $attr['mode'];
+    $content   = $attr['items'];
+    $custom    = !!$attr['custom']
+      ? $attr['custom']
+      : 'custom';
+    $class     = !!($mode &  1) # opened section
+      ? ' opened'
+      : '';
+    $titleMain = !!($mode &  2);# has title
+    $arrow     = !!($mode &  4);# may be opened/closed
+    $sep1      = !!($mode &  8);# has top separator
+    $sep2      = !!($mode & 16);# has bottom separator
+    # check items
     if (is_array($content))
     {
-      # TODO: items tree
-      $id      = $content['id'];
-      $order   = $content['order'];
-      $content = $this->renderSectionItems($content, $T, [
-      ]);
-      if (!$content || empty($content)) {
-        return '';
-      }
+      # fantom root section
+      $id = $content['id'];
+      $content = $this->renderSectionItem($content, $T, $attr);
     }
     else
     {
-      # zero section
-      $id    = 0;
-      $order = 0;
-      $class = !!($mode & 1)
-        ? ' opened'
-        : '';
-      $this->parseTemplate($T['section'], $T, [
-        'class' => $class,
-        'items' => $content,
-      ]);
+      # zero section (foreign content)
+      $id = -1;
     }
-    # determine main section parameters
-    $class      = !!($mode &  1) # opened section
-      ? ' opened'
-      : '';
-    $titleBox   = !!($mode &  2);# has title
-    $arrowBox   = !!($mode &  4);# may be opened/closed
-    $extraBox   = !!($mode &  8);# extended title
-    $topLine    = !!($mode & 16);# has top separator
-    $bottomLine = !!($mode & 32);# has bottom separator
-    # determine custom class and data
-    if (!($custom = $attr['customClass'])) {
-      $custom = 'custom';
-    }
-    $data =
-      'data-id="'.$id.'" '.
-      'data-order="'.$order.'" '.
-      'data-mode="'.$mode.'"';
-    if (!empty($attr['extraData'])) {
-      $data .= ' '.$data;
-    }
+    # create root configuration
+    $config = !!$attr['cfg']
+      ? $attr['cfg']
+      : [];
+    $config = json_encode(array_merge($config, [
+      'mode'  => $mode,
+      'id'    => $id,
+      'arrow' => $arrow,
+      'extra' => !!$attr['extraMain'],
+    ]));
     # compose
     return $this->parseTemplate($T['main'], $T, [
-      'custom'      => $custom,
-      'class'       => $class,
-      'data'        => $data,
-      'titleBox'    => $titleBox,
-      'title'       => $attr['title'],
-      'arrowBox'    => $arrowBox,
-      'extraBox'    => $extraBox,
-      'topLine'     => $topLine,
-      'items'       => $content,
-      'bottomLine'  => $bottomLine,
+      'custom'    => $custom,
+      'class'     => $class,
+      'cfg'       => $config,
+      'titleMain' => $titleMain,
+      'extraMain' => $attr['extraMain'],
+      'title'     => $attr['title'],
+      'extra'     => $attr['extra'],
+      'arrow'     => ($arrow ? ' v' : ''),
+      'sep1'      => $sep1,
+      'items'     => $content,
+      'sep2'      => $sep2,
       'placeholder' => $this->templates['svg']['placeholder'],
     ]);
   }
   /***/
   /***/
-  private function renderSectionItems($node, $T, $attr)
+  private function renderSectionItem($node, $T, $attr)
   {
+    # iterate slaves of this master
     $html = '';
-    foreach ($node['list'] as $a)
+    foreach ($node['slaves'] as $a)
     {
-      # create item template parameters
-      if ($a['list'])
+      # create configuration
+      $b = json_encode([
+        'id'     => $a['id'],
+        'depth'  => $a['depth'],
+        'extra'  => !!$attr['extra'],
+        'arrow'  => $a['arrow'],
+        'order'  => $a['order'],
+        'count'  => $a['count'],
+        'total'  => $a['total'],
+      ]);
+      # check slave is also a master
+      if ($a['slaves'])
       {
-        $b = [
-          'class'    => [
-            ' sub', ($attr['subOpened'] ? ' opened' : '')
-          ],
-          'id'       => $a['id'],
-          'order'    => $a['order'],
-          'title'    => $a['name'],
-          'extra'    => $a['extra'],
-          'countBox' => false,
-          'items'    => $this->renderSectionItem($a, $T, $attr),
-        ];
+        # create a section (recurse)
+        $b = $this->parseTemplate($T['item'], $T, [
+          'class'   => ($attr['opened'] ? ' opened' : ''),
+          'cfg'     => $b,
+          'title'   => $a['name'],
+          'arrow'   => ($a['arrow'] ? ' v' : ''),
+          'extra'   => $attr['extra'],
+          'section' => true,
+          'items'   => $this->renderSectionItem($a, $T, $attr),
+        ]);
       }
       else
       {
-        $b = [
-          'class'    => '',
-          'id'       => $a['id'],
-          'order'    => $a['order'],
-          'title'    => $a['name'],
-          'extra'    => $a['extra'],
-          'arrowBox' => false,
-          'section'  => false,
-        ];
+        # create an item
+        $b = $this->parseTemplate($T['item'], $T, [
+          'class'   => '',
+          'cfg'     => $b,
+          'title'   => $a['name'],
+          'arrow'   => '',
+          'extra'   => $attr['extra'],
+          'section' => false,
+        ]);
       }
       # aggregate markup
-      $html .= $this->parseTemplate($T['item'], $T, $b).$c;
+      $html .= $b;
     }
-    # complete
     return $html;
   }
   # }}}
@@ -1288,8 +1165,8 @@ EOD;
   # config {{{
   private function apiConfig($request)
   {
-    # refine request parameters
-    # {{{
+    # prepare
+    # refine request parameters {{{
     # create key filter
     $a = [
       'lang',
@@ -1314,14 +1191,12 @@ EOD;
       $this->apiFail(400, 'incorrect limit/offset');
     }
     # base categories
-    if (!($cats = $request['category']) ||
-        !is_array($cats) || count($cats) === 0)
-    {
-      $cats = null;
+    $cats = $this->parseCategoryFilter($request['category']);
+    if ($cats === null) {
+      $this->apiFail(400, 'incorrect category filter');
     }
     # }}}
-    # get product map metadata
-    # {{{
+    # get product map metadata {{{
     # set parameters for base query
     $ids = [
       'order'    => [''],
@@ -1340,8 +1215,7 @@ EOD;
     # currency settings
     $currency = $this->getCurrency();
     # }}}
-    # get localized config
-    # {{{
+    # get localized config {{{
     $locale = __DIR__.DIRECTORY_SEPARATOR.$this->name.'-config.php';
     $locale = (include $locale);
     $locale = array_key_exists($lang, $locale)
@@ -1361,9 +1235,9 @@ EOD;
   # grid {{{
   private function apiGrid($request)
   {
+    # prepare
     # TODO: cache
-    # refine request parameters
-    # {{{
+    # refine request parameters {{{
     # create key filter
     $a = [
       'limit',
@@ -1390,26 +1264,9 @@ EOD;
       $this->apiFail(400, 'incorrect limit/offset');
     }
     # category filter
-    if (!($cats = $request['category']) ||
-        !is_array($cats) || count($cats) === 0)
-    {
-      $cats = null;
-    }
-    else
-    {
-      $c = 'incorrect category filter data';
-      foreach ($cats as $a)
-      {
-        if (!is_array($a)) {
-          $this->apiFail(400, $c);
-        }
-        foreach ($a as $b)
-        {
-          if (!is_int($b) || $b < 0) {
-            $this->apiFail(400, $c);
-          }
-        }
-      }
+    $cats = $this->parseCategoryFilter($request['category']);
+    if ($cats === null) {
+      $this->apiFail(400, 'incorrect category filter');
     }
     # order
     $a = $request['order'];
@@ -1426,8 +1283,7 @@ EOD;
       ? [intval($a[1]), intval($a[2])]
       : null;
     # }}}
-    # get products map
-    # {{{
+    # get products map {{{
     # set parameters (heavy)
     $ids = [
       'order'    => $request['order'],
@@ -1445,8 +1301,7 @@ EOD;
       $this->apiFail(400, 'incorrect offset, too large');
     }
     # }}}
-    # send metadata
-    # {{{
+    # send metadata {{{
     # activate streaming
     if (session_status() === PHP_SESSION_ACTIVE) {
       session_write_close();
@@ -1458,9 +1313,9 @@ EOD;
     # send
     $this->sendInt($total);
     # }}}
-    # extract limited set
+    # operate
+    # send items data
     $ids = array_slice($ids, $offset, $limit);
-    # send products
     foreach ($ids as $id)
     {
       # get product
@@ -1565,13 +1420,13 @@ EOD;
         if (array_key_exists($a, $attr))
         {
           if (is_array($attr[$a])) {
-            $b = $attr[$a][$depth];
+            $b = $attr[$a][$depth];// follow the sequence
           }
           else if (!is_bool($attr[$a])) {
-            $b = $attr[$a];
+            $b = $attr[$a];// as is (string)
           }
           else if (!$attr[$a]) {
-            $b = '';
+            $b = '';// empty flagged
           }
         }
         else
@@ -1586,7 +1441,7 @@ EOD;
         }
         # check data
         if ($b === null && array_key_exists($a, $data)) {
-          $b = $data[$a];
+          $b = $data[$a];// may be null to save the marker
         }
         # substitute
         if ($b !== null)
@@ -1634,6 +1489,60 @@ EOD;
     # complete
     return is_string($json) ? $json : '';
   }
+  private function parseCategoryFilter($s)
+  {
+    # check type
+    if (!is_array($s)) {
+      return null;
+    }
+    # check empty
+    if (($a = count($s)) === 0) {
+      return [];
+    }
+    # restrict AND operator (count of filters)
+    if ($a > 10) {
+      return null;
+    }
+    # prepare
+    $F = [];
+    $I = 0;
+    # refine values
+    foreach ($s as $a)
+    {
+      # check item type
+      if (!is_array($a)) {
+        return null;
+      }
+      # check empty
+      if (($c = count($a)) === 0) {
+        continue;
+      }
+      # create an entry
+      $F[$I] = [];
+      # restrict OR operator (check list size)
+      if (($I === 0 && $c > 2000) ||
+          ($I !== 0 && $c > 100))
+      {
+        return null;
+      }
+      # iterate and collect identifiers
+      $b = -1;
+      while (++$b < $c)
+      {
+        # check type
+        if (!is_int($a[$b]) || $a[$b] < 0) {
+          return null;
+        }
+        # collect unique
+        if (array_search($a[$b], $F[$I], true) === false) {
+          $F[$I][] = $a[$b];
+        }
+      }
+      # continue
+      ++$I;
+    }
+    return $F;
+  }
   # }}}
   # apis {{{
   private function apiFail($code, $msg)
@@ -1673,7 +1582,7 @@ EOD;
     # prepare
     $joins = $filts = $order = '';
     # compose filters {{{
-    if ($a = $o['category'])
+    if (!!($a = $o['category']) && count($a) > 0)
     {
       $joins .= <<<EOD
 
@@ -1686,8 +1595,9 @@ EOD;
 EOD;
       foreach ($a as $b)
       {
-        $b = implode(',', $b);
-        $filts .= "AND tCatRel.term_taxonomy_id IN ({$b}) ";
+        $filts .=
+          'AND tCatRel.term_taxonomy_id IN ('.
+          implode(',', $b).') ';
       }
     }
     if ($a = $o['price'])
@@ -1850,7 +1760,6 @@ EOD;
 EOD;
     # query the database
     if (($a = $db->query($q)) === false) {
-      #$a = mysqli_error($db);
       return null;
     }
     # get the result
@@ -1898,61 +1807,65 @@ EOD;
     return $res;
   }
   # }}}
-  public function getCategoryTree($root, $hasEmpty) # {{{
+  private function getCategoryTree($root, $hasEmpty) # {{{
   {
-    # determine root node identifier
+    # get root identifier {{{
     if (!empty($root))
     {
       # check valid
       if (strlen($root) > 200) {
         return null;
       }
-      # determine filter clause
+      # check exact identifier specified
       if (ctype_digit($root)) {
-        $root = 'term_id = '.$root;
+        $root = intval($root);
       }
       else
       {
-        $root = $this->db->real_escape_string($root);
-        $root = "name = '$root'";
-      }
-      # create a query expression
-      $q = <<<EOD
+        # create a search query
+        $q = $this->db->real_escape_string($root);
+        $q = <<<EOD
 
-        SELECT term_id
-        FROM {$this->prefix}terms
-        WHERE {$root}
+          SELECT term_id
+          FROM {$this->prefix}terms
+          WHERE slug = '{$q}'
 
 EOD;
-      # run it
-      if (($q = $this->db->query($q)) === false) {
-        return null;
+        # execute
+        if (($q = $this->db->query($q)) === false) {
+          return null;
+        }
+        # checkout the result
+        if (!($a = $q->fetch_row()) || count($a) !== 1) {
+          return null;
+        }
+        # cleanup
+        $q->free();
+        # done
+        $root = $a[0];
       }
-      # get the result
-      if (!($a = $q->fetch_row()) || count($a) !== 1) {
-        return null;
-      }
-      $root = $a[0];
-      # cleanup
-      $q->free();
     }
     else {
       $root = 0;
     }
-    # extract all product categories,
-    # this consumes more memory but works faster..
-    # prepare extra filter
-    $q = $hasEmpty ? '' : 'AND IFNULL(tmc.meta_value, 0) > 0';
-    # create query expression
+    $root = ''.$root;
+    # }}}
+    # get categories {{{
+    # create a query
+    $q = $hasEmpty
+      ? ''
+      : 'AND CAST(tmc.meta_value AS UNSIGNED) > 0';
     $q = <<<EOD
 
       SELECT
-        tm.term_id, tm.name,
+        tm.term_id,
+        tm.name,
         tx.parent,
-        tmo.meta_value,
-        IFNULL(tmc.meta_value, 0)
+        CAST(tmo.meta_value AS UNSIGNED) AS t_order,
+        tmc.meta_value
       FROM {$this->prefix}term_taxonomy AS tx
-        JOIN {$this->prefix}terms AS tm ON tm.term_id = tx.term_id
+        JOIN {$this->prefix}terms AS tm
+          ON tm.term_id = tx.term_id
         LEFT JOIN {$this->prefix}termmeta AS tmo
           ON tmo.term_id  = tx.term_id AND
              tmo.meta_key = 'order'
@@ -1962,81 +1875,92 @@ EOD;
       WHERE
         tx.taxonomy = 'product_cat' {$q}
       ORDER BY
-        tmo.meta_value, tm.term_id
+        t_order, tm.term_id
 
 EOD;
-    # run it
+    # execute
     if (($q = $this->db->query($q)) === false) {
+      #$a = mysqli_error($this->db);
       return null;
     }
     # get the result and cleanup
     $a = $q->fetch_all(MYSQLI_NUM);
     $q->free();
-    # create items map: [id => item]
+    # }}}
+    # build a tree {{{
+    # collect all items into map: [id => item]
     $q = [];
     foreach ($a as $b)
     {
       $q[$b[0]] = [
-        'id'    => $b[0],
-        'name'  => $b[1],
-        'pid'   => $b[2],
-        'order' => $b[3],
-        'total' => $b[4],
-        'count' => $b[4],
-        'depth' => 0,
-        'list'  => null,
+        'id'     => intval($b[0]),
+        'name'   => $b[1],
+        'master' => intval($b[2]),
+        'depth'  => 0,
+        'arrow'  => true,
+        'order'  => $b[3] === null ? 0 : intval($b[3]),
+        'count'  => intval($b[4]),
+        'total'  => intval($b[4]),
+        'slaves' => null,
       ];
     }
-    # free memory
     unset($a);
-    # create root node
+    # add fantom master node
     $q[0] = [
-      'id'    => 0,
-      'name'  => '',
-      'pid'   => -1,
-      'order' => 0,
-      'count' => 0,
-      'total' => 0,
-      'depth' => 0,
-      'list'  => null,
+      'id'     => 0,
+      'name'   => '',
+      'master' => -1,
+      'depth'  => 0,
+      'arrow'  => true,
+      'order'  => 0,
+      'count'  => 0,
+      'total'  => 0,
+      'slaves' => null,
     ];
-    # create parents map: [parent => items]
+    # create slave items map: [master_id => slave]
     $p = [];
     foreach ($q as &$a)
     {
-      if (($b = $a['pid']) >= 0)
+      # skip fantom master
+      if (($b = $a['master']) !== -1)
       {
-        # create a list
+        # create a master entry
+        $b = ''.$b;
         if (!array_key_exists($b, $p)) {
           $p[$b] = [];
         }
-        # add item
+        # add slave
         $p[$b][] = &$a;
       }
     }
     unset($a);
-    # create recursive helper
+    # create recursive helper and
+    # determine relationships
     $f = function(&$item, $depth) use (&$f, $q, $p)
     {
       # set depth
       $item['depth'] = $depth;
-      # check item is a parent
-      $a = $item['id'];
+      # check
+      $a = ''.$item['id'];
       if (array_key_exists($a, $p))
       {
-        # set children
-        $item['list'] = &$p[$a];
-        # recurse to determine own items count
-        $a = $item['count'];
-        foreach ($item['list'] as &$a) {
+        # set slaves
+        $item['slaves'] = &$p[$a];
+        # recurse to determine own count
+        foreach ($item['slaves'] as &$a) {
           $item['count'] -= $f($a, $depth + 1);
         }
+        unset($a);
+      }
+      else
+      {
+        # no slaves, clear arrow
+        $item['arrow'] = false;
       }
       return $item['total'];
     };
-    # initialize relationships
     $f($q[$root], 0);
-    # done
+    # }}}
     return $q[$root];
   }
   # }}}

@@ -151,160 +151,173 @@ smBlocks = do ->>
 	# slaves
 	sMainSection = do -> # {{{
 		# constructors
-		Control = (block) !-> # {{{
-			# data
-			@block = block
-			# callbacks
-			@onSwitch = false
-		###
-		Control.prototype = {
-			attach: !-> # {{{
-				for a of b = @block.item
-					b[a].attach!
+		Item = (block, node, parent) !-> # {{{
+			# base
+			@block  = block
+			@node   = node
+			@parent = parent
+			# state
+			@config  = JSON.parse node.dataset.cfg
+			@hovered = false
+			@focused = false
+			@opened  = node.classList.contains 'opened'
+			# controls
+			# {{{
+			@titleBox = box  = querySelectorChild node, '.title'
+			@section  = sect = querySelectorChild node, '.section'
+			if box
+				@title = querySelectorChild box, 'h3'
+				@arrow = querySelectorChild box, '.arrow'
+			else
+				@title = null
+				@arrow = null
 			# }}}
-			detach: !-> # {{{
-				true
-			# }}}
-		}
-		# }}}
-		Item = do -> # {{{
-			Events = (item) !-> # {{{
-				@item    = item
-				@hovered = false
-				@focused = false
-				block = item.block
-				@switchHover = (e) !~> # {{{
-					# fulfil event
-					e.preventDefault!
-					# operate
-					if not block.locked and not @hovered
-						item.node.classList.add 'hovered'
+			# handlers
+			@hover = (e) !~> # {{{
+				# fulfil event
+				e.preventDefault!
+				# operate
+				if not @block.locked
+					e.currentTarget.classList.add 'h'
+					if not @hovered and \
+					   (not @config.extra or \
+					    e.currentTarget == @arrow)
+						###
 						@hovered = true
-				# }}}
-				@switchUnhover = (e) !~> # {{{
-					# fulfil event
-					e.preventDefault!
-					# operate
-					if @hovered
-						item.node.classList.remove 'hovered'
-						@hovered = false
-				# }}}
-				@switchFocus = (e) !~> # {{{
-					# fulfil event
-					e.preventDefault!
-					# operate
-					if not block.locked and not @focused
-						item.node.classList.add 'focused'
-						@focused = true
-				# }}}
-				@switchUnfocus = (e) !~> # {{{
-					# fulfil event
-					e.preventDefault!
-					# operate
-					if not block.locked and @focused
-						item.node.classList.remove 'focused'
-						@focused = false
-				# }}}
-				@switch = (e) !~> # {{{
-					# fulfil event
-					e.preventDefault!
-					# operate
-					if not block.locked
-						item.opened = !item.opened
-						item.node.classList.toggle 'opened', item.opened
-						if not @focused and item.switch
-							item.switch.focus!
-						# callback
-						if (e = block.ctrl).onSwitch
-							e.onSwitch item
-				# }}}
+						@node.classList.add 'hovered'
+						if not @config.extra
+							if e.currentTarget == @title
+								@arrow.classList.add 'h'
+							else
+								@title.classList.add 'h'
 			# }}}
-			return Item = (block, node, parent) !->
-				# item base
-				@block    = block
-				@node     = node
-				@id       = +node.dataset.id    # unique identifier
-				@order    = +node.dataset.order # position in the list
-				@parent   = parent
-				@opened   = node.classList.contains 'opened'
-				# containers
-				@titleBox = box = node.firstChild
-				@arrowBox = arrow = querySelectorChild box, '.arrow'
-				@extraBox = querySelectorChild box, '.extra'
-				@section  = sect = querySelectorChild node, '.section'
-				# controls
-				@title    = box.firstChild
-				@switch   = if arrow
-					then querySelectorChild arrow, '.switch'
-					else null
-				# children
-				if (a = querySelectorChildren sect, '.item').length
-					# store
-					@children = a
-					# initialize
-					for b,c in a
-						a[c] = new Item block, b, @
-				else
-					@children = null
-				# event handlers
-				@events = new Events @
-		#####
+			@unhover = (e) !~> # {{{
+				# fulfil event
+				e.preventDefault!
+				# operate
+				if not @block.locked
+					e.currentTarget.classList.remove 'h'
+					if @hovered
+						@hovered = false
+						@node.classList.remove 'hovered'
+						if not @config.extra
+							if e.currentTarget == @title
+								@arrow.classList.remove 'h'
+							else
+								@title.classList.remove 'h'
+			# }}}
+			@focus = (e) !~> # {{{
+				# fulfil event
+				e.preventDefault!
+				# operate
+				if not @block.locked and not @focused
+					@focused = true
+					@node.classList.add 'focused'
+					@arrow.classList.add 'f'
+					if not @config.extra
+						@title.classList.add 'f'
+			# }}}
+			@unfocus = (e) !~> # {{{
+				# fulfil event
+				e.preventDefault!
+				# operate
+				if not @block.locked and @focused
+					@focused = false
+					@node.classList.remove 'focused'
+					@arrow.classList.remove 'f'
+					if not @config.extra
+						@title.classList.remove 'f'
+			# }}}
+			@switch = (e) !~> # {{{
+				# fulfil event
+				e.preventDefault!
+				e.stopPropagation!
+				# operate
+				if not @block.locked and @config.arrow and \
+				   (not @config.extra or e.currentTarget == @arrow)
+					###
+					@opened = !@opened
+					@node.classList.toggle 'opened', @opened
+					if not @focused and @arrow
+						@arrow.focus!
+					# callback
+					e @ if e = @block.onChange
+			# }}}
+			# children
+			# {{{
+			if (a = querySelectorChildren sect, '.item').length
+				# set and recurse
+				@children = a
+				for b,c in a
+					a[c] = new Item block, b, @
+			else
+				# leaf node
+				@children = null
+			# }}}
+		###
 		Item.prototype =
 			attach: !-> # {{{
 				# prepare
 				B = @block
-				E = @events
 				# check arrow mode enabled and
-				# set switch handlers
-				if B.mode .&. 4
-					if a = @switch
-						a.addEventListener 'click', E.switch
-						a.addEventListener 'pointerenter', E.switchHover
-						a.addEventListener 'pointerleave', E.switchUnhover
-						a.addEventListener 'focusin', E.switchFocus
-						a.addEventListener 'focusout', E.switchUnfocus
-					a = @title
-					a.addEventListener 'click', E.switch
-					a.addEventListener 'pointerenter', E.switchHover
-					a.addEventListener 'pointerleave', E.switchUnhover
-				# done
+				# set section switch handlers
+				if @block.rootItem.config.mode .&. 4
+					if a = @arrow
+						a.addEventListener 'pointerenter', @hover
+						a.addEventListener 'pointerleave', @unhover
+						a.addEventListener 'focusin', @focus
+						a.addEventListener 'focusout', @unfocus
+						a.addEventListener 'click', @switch
+					if a = @title
+						a.addEventListener 'pointerenter', @hover
+						a.addEventListener 'pointerleave', @unhover
+						a.addEventListener 'click', @switch
+				# recurse to children
+				if a = @children
+					for b in a
+						b.attach!
 			# }}}
 			detach: !-> # {{{
 				true
 			# }}}
+			setClass: (name, flag = true) !-> # {{{
+				# recurse to children
+				if a = @children
+					for b in a
+						b.setClass name, flag
+				# apply on self
+				@node.classList.toggle name, flag
+			# }}}
 		# }}}
 		Block = (root, state) !-> # {{{
-			# containers
+			# base
 			@root     = root
 			@rootBox  = box  = root.firstChild
 			@rootItem = root = new Item @, box, null
-			@lines    = querySelectorChildren box, 'hr'
-			# items
-			sect      = {}     # with section (parents)
-			item      = {}     # all
-			list      = [root] # all ordered
-			# initialize
+			@lines    = querySelectorChildren box, 'svg'
+			# controls
+			@sect     = sect = {}     # with section (parents)
+			@item     = item = {}     # all
+			@list     = list = [root] # all ordered
+			# assemble tree
 			# {{{
 			a = -1
 			while ++a < list.length
 				if (b = list[a]).children
-					sect[b.id] = b
-					list ++= b.children
-				item[b.id] = b
+					sect[b.config.id] = b
+					list.push ...b.children
+				item[b.config.id] = b
 			# }}}
-			@sect     = sect
-			@item     = item
-			@list     = list
 			# state
-			@mode     = +box.dataset.mode
 			@state    = state
 			@locked   = 1
 			@class    = {}
-			@ctrl     = new Control @
+			# external handlers
+			@onChange = false
 		###
 		Block.prototype =
 			init: ->> # {{{
-				@ctrl.attach!
+				@rootItem.attach!
 				@root.classList.add 'v'
 				return true
 			# }}}
@@ -313,10 +326,10 @@ smBlocks = do ->>
 				switch level
 				case 1
 					if not @locked
-						@rootBox.classList.remove 'v'
+						@rootItem.setClass 'v', false
 				default
 					if @locked
-						@rootBox.classList.add 'v'
+						@rootItem.setClass 'v', true
 				# set
 				@locked = level
 			# }}}
@@ -331,43 +344,12 @@ smBlocks = do ->>
 			setTitle: (name) !-> # {{{
 				@rootItem.title.textContent = name
 			# }}}
-			refresh: (list) !-> # {{{
-				# iterate changed items
-				for a in list
-					# get item
-					a = @item[a]
-					# set visual state
-					if b = a.state._checked
-						a.checkbox.classList.remove if b == 2
-							then 'indeterminated'
-							else 'checked'
-					if b = a.state.checked
-						a.checkbox.classList.add if b == 2
-							then 'indeterminated'
-							else 'checked'
-				# determine new filter
-				list = []
-				for a,b of @item
-					# get state
-					a = b.id
-					b = b.state
-					# collect non-empty category identifiers
-					if b.checked == 1 and b.count > 0
-						list[*] = a
-				# get old filter's data and
-				# check the difference exists
-				b = state.data[@index][1]
-				if b.length == list.length
-					a = list.every (a) -> (b.indexOf a) != -1
-					return if a
-				# set new filter
-				state.data[@index][1] = list
-				state.change!
+			refresh: !-> # {{{
 				# done
 			# }}}
 			finit: !-> # {{{
 				@root.classList.remove 'v'
-				@ctrl.detach!
+				@rootItem.detach!
 			# }}}
 		# }}}
 		# factory
@@ -461,6 +443,7 @@ smBlocks = do ->>
 			pageIndex: 0 # current page
 			orderFilter: ['',  0] # tag, variant
 			# filters
+			catFilter:   []
 			priceFilter: [false, -1, -1, -1, -1] # enabled, a, b, aMin, bMax
 		}
 		gridLock = do ->>
@@ -469,7 +452,7 @@ smBlocks = do ->>
 			b = soFetch {
 				func: 'config'
 				lang: ''
-				category: null
+				category: gridState.catFilter
 			}
 			c = gridState.config
 			d = await Promise.all [a, b]
@@ -605,11 +588,11 @@ smBlocks = do ->>
 			res = null
 			req = {
 				func: 'grid'
-				limit: gridList.length
-				offset: 0
-				category: null
-				order: gridState.orderFilter
+				category: gridState.catFilter
 				price: gridState.priceFilter
+				order: gridState.orderFilter
+				offset: 0
+				limit: gridList.length
 			}
 			# }}}
 			setState = (s) -> # {{{
@@ -620,45 +603,30 @@ smBlocks = do ->>
 				# rise current
 				if gridState.level < s.level
 					gridState.level = s.level
-				# change state
+				# manage state interoperablity
 				switch s.name
 				case 'category'
-					# {{{
-					# format category filter's data
-					# prepare
-					a = [] # AND
-					b = [] # OR
-					# aggregate
-					for c in s.data
-						switch c.0
-						case 'AND'
-							# simple append
-							a[*] = c.1 if c.1.length
-						case 'OR'
-							# merge unique
-							for d in c.1 when (b.indexOf d) == -1
-								b[*] = d
-					# merge
-					a[*] = b if b.length
-					# set filter
-					req.category = if a.length
-						then a
-						else null
-					# reset offset & page index
+					# it's assumed that filter combinations
+					# does not interset.. so, always
+					# reset query offset & page index
 					req.offset = gridState.pageIndex = 0
-					# }}}
+				case 'price'
+					# TODO: price range may limit the same
+					# set of items (be ineffective),
+					# which means that page index should not
+					# reset for better optimization & integrity,
+					# but for the sake of dev speed,
+					# let's reset it for now..
+					req.offset = gridState.pageIndex = 0
 				case 'page'
-					# {{{
-					# set new page index and
+					# set page index and
 					# determine first record offset
 					gridState.pageIndex = s.data.0
 					req.offset = gridState.pageIndex * req.limit
-					# }}}
 				case 'order'
-					# {{{
+					# set
 					gridState.orderFilter.0 = s.data.0
 					gridState.orderFilter.1 = s.data.1
-					# }}}
 				# done
 				return true
 			# }}}
@@ -1105,6 +1073,284 @@ smBlocks = do ->>
 			# }}}
 		}
 	# }}}
+	mCategoryFilter = do -> # {{{
+		# constructors
+		Checkbox = (block, item, parent = null) !-> # {{{
+			# base
+			@block  = block
+			@item   = item
+			@parent = parent
+			# controls
+			@checkbox = cbox = if item.titleBox
+				then querySelectorChild item.titleBox, '.checkbox'
+				else null
+			# state
+			@hovered = false
+			@focused = false
+			@state   = 0
+			# handlers
+			@hover = (e) !~> # {{{
+				# fulfil the event
+				e.preventDefault!
+				# check
+				if not @block.locked and \
+				   not @hovered
+					###
+					@item.node.classList.add 'hovered-2'
+					@hovered = true
+			# }}}
+			@unhover = (e) !~> # {{{
+				# fulfil the event
+				e.preventDefault!
+				# check
+				if @hovered
+					@item.node.classList.remove 'hovered-2'
+					@hovered = false
+			# }}}
+			@focus = (e) !~> # {{{
+				# check
+				if not @block.locked and \
+				   not @focused
+					###
+					@item.node.classList.add 'focused-2'
+					@focused = true
+				else
+					# try to prevent focus
+					e.preventDefault!
+					e.stopImmediatePropagation!
+			# }}}
+			@unfocus = (e) !~> # {{{
+				# fulfil the event
+				e.preventDefault!
+				# check
+				if @focused
+					@item.node.classList.remove 'focused-2'
+					@focused = false
+			# }}}
+			@check = (e) !~> # {{{
+				# fulfil the event
+				e.preventDefault!
+				e.stopImmediatePropagation!
+				# check
+				if @block.locked
+					return
+				# switch current and
+				# refresh block state
+				@block.refresh @toggleCheckbox!
+				# done
+				@checkbox.focus!
+			# }}}
+			# children
+			# {{{
+			if item.children
+				@children = a = []
+				for c,b in item.children
+					a[b] = new Checkbox block, c, @
+			else
+				@children = null
+			# }}}
+			# initialize
+			# to avoid natural focus navigation problem,
+			# re-attach the checkbox
+			if cbox
+				a = cbox.parentNode
+				a.removeChild cbox
+				a.insertBefore cbox, a.firstChild
+		###
+		Checkbox.prototype =
+			attach: !-> # {{{
+				# operate
+				if a = @checkbox
+					a.addEventListener 'pointerenter', @hover
+					a.addEventListener 'pointerleave', @unhover
+					a.addEventListener 'focusin',  @focus
+					a.addEventListener 'focusout', @unfocus
+					a.addEventListener 'click', @check
+					a = @item.title
+					a.addEventListener 'pointerenter', @hover
+					a.addEventListener 'pointerleave', @unhover
+					a.addEventListener 'click', @check
+				# recurse
+				if a = @children
+					for c in a
+						c.attach!
+			# }}}
+			detach: !-> # {{{
+				true
+			# }}}
+			setChildren: (items, v) -> # {{{
+				# create change list
+				list = []
+				# iterate items
+				for a in items when a.state != v
+					# set child
+					a.state = v
+					list[*] = a
+					# recurse
+					if a.children
+						list.push ...(@setChildren a.children, v)
+				# done
+				return list
+			# }}}
+			setParent: (item, v) -> # {{{
+				# check
+				if v == 2
+					# this value may only come from another parent,
+					# no need to check children
+					a = 2
+				else
+					# assume state homogeneity and
+					# iterate children to find the opposite
+					a = v
+					for b in item.children when b.state != a
+						a = 2
+						break
+				# set
+				if item.state == a
+					b = []
+				else
+					item.state = a
+					b = [item]
+				# recurse and complete
+				return if item.parent
+					then (@setParent item.parent, a) ++ b
+					else b
+			# }}}
+			toggleCheckbox: -> # {{{
+				# settle self first
+				@state = if @state == 2
+					then 1 # force determinism
+					else if @state
+						then 0
+						else 1
+				# create change list
+				list = [@]
+				# set parents
+				if @parent
+					list.push ...(@setParent @parent, @state)
+				# set children
+				if @children
+					list.push ...(@setChildren @children, @state)
+				# done
+				return list
+			# }}}
+			getCheckedIds: -> # {{{
+				# check self
+				list = if @state == 1 and @item.config.count > 0
+					then [@item.config.id]
+					else []
+				# check children
+				if @children
+					for a in @children
+						list.push ...(a.getCheckedIds!)
+				# done
+				return list
+			# }}}
+		# }}}
+		Block = (root, state) !-> # {{{
+			# base
+			@root    = root
+			@rootBox = rootBox = root.firstChild
+			# controls
+			@section = box = sMainSection root
+			@checks  = new Checkbox @, box.rootItem
+			# state
+			@state   = state
+			@index   = -1
+			@locked  = true
+			# initialize
+			state.ready[*] = box.init!
+				.then (x) ~>
+					# activate controls
+					@checks.attach! if x
+					# done
+					return x
+		###
+		Block.prototype =
+			init: (index) !-> # {{{
+				# create widget's data
+				@index = index
+				@state.data[index] = []
+			# }}}
+			refresh: (list) !-> # {{{
+				# it's assumed that categories doesn't intersect
+				# in the composed UI blocks, so there may be
+				# only single originator, so, the refresh is
+				# the only source of the change..
+				# (no external calls needed)
+				if list
+					# iterate change list and set visual state
+					for a in list
+						b = a.item.node.classList
+						switch a.state
+						case 2
+							b.add 'checked', 'c2'
+							b.remove 'c1'
+						case 1
+							b.add 'checked', 'c1'
+							b.remove 'c2'
+						default
+							b.remove 'checked', 'c1', 'c2'
+				# check
+				if @index < 0
+					return
+				# determine current filter
+				a = @checks.getCheckedIds!
+				b = @state.data[@index]
+				# compare arrays
+				if d = ((c = a.length) == b.length)
+					while --c >= 0
+						if a[c] != b[c]
+							d = false
+							break
+				# check the difference
+				if not d
+					# update array
+					b.length = c = a.length
+					while --c >= 0
+						b[c] = a[c]
+					# change the filter
+					state.change!
+				# done
+			# }}}
+			lock: (level) !-> # {{{
+				switch level
+				case 1
+					@section.lock 1 if not @locked
+				default
+					@section.lock 0 if @locked
+				@locked = level
+			# }}}
+		# }}}
+		# initialize
+		# {{{
+		# create common state
+		state = new BlockState 'category', 2, (event, data) ->
+			# operate
+			switch event
+			case 'init'
+				@data = data.catFilter
+				for a,b in blocks
+					a.init b
+			case 'change'
+				true
+			case 'lock'
+				for a in blocks
+					a.lock 1
+			case 'load'
+				for a in blocks
+					#a.refresh! # not needed!
+					a.lock 0
+			# done
+			return true
+		# create individual blocks
+		blocks = [...(document.querySelectorAll '.sm-blocks.category-filter')]
+		for a,b in blocks
+			blocks[b] = new Block a, state, b
+		# }}}
+		return state
+	# }}}
+	# {{{
 	mProductsGrid = do -> # {{{
 		###
 		Block = (root) !-> # {{{
@@ -1143,7 +1389,7 @@ smBlocks = do ->>
 		# }}}
 		return state
 	# }}}
-	mCategoryFilter = do -> # {{{
+	mCategoryFilter_backup = do -> # {{{
 		# constructors
 		Item = (block, node) !-> # {{{
 			# {{{
@@ -1355,6 +1601,7 @@ smBlocks = do ->>
 			# }}}
 		# }}}
 		# initialize
+		/***
 		# {{{
 		# create common state
 		state = new BlockState 'category', 2, (event, data) ->
@@ -1376,6 +1623,9 @@ smBlocks = do ->>
 		blocks = blocks.map (root) -> new Block root
 		# }}}
 		return state
+		/***/
+		return null
+	# }}}
 	# }}}
 	mPriceFilter = do -> # {{{
 		# constructors
@@ -1885,7 +2135,7 @@ smBlocks = do ->>
 				then new TextInputs @
 				else null
 			box = root.parentNode.parentNode.parentNode
-			@section = box = new sMainSection box
+			@section = box = sMainSection box
 			# state
 			@mode    = mode
 			@state   = state
@@ -1899,7 +2149,7 @@ smBlocks = do ->>
 						@inputs.attach!
 						@root.classList.add 'v'
 						if @config.sectionSwitch
-							box.ctrl.onSwitch = @onSwitch @
+							box.onChange = @sectionChange!
 					# done
 					return x
 			# }}}
@@ -1948,7 +2198,7 @@ smBlocks = do ->>
 						fallthrough
 					case 0
 						@rootBox.classList.remove 'v'
-						@section.lock!
+						@section.lock 1
 					###
 				case 1
 					# partial lock
@@ -1968,7 +2218,7 @@ smBlocks = do ->>
 				# set
 				@locked = level
 			# }}}
-			onSwitch: -> (item) !~> # {{{
+			sectionChange: -> (item) !~> # {{{
 				# check root
 				if not item.parent
 					# check state
