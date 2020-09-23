@@ -243,6 +243,111 @@ smBlocks = do ->>
 					# callback
 					e @ if e = @block.onChange
 			# }}}
+			@keydown = (e) !~> # {{{
+				# check enabled
+				if @block.locked or \
+				   e.keyCode not in [38 40 37 39 75 74 72 76]
+					###
+					return
+				# fulfil the event
+				e.preventDefault!
+				e.stopPropagation!
+				# operate
+				switch e.keyCode
+				case 38, 75 # Up|k
+					# pass focus up {{{
+					# WARNING: highly imperative
+					##[A]##
+					# drop to upper siblings
+					if (a = @).parent
+						# prepare
+						b = a.parent.children
+						c = b.indexOf a
+						# find last sibling section
+						while --c >= 0
+							if b[c].children
+								# focus if closed
+								if not (a = b[c]).opened
+									a.arrow.focus!
+									return
+								# skip to [B]
+								break
+						# when no sibling sections found,
+						# focus to parent
+						if !~c
+							a.parent.arrow.focus!
+							return
+					##[B]##
+					# drop to the last child section of the opened sibling
+					while b = a.children
+						# prepare
+						c = b.length
+						# find last child section
+						while --c >= 0
+							if b[c].children
+								# focus if closed
+								if not (a = b[c]).opened
+									a.arrow.focus!
+									return
+								# continue diving..
+								break
+						# end with opened section
+						# if it doesn't have any child sections
+						break if !~c
+					# focus it
+					a.arrow.focus!
+					# }}}
+				case 40, 74 # Down|j
+					# pass focus down {{{
+					##[A]##
+					# dive into inner area
+					if (a = @).opened
+						# prepare
+						b = a.children
+						c = -1
+						# find first child section
+						while ++c < b.length
+							if b[c].children
+								b[c].arrow.focus!
+								return
+					##[B]##
+					# drop to lower siblings
+					while b = a.parent
+						# prepare
+						c = b.children
+						d = c.indexOf a
+						# find first sibling section
+						while ++d < c.length
+							if c[d].children
+								c[d].arrow.focus!
+								return
+						# no sibling sections found,
+						# bubble to parent and try again..
+						a = a.parent
+					##[C]##
+					# re-cycle focus to the root
+					a.arrow.focus!
+					# }}}
+				case 37, 72 # Left|h
+					# close section {{{
+					if @opened
+						# operate
+						@opened = false
+						@node.classList.remove 'opened'
+						# callback
+						e @ if e = @block.onChange
+					# }}}
+				case 39, 76 # Right|l
+					# open section {{{
+					if not @opened
+						# operate
+						@opened = true
+						@node.classList.add 'opened'
+						# callback
+						e @ if e = @block.onChange
+					# }}}
+					true
+			# }}}
 			# children
 			# {{{
 			if (a = querySelectorChildren sect, '.item').length
@@ -267,6 +372,7 @@ smBlocks = do ->>
 						a.addEventListener 'pointerleave', @unhover
 						a.addEventListener 'focusin', @focus
 						a.addEventListener 'focusout', @unfocus
+						a.addEventListener 'keydown', @keydown
 						a.addEventListener 'click', @switch
 					if a = @title
 						a.addEventListener 'pointerenter', @hover

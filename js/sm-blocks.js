@@ -216,6 +216,97 @@ smBlocks = async function(){
           }
         }
       };
+      this.keydown = function(e){
+        var ref$, a, b, c, d;
+        if (this$.block.locked || ((ref$ = e.keyCode) !== 38 && ref$ !== 40 && ref$ !== 37 && ref$ !== 39 && ref$ !== 75 && ref$ !== 74 && ref$ !== 72 && ref$ !== 76)) {
+          return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        switch (e.keyCode) {
+        case 38:
+        case 75:
+          if ((a = this$).parent) {
+            b = a.parent.children;
+            c = b.indexOf(a);
+            while (--c >= 0) {
+              if (b[c].children) {
+                if (!(a = b[c]).opened) {
+                  a.arrow.focus();
+                  return;
+                }
+                break;
+              }
+            }
+            if (!~c) {
+              a.parent.arrow.focus();
+              return;
+            }
+          }
+          while (b = a.children) {
+            c = b.length;
+            while (--c >= 0) {
+              if (b[c].children) {
+                if (!(a = b[c]).opened) {
+                  a.arrow.focus();
+                  return;
+                }
+                break;
+              }
+            }
+            if (!~c) {
+              break;
+            }
+          }
+          a.arrow.focus();
+          break;
+        case 40:
+        case 74:
+          if ((a = this$).opened) {
+            b = a.children;
+            c = -1;
+            while (++c < b.length) {
+              if (b[c].children) {
+                b[c].arrow.focus();
+                return;
+              }
+            }
+          }
+          while (b = a.parent) {
+            c = b.children;
+            d = c.indexOf(a);
+            while (++d < c.length) {
+              if (c[d].children) {
+                c[d].arrow.focus();
+                return;
+              }
+            }
+            a = a.parent;
+          }
+          a.arrow.focus();
+          break;
+        case 37:
+        case 72:
+          if (this$.opened) {
+            this$.opened = false;
+            this$.node.classList.remove('opened');
+            if (e = this$.block.onChange) {
+              e(this$);
+            }
+          }
+          break;
+        case 39:
+        case 76:
+          if (!this$.opened) {
+            this$.opened = true;
+            this$.node.classList.add('opened');
+            if (e = this$.block.onChange) {
+              e(this$);
+            }
+          }
+          true;
+        }
+      };
       if ((a = querySelectorChildren(sect, '.item')).length) {
         this.children = a;
         for (i$ = 0, len$ = a.length; i$ < len$; ++i$) {
@@ -237,6 +328,7 @@ smBlocks = async function(){
             a.addEventListener('pointerleave', this.unhover);
             a.addEventListener('focusin', this.focus);
             a.addEventListener('focusout', this.unfocus);
+            a.addEventListener('keydown', this.keydown);
             a.addEventListener('click', this['switch']);
           }
           if (a = this.title) {
