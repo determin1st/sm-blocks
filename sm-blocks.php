@@ -100,6 +100,10 @@ class StorefrontModernBlocks {
             'type'        => 'string',
             'default'     => 'custom',
           ],
+          'focusGreedy'   => [
+            'type'        => 'boolean',
+            'default'     => true,
+          ],
           ###
           'sectionTitle'  => [
             'type'        => 'string',
@@ -228,6 +232,10 @@ class StorefrontModernBlocks {
           'customClass'   => [
             'type'        => 'string',
             'default'     => 'custom',
+          ],
+          'focusGreedy'   => [
+            'type'        => 'boolean',
+            'default'     => true,
           ],
           ###
           'sectionTitle'  => [
@@ -536,7 +544,7 @@ class StorefrontModernBlocks {
         ',
         'titleMain' => '
         <div class="title">
-          <h3>{{title}}</h3>
+          <h3><label>{{title}}</label></h3>
           <button class="arrow{{arrow}}" type="button">{{arrowIcon}}</button>
           {{extraMain}}
         </div>
@@ -544,7 +552,7 @@ class StorefrontModernBlocks {
         'item' => '
         <div class="item{{class}}" data-cfg=\'{{cfg}}\'>
           <div class="title">
-            <h3>{{title}}</h3>
+            <h3><label>{{title}}</label></h3>
             <button class="arrow{{arrow}}" type="button">{{arrowIcon}}</button>
             {{extra}}
           </div>
@@ -798,6 +806,7 @@ class StorefrontModernBlocks {
     return $this->renderSection([
       'custom'    => 'category-filter custom',
       'mode'      => $attr['sectionMode'],
+      'autofocus' => $attr['focusGreedy'],
       'title'     => $this->parseLocalName($attr['sectionTitle']),
       'extraMain' => '',
       'extra'     => $this->parseTemplate($T['extra'], $T),
@@ -1015,6 +1024,7 @@ EOD;
     # create a 0-section
     return $this->renderSection([
       'mode'      => $attr['sectionMode'],
+      'autofocus' => $attr['focusGreedy'],
       'title'     => $this->parseLocalName($attr['sectionTitle']),
       'extraMain' => '',
       'extra'     => '',
@@ -1062,6 +1072,7 @@ EOD;
       'id'    => $id,
       'arrow' => $arrow,
       'extra' => !!$attr['extraMain'],
+      'autofocus' => $attr['autofocus'],
     ]));
     # compose
     return $this->parseTemplate($T['main'], $T, [

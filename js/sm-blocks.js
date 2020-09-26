@@ -2,7 +2,7 @@
 "use strict";
 var smBlocks, slice$ = [].slice, arrayFrom$ = Array.from || function(x){return slice$.call(x);};
 smBlocks = async function(){
-  var BRAND, soFetch, newPromise, delay, querySelectorChildren, querySelectorChild, newMetaObject, BlockState, sMainSection, sCart, sGridCard, KING, mCategoryFilter, mProductsGrid, mCategoryFilter_backup, mPriceFilter, mPaginator, mOrderer;
+  var BRAND, soFetch, newPromise, newDelay, querySelectorChildren, querySelectorChild, newMetaObject, BlockState, sMainSection, sCart, sGridCard, KING, mCategoryFilter, mProductsGrid, mCategoryFilter_backup, mPriceFilter, mPaginator, mOrderer;
   BRAND = 'sm-blocks';
   soFetch = httpFetch.create({
     baseUrl: '/?rest_route=/' + BRAND + '/kiss',
@@ -32,14 +32,11 @@ smBlocks = async function(){
     };
     return p;
   };
-  delay = function(ms, f){
+  newDelay = function(ms){
     var p, t;
     p = newPromise();
     t = setTimeout(function(){
       p.resolve(true);
-      if (f) {
-        f();
-      }
     }, ms);
     p.cancel = function(){
       clearTimeout(t);
@@ -160,6 +157,9 @@ smBlocks = async function(){
                 this$.title.classList.add('h');
               }
             }
+            if (!this$.block.focused) {
+              this$.block.onAutofocus(this$.arrow);
+            }
           }
         }
       };
@@ -183,7 +183,10 @@ smBlocks = async function(){
       this.focus = function(e){
         e.preventDefault();
         if (!this$.block.locked && !this$.focused) {
-          this$.focused = true;
+          this$.focused = this$.block.focused = true;
+          if (e = this$.block.onFocus) {
+            e(this$);
+          }
           this$.node.classList.add('focused');
           this$.arrow.classList.add('f');
           if (!this$.config.extra) {
@@ -194,7 +197,10 @@ smBlocks = async function(){
       this.unfocus = function(e){
         e.preventDefault();
         if (!this$.block.locked && this$.focused) {
-          this$.focused = false;
+          this$.focused = this$.block.focused = false;
+          if (e = this$.block.onFocus) {
+            e(this$);
+          }
           this$.node.classList.remove('focused');
           this$.arrow.classList.remove('f');
           if (!this$.config.extra) {
@@ -377,9 +383,20 @@ smBlocks = async function(){
         item[b.config.id] = b;
       }
       this.state = state;
+      this.focused = false;
       this.locked = 1;
       this['class'] = {};
-      this.onChange = false;
+      this.onChange = null;
+      this.onFocus = null;
+      this.onAutofocus = function(node){
+        if (root.config.autofocus) {
+          if (root.arrow) {
+            root.arrow.focus();
+          } else if (node) {
+            node.focus();
+          }
+        }
+      };
     };
     Block.prototype = {
       init: async function(){
@@ -687,7 +704,7 @@ smBlocks = async function(){
         var i$, ref$, len$, c, a, b;
         if (gridState.dirty) {
           gridState.dirty = false;
-          gridLock = delay(cooldown);
+          gridLock = newDelay(cooldown);
         } else if (!gridLock) {
           gridLock = newMasterPromise();
           for (i$ = 0, len$ = (ref$ = gridControl).length; i$ < len$; ++i$) {
@@ -1076,6 +1093,9 @@ smBlocks = async function(){
         if (!this$.block.locked && !this$.hovered) {
           this$.item.node.classList.add('hovered-2');
           this$.hovered = true;
+          if (!this$.block.focused) {
+            this$.block.onAutofocus(this$.checkbox);
+          }
         }
       };
       this.unhover = function(e){
@@ -1089,6 +1109,7 @@ smBlocks = async function(){
         if (!this$.block.locked && !this$.focused) {
           this$.item.node.classList.add('focused-2');
           this$.focused = true;
+          this$.block.onFocus(this$);
         } else {
           e.preventDefault();
           e.stopImmediatePropagation();
@@ -1099,6 +1120,7 @@ smBlocks = async function(){
         if (this$.focused) {
           this$.item.node.classList.remove('focused-2');
           this$.focused = false;
+          this$.block.onFocus(this$);
         }
       };
       this.check = function(e){
@@ -1224,6 +1246,34 @@ smBlocks = async function(){
       this.state = state;
       this.index = -1;
       this.locked = true;
+      this.focused = false;
+      this.onFocus = box.onFocus = function(){
+        var p;
+        p = null;
+        return async function(item){
+          if (p && p.pending) {
+            p.resolve(false);
+          }
+          if (item.focused) {
+            this$.focused = true;
+            this$.root.classList.add('f');
+          } else if ((await (p = newDelay(60)))) {
+            this$.focused = false;
+            this$.root.classList.remove('f');
+          }
+          return true;
+        };
+      }();
+      this.onAutofocus = box.onAutofocus = function(node){
+        var a;
+        if (!this$.focused && (a = box.rootItem).config.autofocus) {
+          if (a.arrow) {
+            a.arrow.focus();
+          } else {
+            a.checks.checkbox.focus();
+          }
+        }
+      };
       (ref$ = state.ready)[ref$.length] = box.init().then(function(x){
         if (x) {
           this$.checks.attach();
@@ -1626,7 +1676,7 @@ smBlocks = async function(){
       this.locked = 1;
       this.regex = /^[0-9]{0,9}$/;
       this.stepSz = 10 / 100;
-      this.waiter = delay(0);
+      this.waiter = newDelay(0);
     };
     TextInputs.prototype = {
       init: function(cfg){
@@ -2004,7 +2054,7 @@ smBlocks = async function(){
               this$.input[n].select();
             }
           }
-          if ((await (this$.waiter = delay(400)))) {
+          if ((await (this$.waiter = newDelay(400)))) {
             this$.check(n);
             if (this$.changed) {
               this$.submit();
@@ -2284,7 +2334,7 @@ smBlocks = async function(){
         this$.lock = newPromise();
         this$.lockType = 2;
         this$.block.focus();
-        (await Promise.race([delay(200), this$.lock]));
+        (await Promise.race([newDelay(200), this$.lock]));
         if (!this$.lock.pending) {
           this$.lock = null;
           return true;
@@ -2603,7 +2653,7 @@ smBlocks = async function(){
           return false;
         }
         this.lock = newPromise();
-        (await Promise.race([delay(200), this.lock]));
+        (await Promise.race([newDelay(200), this.lock]));
         if (forward) {
           inc = 1;
           beg = 0;
@@ -2649,7 +2699,7 @@ smBlocks = async function(){
           if ((d = end - inc - inc * a) <= this.brake) {
             b = inc;
             d = 1000 / (1 + d);
-            (await Promise.race([delay(d), this.lock]));
+            (await Promise.race([newDelay(d), this.lock]));
           } else if (inc * b < this.maxSpeed && --c === 0) {
             b = b + inc;
             c = this.brake;
@@ -2672,7 +2722,7 @@ smBlocks = async function(){
           }
         }
         this.lock.resolve();
-        (await delay(60));
+        (await newDelay(60));
         this.lock = null;
         return true;
       },

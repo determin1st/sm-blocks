@@ -16,12 +16,14 @@ WebSafeFontMono = Consolas, Courier, monospace
 	min-height: 0
 	padding:    0
 	margin:     0
-	overflow:   hidden
+	//overflow:   hidden
 	font-size:  var(--font-size)
 	// common controls/combinations
 	// {{{
 	div,button,select,input,label,svg,img,hr,h1,h2,h3
 		box-sizing: border-box
+		min-width:  0
+		min-height: 0
 		margin:  0
 		padding: 0
 		outline: 0
@@ -34,10 +36,12 @@ WebSafeFontMono = Consolas, Courier, monospace
 		outline:     0
 		text-transform:  none
 		text-decoration: none
-		text-overflow:   ellipsis // requires overflow & white-space below
-		overflow:    hidden
-		white-space: nowrap
-		word-break:  keep-all // to break-word asian languages
+		// text overflow block
+		text-overflow: ellipsis
+		overflow:      hidden
+		white-space:   nowrap
+		word-break:    break-all
+		overflow-wrap: anywhere // modern word-break
 	svg
 		width:  100%
 		height: 100%
@@ -74,6 +78,11 @@ WebSafeFontMono = Consolas, Courier, monospace
 				opacity: 1
 		> svg
 			display: none
+		// focused state
+		&.f
+			> div.v
+				box-shadow: inset 0px 0px 8px 1px alpha(violet, 0.2)
+				border-radius: 2px
 // }}}
 // ===
 .sm-blocks.grid // {{{
@@ -731,189 +740,6 @@ WebSafeFontMono = Consolas, Courier, monospace
 				border-color: darkslategray
 		// }}}
 // }}}
-.sm-blocks.category-filter_backup // {{{
-	/////
-	/////
-	> div
-		display: flex
-		flex-direction: column
-		////
-		> .title
-			display: flex
-			> h3
-				flex: 1 1 0
-				font-size: 2em
-				font-weight: bold
-				margin: 0
-		> hr
-			height: 1px
-			margin: 0
-			color: lightgray
-		> .section // root
-			padding-top:    4px
-			padding-bottom: 4px
-			padding-left:   4px
-			padding-right:  0
-			.item
-				> .name // {{{
-				{
-					padding-top:    0;
-					padding-bottom: 0;
-					display: flex;
-					flex-direction: row;
-					> div
-					{
-						display: flex;
-						flex-direction: row;
-						align-items: center;
-					}
-					> .box // {{{
-					{
-						flex: 1 1 0;
-						min-width: 0;
-						padding-top:    8px;
-						padding-bottom: 8px;
-						cursor: pointer;
-						> input // always hidden, used for focusing
-						{
-							flex: 0 0 0;
-							width: 0;
-							height: 0;
-							min-width: 0;
-							min-height: 0;
-							margin: 0;
-							padding: 0;
-							border-style: none;
-							border-width: 0;
-							opacity: 0;
-							//min-width: 20px;
-							//min-height: 20px;
-							position: static;
-							outline: none;
-							&:focus ~ .check
-							{
-								border-width: 2px;
-							}
-						}
-						> .check // box
-						{
-							flex: 0 0 0;
-							min-width:  20px;
-							min-height: 20px;
-							border: 1px solid slategray;
-							border-radius: 2px;
-							background-color: white;
-							position: relative;
-							> svg
-							{
-								position: absolute;
-								top:  0;
-								left: 0;
-								width:  100%;
-								height: 100%;
-								opacity: 0;
-								fill: white;
-								stroke: silver;
-							}
-							&.checked
-							{
-								> svg:nth-child(1) {
-									opacity: 1;
-								}
-								background-color: black;
-							}
-							&.indeterminated
-							{
-								> svg:nth-child(2) {
-									opacity: 1;
-								}
-								background-color: black;
-							}
-							&.disabled
-							{
-								background-color: gainsboro;
-							}
-						}
-						> label
-						{
-							flex: 1 1 0;
-							padding-top:    1px;
-							padding-bottom: 0;
-							padding-left:   8px;
-							padding-right:  0;
-							min-width: 0;
-							margin: 0;
-							line-height: 1;
-							white-space: nowrap;
-							overflow: hidden;
-							text-overflow: ellipsis;
-							cursor: pointer;
-							user-select: none;
-							font-weight: normal;
-							color: black;
-						}
-						&:hover
-						{
-							padding-left: 1px;
-							> .check
-							{
-								border-width: 2px;
-							}
-						}
-					}
-					// }}}
-					> .count // {{{
-					{
-						flex: 0 0 auto;
-						white-space: nowrap;
-					}
-					// }}}
-					> .arrow // {{{
-					{
-						flex: 1 1 0;
-						min-width: 20px;
-						max-width: 48px;
-						justify-content: flex-end;
-						cursor: pointer;
-						> svg
-						{
-							width:  auto;
-							height: 100%;
-							max-height: 24px;
-							transform: rotate(90deg);
-							fill: silver;
-							stroke: black;
-						}
-						&:hover > svg
-						{
-							fill: black;
-							stroke: silver;
-						}
-						&.opened
-						{
-							> svg
-							{
-								transform: rotate(0deg);
-								fill: black;
-							}
-						}
-					}
-					// }}}
-				}
-				// }}}
-				> .section // {{{
-				{
-					display: none;
-					opacity: 0;
-					padding-left: 20px;
-					&.opened
-					{
-						display: block;
-						opacity: 1;
-					}
-				}
-				// }}}
-// }}}
 // ===
 .sm-blocks.main-section // {{{
 	// root
@@ -1045,16 +871,17 @@ WebSafeFontMono = Consolas, Courier, monospace
 	> div.item
 		display: flex
 		flex-direction: column
+		padding: 0 2px 0 8px
 		> .title // {{{
 			height: 3em
-			padding: 0.4em 0 0.2em 0
+			padding: 4px 0 4px 0
 			> h3
 				font-size: 2em
 				font-weight: bold
 			> button.arrow
 				height: 100%
-				min-width: 2.2em
-				padding: 0.2em
+				min-width: calc(3em - 8px)
+				padding: 4px
 		// }}}
 		> .section // {{{
 			padding: 0

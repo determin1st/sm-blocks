@@ -43,13 +43,12 @@ smBlocks = do ->>
 		# done
 		return p
 	# }}}
-	delay = (ms, f) -> # {{{
+	newDelay = (ms) -> # {{{
 		# create custom promise
 		p = newPromise!
 		# start timer
 		t = setTimeout !->
 			p.resolve true
-			f! if f
 		, ms
 		# add cancellation
 		p.cancel = !->
@@ -185,11 +184,14 @@ smBlocks = do ->>
 						###
 						@hovered = true
 						@node.classList.add 'hovered'
+						# set extra hovered
 						if not @config.extra
 							if e.currentTarget == @title
 								@arrow.classList.add 'h'
 							else
 								@title.classList.add 'h'
+						if not @block.focused
+							@block.onAutofocus @arrow
 			# }}}
 			@unhover = (e) !~> # {{{
 				# fulfil event
@@ -211,7 +213,8 @@ smBlocks = do ->>
 				e.preventDefault!
 				# operate
 				if not @block.locked and not @focused
-					@focused = true
+					@focused = @block.focused = true
+					e @ if e = @block.onFocus
 					@node.classList.add 'focused'
 					@arrow.classList.add 'f'
 					if not @config.extra
@@ -222,7 +225,8 @@ smBlocks = do ->>
 				e.preventDefault!
 				# operate
 				if not @block.locked and @focused
-					@focused = false
+					@focused = @block.focused = false
+					e @ if e = @block.onFocus
 					@node.classList.remove 'focused'
 					@arrow.classList.remove 'f'
 					if not @config.extra
@@ -416,10 +420,19 @@ smBlocks = do ->>
 			# }}}
 			# state
 			@state    = state
+			@focused  = false
 			@locked   = 1
 			@class    = {}
-			# external handlers
-			@onChange = false
+			# handlers
+			@onChange = null
+			@onFocus  = null
+			@onAutofocus = (node) !-> # {{{
+				if root.config.autofocus
+					if root.arrow
+						root.arrow.focus!
+					else if node
+						node.focus!
+			# }}}
 		###
 		Block.prototype =
 			init: ->> # {{{
@@ -779,7 +792,7 @@ smBlocks = do ->>
 					# to guard against excessive load calls
 					# caused by multiple user actions,
 					# it's important to do a short cooldown..
-					gridLock := delay cooldown
+					gridLock := newDelay cooldown
 				else if not gridLock
 					# set master lock
 					gridLock := newMasterPromise!
@@ -1204,6 +1217,9 @@ smBlocks = do ->>
 					###
 					@item.node.classList.add 'hovered-2'
 					@hovered = true
+					# autofocus
+					if not @block.focused
+						@block.onAutofocus @checkbox
 			# }}}
 			@unhover = (e) !~> # {{{
 				# fulfil the event
@@ -1220,6 +1236,7 @@ smBlocks = do ->>
 					###
 					@item.node.classList.add 'focused-2'
 					@focused = true
+					@block.onFocus @
 				else
 					# try to prevent focus
 					e.preventDefault!
@@ -1232,6 +1249,7 @@ smBlocks = do ->>
 				if @focused
 					@item.node.classList.remove 'focused-2'
 					@focused = false
+					@block.onFocus @
 			# }}}
 			@check = (e) !~> # {{{
 				# fulfil the event
@@ -1364,6 +1382,33 @@ smBlocks = do ->>
 			@state   = state
 			@index   = -1
 			@locked  = true
+			@focused = false
+			# handlers
+			@onFocus = box.onFocus = do ~> # {{{
+				p = null
+				return (item) ~>>
+					# check
+					if p and p.pending
+						p.resolve false
+					# set
+					if item.focused
+						@focused = true
+						@root.classList.add 'f'
+					else if await (p := newDelay 60)
+						@focused = false
+						@root.classList.remove 'f'
+					# done
+					return true
+			# }}}
+			@onAutofocus = box.onAutofocus = (node) !~> # {{{
+				if not @focused and \
+				   (a = box.rootItem).config.autofocus
+					###
+					if a.arrow
+						a.arrow.focus!
+					else
+						a.checks.checkbox.focus!
+			# }}}
 			# initialize
 			state.ready[*] = box.init!
 				.then (x) ~>
@@ -1819,7 +1864,7 @@ smBlocks = do ->>
 			@locked  = 1
 			@regex   = /^[0-9]{0,9}$/
 			@stepSz  = 10/100
-			@waiter  = delay 0
+			@waiter  = newDelay 0
 		###
 		TextInputs.prototype =
 			init: (cfg) !-> # {{{
@@ -2218,7 +2263,7 @@ smBlocks = do ->>
 					@inputScroll n, (e.deltaY < 0)
 					@input[n].select! if @focused[n]
 				# initiate submit sequence
-				if await (@waiter = delay 400)
+				if await (@waiter = newDelay 400)
 					# timeout passed, submit fluently
 					@check n
 					@submit! if @changed
@@ -2542,7 +2587,7 @@ smBlocks = do ->>
 				@lockType = 2
 				@block.focus!
 				# cooldown
-				await Promise.race [(delay 200), @lock]
+				await Promise.race [(newDelay 200), @lock]
 				if not @lock.pending
 					# prevent false startup
 					@lock = null
@@ -2920,7 +2965,7 @@ smBlocks = do ->>
 				# lock and suspend
 				# to prevent false startups
 				@lock = newPromise!
-				await Promise.race [(delay 200), @lock]
+				await Promise.race [(newDelay 200), @lock]
 				# calculate initial values
 				if forward
 					inc = 1
@@ -2973,7 +3018,7 @@ smBlocks = do ->>
 						# throttle
 						b = inc
 						d = 1000 / (1 + d)
-						await Promise.race [(delay d), @lock]
+						await Promise.race [(newDelay d), @lock]
 					else if inc*b < @maxSpeed and --c == 0
 						# accelerate
 						b = b + inc
@@ -2990,7 +3035,7 @@ smBlocks = do ->>
 						b.refresh!
 				# release lock and complete
 				@lock.resolve!
-				await delay 60 # omit click event
+				await newDelay 60 # omit click event
 				@lock = null
 				return true
 			# }}}
