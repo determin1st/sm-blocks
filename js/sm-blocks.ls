@@ -1,8 +1,7 @@
 "use strict"
 smBlocks = do ->>
 	# TODO {{{
-	# - price filter (!)
-	# - ...
+	# - category count display (extra)
 	# - static paginator max-width auto-calc
 	# - grid's goto next page + scroll up (?)
 	# }}}
@@ -260,77 +259,23 @@ smBlocks = do ->>
 				switch e.keyCode
 				case 38, 75 # Up|k
 					# pass focus up {{{
-					# WARNING: highly imperative
-					##[A]##
-					# drop to upper siblings
-					if (a = @).parent
-						# prepare
-						b = a.parent.children
-						c = b.indexOf a
-						# find last sibling section
-						while --c >= 0
-							if b[c].children
-								# focus if closed
-								if not (a = b[c]).opened
-									a.arrow.focus!
-									return
-								# skip to [B]
-								break
-						# when no sibling sections found,
-						# focus to parent
-						if !~c
-							a.parent.arrow.focus!
+					# operate
+					if a = @searchArrow true
+						# ask controller
+						if (e = @block.onRefocus) and (e @, a, true)
 							return
-					##[B]##
-					# drop to the last child section of the opened sibling
-					while b = a.children
-						# prepare
-						c = b.length
-						# find last child section
-						while --c >= 0
-							if b[c].children
-								# focus if closed
-								if not (a = b[c]).opened
-									a.arrow.focus!
-									return
-								# continue diving..
-								break
-						# end with opened section
-						# if it doesn't have any child sections
-						break if !~c
-					# focus it
-					a.arrow.focus!
+						# pass
+						a.arrow.focus!
 					# }}}
 				case 40, 74 # Down|j
 					# pass focus down {{{
-					##[A]##
-					# dive into inner area
-					if (a = @).opened
-						# prepare
-						b = a.children
-						c = -1
-						# find first child section
-						while ++c < b.length
-							if b[c].children
-								b[c].arrow.focus!
-								return
-					##[B]##
-					# drop to lower siblings
-					while b = a.parent
-						# prepare
-						c = b.children
-						d = c.indexOf a
-						# find first sibling section
-						while ++d < c.length
-							if c[d].children
-								c[d].arrow.focus!
-								return
-						# no sibling sections found,
-						# bubble to parent and try again..
-						a = a.parent
-					##[C]##
-					# re-cycle focus to the root
-					a.arrow.focus!
+					# operate
+					if a = @searchArrow false
+						# ask controller
+						if (e = @block.onRefocus) and (e @, a, false)
+							return
+						# pass
+						a.arrow.focus!
 					# }}}
 				case 37, 72 # Left|h
 					# close section {{{
@@ -340,6 +285,9 @@ smBlocks = do ->>
 						@node.classList.remove 'opened'
 						# callback
 						e @ if e = @block.onChange
+					else if e = @block.onRefocus
+						# refocus
+						e @, null, true
 					# }}}
 				case 39, 76 # Right|l
 					# open section {{{
@@ -349,8 +297,11 @@ smBlocks = do ->>
 						@node.classList.add 'opened'
 						# callback
 						e @ if e = @block.onChange
+					else if e = @block.onRefocus
+						# refocus
+						e @, null, false
 					# }}}
-					true
+				# done
 			# }}}
 			# children
 			# {{{
@@ -398,6 +349,100 @@ smBlocks = do ->>
 				# apply on self
 				@node.classList.toggle name, flag
 			# }}}
+			searchArrow: (direction) !-> # {{{
+				# WARNING: highly imperative
+				if direction
+					# UPWARD {{{
+					##[A]##
+					# drop to upper siblings
+					if (a = @).parent
+						# prepare
+						b = a.parent.children
+						c = b.indexOf a
+						# find last sibling section
+						while --c >= 0
+							if b[c].children
+								# focus if closed
+								if not (a = b[c]).opened
+									return a
+								# skip to [B]
+								break
+						# when no sibling sections found,
+						# focus to parent
+						if !~c
+							return a.parent
+					##[B]##
+					# drop to the last child section of the opened sibling
+					while b = a.children
+						# prepare
+						c = b.length
+						# find last child section
+						while --c >= 0
+							if b[c].children
+								# focus if closed
+								if not (a = b[c]).opened
+									return a
+								# continue diving..
+								break
+						# end with opened section
+						# if it doesn't have any child sections
+						break if !~c
+					# done
+					# }}}
+				else
+					# DOWNWARD {{{
+					##[A]##
+					# dive into inner area
+					if (a = @).opened
+						# prepare
+						if not (b = a.children)
+							return a
+						# find first child section
+						c = -1
+						while ++c < b.length
+							if b[c].children
+								return b[c]
+					##[B]##
+					# drop to lower siblings
+					while b = a.parent
+						# prepare
+						c = b.children
+						d = c.indexOf a
+						# find first sibling section
+						while ++d < c.length
+							if c[d].children
+								return c[d]
+						# no sibling sections found,
+						# bubble to parent and try again..
+						a = a.parent
+					# re-cycle focus to the root..
+					# }}}
+				# done
+				return a
+			# }}}
+			getLastVisible: -> # {{{
+				# check self
+				if not (a = @children) or not @opened
+					return @
+				# search recursively
+				return a[a.length - 1].getLastVisible!
+			# }}}
+			getNextVisible: -> # {{{
+				# check self
+				if @children and @opened
+					return @children.0
+				# navigate
+				a = @
+				while b = a.parent
+					# get next sibling
+					c = b.children
+					if (d = c.indexOf a) < c.length - 1
+						return c[d + 1]
+					# climb up the tree..
+					a = b
+				# done
+				return a
+			# }}}
 		# }}}
 		Block = (root, state) !-> # {{{
 			# base
@@ -424,8 +469,9 @@ smBlocks = do ->>
 			@locked   = 1
 			@class    = {}
 			# handlers
-			@onChange = null
-			@onFocus  = null
+			@onChange  = null
+			@onFocus   = null
+			@onRefocus = null
 			@onAutofocus = (node) !~> # {{{
 				if @rootItem.config.autofocus
 					if @rootItem.arrow
@@ -475,7 +521,51 @@ smBlocks = do ->>
 		return (node, state) ->
 			return new Block node, state
 	# }}}
-	sCart = do -> # {{{
+	# {{{
+	sGrid = do -> # {{{
+		###
+		Block = (root) !-> # {{{
+			# root
+			@root    = root
+			@rootBox = root.firstChild
+			# controller
+			@state = new State @
+		# }}}
+		State = (block) !-> # {{{
+			# grid
+			@block = block
+			@lock  = null  # master lock
+			@dirty = false # resolved-in-process flag
+			@level = 0     # update priority level
+			@total = 0     # items in the set
+			@count = 0     # displayed items
+			# paginator
+			@pageCount = 0 # calculated total/count
+			@pageIndex = 0 # current page
+			# orderer
+			@orderOption = null
+			@orderFilter = ['', 0]
+			# cart
+			# ...
+			# initialize
+			# ...
+		# }}}
+		# api
+		# initialize
+		# {{{
+		# create common state
+		state = new BlockState 'grid', 0, (event, data) ->
+			# done
+			return true
+		# }}}
+		return state
+	# }}}
+	sGridCard = do -> # {{{
+		return null
+	# }}}
+	# }}}
+	# masters
+	mCart = do -> # {{{
 		# prepare
 		data = null
 		# create api
@@ -534,10 +624,6 @@ smBlocks = do ->>
 			# }}}
 		}
 	# }}}
-	sGridCard = do -> # TODO {{{
-		return null
-	# }}}
-	# masters
 	KING = do -> # {{{
 		# prepare
 		# {{{
@@ -567,7 +653,7 @@ smBlocks = do ->>
 		}
 		gridLock = do ->>
 			# load configuration
-			a = sCart.load!
+			a = mCart.load!
 			b = soFetch {
 				func: 'config'
 				lang: ''
@@ -1054,7 +1140,7 @@ smBlocks = do ->>
 						return
 					# check stock count and
 					# set initial button state
-					x = sCart.get data.id
+					x = mCart.get data.id
 					if s.count == 0 or (x and s.count <= x.quantity)
 						e.disabled = true
 					# create event handler and
@@ -1064,13 +1150,13 @@ smBlocks = do ->>
 						a.preventDefault!
 						e.disabled = true
 						# add simple single product to cart
-						if not (a = await sCart.add data.id)
+						if not (a = await mCart.add data.id)
 							return
 						# reload cart items and
 						# check if more items may be added
-						if not await sCart.load!
+						if not await mCart.load!
 							return
-						x = sCart.get data.id
+						x = mCart.get data.id
 						if not x or s.count <= x.quantity
 							return
 						# unlock
@@ -1191,44 +1277,6 @@ smBlocks = do ->>
 			# }}}
 		}
 	# }}}
-	mProductGrid = do -> # {{{
-		###
-		Block = (root) !-> # {{{
-			# root
-			@root    = root
-			@rootBox = root.firstChild
-			# controller
-			@state = new State @
-		# }}}
-		State = (block) !-> # {{{
-			# grid
-			@block = block
-			@lock  = null  # master lock
-			@dirty = false # resolved-in-process flag
-			@level = 0     # update priority level
-			@total = 0     # items in the set
-			@count = 0     # displayed items
-			# paginator
-			@pageCount = 0 # calculated total/count
-			@pageIndex = 0 # current page
-			# orderer
-			@orderOption = null
-			@orderFilter = ['', 0]
-			# cart
-			# ...
-			# initialize
-			# ...
-		# }}}
-		# api
-		# initialize
-		# {{{
-		# create common state
-		state = new BlockState 'grid', 0, (event, data) ->
-			# done
-			return true
-		# }}}
-		return state
-	# }}}
 	mCategoryFilter = do -> # {{{
 		# constructors
 		Checkbox = (block, item, parent = null) !-> # {{{
@@ -1301,7 +1349,54 @@ smBlocks = do ->>
 				# done
 				@checkbox.focus!
 			# }}}
-			# children
+			@keydown = (e) !~> # {{{
+				# check enabled
+				if @block.locked or \
+				   e.keyCode not in [38 40 37 39 75 74 72 76]
+					###
+					return
+				# fulfil the event
+				e.preventDefault!
+				e.stopPropagation!
+				# operate
+				switch e.keyCode
+				case 38, 75 # Up|k
+					# pass focus up {{{
+					# get upper item
+					a = @parent.children
+					if (b = a.indexOf @) == 0
+						a = @parent
+					else
+						a = a[b - 1].item.getLastVisible!
+						a = @parent.get a.config.id
+					# operate
+					if a.checkbox
+						a.checkbox.focus!
+					else if a.item.arrow
+						a.item.arrow.focus!
+					# }}}
+				case 40, 74 # Down|j
+					# pass focus down {{{
+					# get lower item
+					a = @item.getNextVisible!
+					a = @block.checks.get a.config.id
+					# operate
+					if a.checkbox
+						a.checkbox.focus!
+					else if a.item.arrow
+						a.item.arrow.focus!
+					# }}}
+				case 37, 72 # Left|h
+					# pass focus left {{{
+					a.focus! if a = @item.arrow
+					# }}}
+				case 39, 76 # Right|l
+					# pass focus right {{{
+					a.focus! if a = @item.arrow
+					# }}}
+				# done
+			# }}}
+			# set children
 			# {{{
 			if item.children
 				@children = a = []
@@ -1329,10 +1424,12 @@ smBlocks = do ->>
 					a.addEventListener 'focusin',  @focus
 					a.addEventListener 'focusout', @unfocus
 					a.addEventListener 'click', @check
+					a.addEventListener 'keydown', @keydown
 					a = @item.title
 					a.addEventListener 'pointerenter', @hover
 					a.addEventListener 'pointerleave', @unhover
 					a.addEventListener 'click', @check
+					a.addEventListener 'keydown', @keydown
 				# recurse
 				if a = @children
 					for c in a
@@ -1340,6 +1437,17 @@ smBlocks = do ->>
 			# }}}
 			detach: !-> # {{{
 				true
+			# }}}
+			get: (id) -> # {{{
+				# check self
+				if id == @item.config.id
+					return @
+				# search children recursively
+				if c = @children
+					for a in c when (a = a.get id)
+						return a
+				# nothing
+				return null
 			# }}}
 			setChildren: (items, v) -> # {{{
 				# create change list
@@ -1423,6 +1531,32 @@ smBlocks = do ->>
 			@locked  = true
 			@focused = false
 			# handlers
+			box.onRefocus = (i1, i2, direction) ~> # {{{
+				# prepare
+				a = null
+				# check destination
+				if i2
+					# up/down navigation for root
+					if not i1.parent
+						# pass to checkbox
+						# get item
+						if direction
+							# last
+							a = i1.getLastVisible!
+							a = @checks.get a.config.id
+						else
+							# first
+							a = @checks.get i1.children.0.config.id
+				else
+					# left/right breakout
+					# direction doesn't matter for single checkbox
+					a = @checks.get i1.config.id
+				# custom
+				if a and a.checkbox
+					a.checkbox.focus!
+				# default
+				return !!a
+			# }}}
 			@onFocus = box.onFocus = do ~> # {{{
 				p = null
 				return (item) ~>>
@@ -1670,6 +1804,8 @@ smBlocks = do ->>
 				e.stopPropagation!
 				# callback
 				@onScroll @, (e.deltaY < 0)
+				# select text
+				@select! if @focused
 			# }}}
 			@onLabel = (e) !~> # {{{
 				# check
@@ -2045,6 +2181,20 @@ smBlocks = do ->>
 						@section.root.classList.remove 'f'
 					# done
 					return true
+			# }}}
+			S.onRefocus = (i1, i2, direction) ~> # {{{
+				# check
+				if i2
+					if direction
+						# last
+						@inputs.n1.input.focus!
+					else
+						# first
+						@inputs.n0.input.focus!
+					# done
+					return true
+				# done
+				return false
 			# }}}
 			# initialize
 			# {{{

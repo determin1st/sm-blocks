@@ -7,7 +7,7 @@
 }
 #sm-demo > .a {
   flex: 1 1 0;
-  max-width: 300px;
+  max-width: 320px;
   padding-right: 8px;
 }
 #sm-demo > .b {

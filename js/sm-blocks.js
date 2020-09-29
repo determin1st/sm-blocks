@@ -2,7 +2,7 @@
 "use strict";
 var smBlocks, slice$ = [].slice, arrayFrom$ = Array.from || function(x){return slice$.call(x);};
 smBlocks = async function(){
-  var BRAND, soFetch, newPromise, newDelay, querySelectorChildren, querySelectorChild, newMetaObject, BlockState, sMainSection, sCart, sGridCard, KING, mProductGrid, mCategoryFilter, mPriceFilter, mPaginator, mOrderer;
+  var BRAND, soFetch, newPromise, newDelay, querySelectorChildren, querySelectorChild, newMetaObject, BlockState, sMainSection, sGrid, sGridCard, mCart, KING, mCategoryFilter, mPriceFilter, mPaginator, mOrderer;
   BRAND = 'sm-blocks';
   soFetch = httpFetch.create({
     baseUrl: '/?rest_route=/' + BRAND + '/kiss',
@@ -223,7 +223,7 @@ smBlocks = async function(){
         }
       };
       this.keydown = function(e){
-        var ref$, a, b, c, d;
+        var ref$, a;
         if (this$.block.locked || ((ref$ = e.keyCode) !== 38 && ref$ !== 40 && ref$ !== 37 && ref$ !== 39 && ref$ !== 75 && ref$ !== 74 && ref$ !== 72 && ref$ !== 76)) {
           return;
         }
@@ -232,64 +232,21 @@ smBlocks = async function(){
         switch (e.keyCode) {
         case 38:
         case 75:
-          if ((a = this$).parent) {
-            b = a.parent.children;
-            c = b.indexOf(a);
-            while (--c >= 0) {
-              if (b[c].children) {
-                if (!(a = b[c]).opened) {
-                  a.arrow.focus();
-                  return;
-                }
-                break;
-              }
-            }
-            if (!~c) {
-              a.parent.arrow.focus();
+          if (a = this$.searchArrow(true)) {
+            if ((e = this$.block.onRefocus) && e(this$, a, true)) {
               return;
             }
+            a.arrow.focus();
           }
-          while (b = a.children) {
-            c = b.length;
-            while (--c >= 0) {
-              if (b[c].children) {
-                if (!(a = b[c]).opened) {
-                  a.arrow.focus();
-                  return;
-                }
-                break;
-              }
-            }
-            if (!~c) {
-              break;
-            }
-          }
-          a.arrow.focus();
           break;
         case 40:
         case 74:
-          if ((a = this$).opened) {
-            b = a.children;
-            c = -1;
-            while (++c < b.length) {
-              if (b[c].children) {
-                b[c].arrow.focus();
-                return;
-              }
+          if (a = this$.searchArrow(false)) {
+            if ((e = this$.block.onRefocus) && e(this$, a, false)) {
+              return;
             }
+            a.arrow.focus();
           }
-          while (b = a.parent) {
-            c = b.children;
-            d = c.indexOf(a);
-            while (++d < c.length) {
-              if (c[d].children) {
-                c[d].arrow.focus();
-                return;
-              }
-            }
-            a = a.parent;
-          }
-          a.arrow.focus();
           break;
         case 37:
         case 72:
@@ -299,6 +256,8 @@ smBlocks = async function(){
             if (e = this$.block.onChange) {
               e(this$);
             }
+          } else if (e = this$.block.onRefocus) {
+            e(this$, null, true);
           }
           break;
         case 39:
@@ -309,8 +268,9 @@ smBlocks = async function(){
             if (e = this$.block.onChange) {
               e(this$);
             }
+          } else if (e = this$.block.onRefocus) {
+            e(this$, null, false);
           }
-          true;
         }
       };
       if ((a = querySelectorChildren(sect, '.item')).length) {
@@ -363,6 +323,85 @@ smBlocks = async function(){
           }
         }
         this.node.classList.toggle(name, flag);
+      },
+      searchArrow: function(direction){
+        var a, b, c, d;
+        if (direction) {
+          if ((a = this).parent) {
+            b = a.parent.children;
+            c = b.indexOf(a);
+            while (--c >= 0) {
+              if (b[c].children) {
+                if (!(a = b[c]).opened) {
+                  return a;
+                }
+                break;
+              }
+            }
+            if (!~c) {
+              return a.parent;
+            }
+          }
+          while (b = a.children) {
+            c = b.length;
+            while (--c >= 0) {
+              if (b[c].children) {
+                if (!(a = b[c]).opened) {
+                  return a;
+                }
+                break;
+              }
+            }
+            if (!~c) {
+              break;
+            }
+          }
+        } else {
+          if ((a = this).opened) {
+            if (!(b = a.children)) {
+              return a;
+            }
+            c = -1;
+            while (++c < b.length) {
+              if (b[c].children) {
+                return b[c];
+              }
+            }
+          }
+          while (b = a.parent) {
+            c = b.children;
+            d = c.indexOf(a);
+            while (++d < c.length) {
+              if (c[d].children) {
+                return c[d];
+              }
+            }
+            a = a.parent;
+          }
+        }
+        return a;
+      },
+      getLastVisible: function(){
+        var a;
+        if (!(a = this.children) || !this.opened) {
+          return this;
+        }
+        return a[a.length - 1].getLastVisible();
+      },
+      getNextVisible: function(){
+        var a, b, c, d;
+        if (this.children && this.opened) {
+          return this.children[0];
+        }
+        a = this;
+        while (b = a.parent) {
+          c = b.children;
+          if ((d = c.indexOf(a)) < c.length - 1) {
+            return c[d + 1];
+          }
+          a = b;
+        }
+        return a;
       }
     };
     Block = function(root, state){
@@ -388,6 +427,7 @@ smBlocks = async function(){
       this['class'] = {};
       this.onChange = null;
       this.onFocus = null;
+      this.onRefocus = null;
       this.onAutofocus = function(node){
         if (this$.rootItem.config.autofocus) {
           if (this$.rootItem.arrow) {
@@ -439,7 +479,34 @@ smBlocks = async function(){
       return new Block(node, state);
     };
   }();
-  sCart = function(){
+  sGrid = function(){
+    var Block, State, state;
+    Block = function(root){
+      this.root = root;
+      this.rootBox = root.firstChild;
+      this.state = new State(this);
+    };
+    State = function(block){
+      this.block = block;
+      this.lock = null;
+      this.dirty = false;
+      this.level = 0;
+      this.total = 0;
+      this.count = 0;
+      this.pageCount = 0;
+      this.pageIndex = 0;
+      this.orderOption = null;
+      this.orderFilter = ['', 0];
+    };
+    state = new BlockState('grid', 0, function(event, data){
+      return true;
+    });
+    return state;
+  }();
+  sGridCard = function(){
+    return null;
+  }();
+  mCart = function(){
     var data;
     data = null;
     return {
@@ -490,9 +557,6 @@ smBlocks = async function(){
       }
     };
   }();
-  sGridCard = function(){
-    return null;
-  }();
   KING = function(){
     var root, grid, gridList, gridControl, gridState, gridLock, gridResizer, gridLoader, Box, Data, newImageBlock, newTitleBlock, newPriceBlock, newControlBlock, newItem;
     if (!(root = document.querySelector('.sm-blocks.grid'))) {
@@ -516,7 +580,7 @@ smBlocks = async function(){
     };
     gridLock = async function(){
       var a, b, c, d, e;
-      a = sCart.load();
+      a = mCart.load();
       b = soFetch({
         func: 'config',
         lang: '',
@@ -933,7 +997,7 @@ smBlocks = async function(){
             e.classList.add('none');
             return;
           }
-          x = sCart.get(data.id);
+          x = mCart.get(data.id);
           if (s.count === 0 || (x && s.count <= x.quantity)) {
             e.disabled = true;
           }
@@ -941,13 +1005,13 @@ smBlocks = async function(){
             var x;
             a.preventDefault();
             e.disabled = true;
-            if (!(a = (await sCart.add(data.id)))) {
+            if (!(a = (await mCart.add(data.id)))) {
               return;
             }
-            if (!(await sCart.load())) {
+            if (!(await mCart.load())) {
               return;
             }
-            x = sCart.get(data.id);
+            x = mCart.get(data.id);
             if (!x || s.count <= x.quantity) {
               return;
             }
@@ -1075,30 +1139,6 @@ smBlocks = async function(){
       }
     };
   }();
-  mProductGrid = function(){
-    var Block, State, state;
-    Block = function(root){
-      this.root = root;
-      this.rootBox = root.firstChild;
-      this.state = new State(this);
-    };
-    State = function(block){
-      this.block = block;
-      this.lock = null;
-      this.dirty = false;
-      this.level = 0;
-      this.total = 0;
-      this.count = 0;
-      this.pageCount = 0;
-      this.pageIndex = 0;
-      this.orderOption = null;
-      this.orderFilter = ['', 0];
-    };
-    state = new BlockState('grid', 0, function(event, data){
-      return true;
-    });
-    return state;
-  }();
   mCategoryFilter = function(){
     var Checkbox, Block, state, blocks, i$, len$, b, a;
     Checkbox = function(block, item, parent){
@@ -1155,6 +1195,52 @@ smBlocks = async function(){
         this$.block.refresh(this$.toggleCheckbox());
         this$.checkbox.focus();
       };
+      this.keydown = function(e){
+        var ref$, a, b;
+        if (this$.block.locked || ((ref$ = e.keyCode) !== 38 && ref$ !== 40 && ref$ !== 37 && ref$ !== 39 && ref$ !== 75 && ref$ !== 74 && ref$ !== 72 && ref$ !== 76)) {
+          return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        switch (e.keyCode) {
+        case 38:
+        case 75:
+          a = this$.parent.children;
+          if ((b = a.indexOf(this$)) === 0) {
+            a = this$.parent;
+          } else {
+            a = a[b - 1].item.getLastVisible();
+            a = this$.parent.get(a.config.id);
+          }
+          if (a.checkbox) {
+            a.checkbox.focus();
+          } else if (a.item.arrow) {
+            a.item.arrow.focus();
+          }
+          break;
+        case 40:
+        case 74:
+          a = this$.item.getNextVisible();
+          a = this$.block.checks.get(a.config.id);
+          if (a.checkbox) {
+            a.checkbox.focus();
+          } else if (a.item.arrow) {
+            a.item.arrow.focus();
+          }
+          break;
+        case 37:
+        case 72:
+          if (a = this$.item.arrow) {
+            a.focus();
+          }
+          break;
+        case 39:
+        case 76:
+          if (a = this$.item.arrow) {
+            a.focus();
+          }
+        }
+      };
       if (item.children) {
         this.children = a = [];
         for (i$ = 0, len$ = (ref$ = item.children).length; i$ < len$; ++i$) {
@@ -1180,10 +1266,12 @@ smBlocks = async function(){
           a.addEventListener('focusin', this.focus);
           a.addEventListener('focusout', this.unfocus);
           a.addEventListener('click', this.check);
+          a.addEventListener('keydown', this.keydown);
           a = this.item.title;
           a.addEventListener('pointerenter', this.hover);
           a.addEventListener('pointerleave', this.unhover);
           a.addEventListener('click', this.check);
+          a.addEventListener('keydown', this.keydown);
         }
         if (a = this.children) {
           for (i$ = 0, len$ = a.length; i$ < len$; ++i$) {
@@ -1194,6 +1282,21 @@ smBlocks = async function(){
       },
       detach: function(){
         true;
+      },
+      get: function(id){
+        var c, i$, len$, a;
+        if (id === this.item.config.id) {
+          return this;
+        }
+        if (c = this.children) {
+          for (i$ = 0, len$ = c.length; i$ < len$; ++i$) {
+            a = c[i$];
+            if (a = a.get(id)) {
+              return a;
+            }
+          }
+        }
+        return null;
       },
       setChildren: function(items, v){
         var list, i$, len$, a;
@@ -1270,6 +1373,26 @@ smBlocks = async function(){
       this.index = -1;
       this.locked = true;
       this.focused = false;
+      box.onRefocus = function(i1, i2, direction){
+        var a;
+        a = null;
+        if (i2) {
+          if (!i1.parent) {
+            if (direction) {
+              a = i1.getLastVisible();
+              a = this$.checks.get(a.config.id);
+            } else {
+              a = this$.checks.get(i1.children[0].config.id);
+            }
+          }
+        } else {
+          a = this$.checks.get(i1.config.id);
+        }
+        if (a && a.checkbox) {
+          a.checkbox.focus();
+        }
+        return !!a;
+      };
       this.onFocus = box.onFocus = function(){
         var p;
         p = null;
@@ -1518,6 +1641,9 @@ smBlocks = async function(){
         e.preventDefault();
         e.stopPropagation();
         this$.onScroll(this$, e.deltaY < 0);
+        if (this$.focused) {
+          this$.select();
+        }
       };
       this.onLabel = function(e){
         if (this$.locked || !this$.focused || !this$.onSubmit) {
@@ -1859,6 +1985,17 @@ smBlocks = async function(){
           return true;
         };
       }();
+      S.onRefocus = function(i1, i2, direction){
+        if (i2) {
+          if (direction) {
+            this$.inputs.n1.input.focus();
+          } else {
+            this$.inputs.n0.input.focus();
+          }
+          return true;
+        }
+        return false;
+      };
       (ref$ = state.ready)[ref$.length] = S.init().then(function(x){
         if (x) {
           this$.inputs.attach();

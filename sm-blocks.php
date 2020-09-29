@@ -104,7 +104,7 @@ class StorefrontModernBlocks {
             'type'        => 'boolean',
             'default'     => true,
           ],
-          ###
+          ### section
           'sectionTitle'  => [
             'type'        => 'string',
             'default'     => '{"en":"Categories","ru":"Категории"}',
@@ -117,20 +117,20 @@ class StorefrontModernBlocks {
             'type'        => 'boolean',
             'default'     => false,
           ],
-          ### TODO
-          'operator'      => [
-            'type'        => 'string',
-            'default'     => 'OR',
-          ],
+          ### specific
           'baseCategory'  => [
             'type'        => 'string',
             'default'     => '',
           ],
-          'hasCount'      => [
-            'type'        => 'boolean',
-            'default'     => true,
+          'operator'      => [
+            'type'        => 'string',
+            'default'     => 'OR',
           ],
           'hasEmpty'      => [
+            'type'        => 'boolean',
+            'default'     => false,
+          ],
+          'hasCount'      => [
             'type'        => 'boolean',
             'default'     => false,
           ],
@@ -562,8 +562,6 @@ class StorefrontModernBlocks {
         'section' => '
         <div class="section">{{items}}</div>
         ',
-        'arrow' => '
-        ',
         'arrowIcon' => '
         <svg preserveAspectRatio="none" viewBox="0 0 16 16">
           <path class="a" stroke-linejoin="round" d="M8 12l2.5-4L13 4H3l2.5 4z"/>
@@ -590,10 +588,13 @@ class StorefrontModernBlocks {
       ],
       # }}}
     ],
+    $cache     = [
+      'categoryTree' => [], # key  => tree
+      'categorySlug' => [], # slug => id
+    ],
     $cfg       = [
       'enableDemoShop' => true,
       'purgeTimeout'   => 86400,
-      'cache'          => [],
     ];
   # }}}
   # constructor {{{
@@ -796,18 +797,22 @@ class StorefrontModernBlocks {
   {
     # prepare
     $T = $this->templates['category-filter'];
-    # extract data
+    # get data
     $a = $attr['baseCategory'];
     $b = $attr['hasEmpty'];
     if (!($root = $this->getCategoryTree($a, $b))) {
       return '';
     }
+    # get title
+    $title = empty($root['name'])
+      ? $this->parseLocalName($attr['sectionTitle'])
+      : $root['name'];
     # create a section
     return $this->renderSection([
       'custom'    => 'category-filter custom',
       'mode'      => $attr['sectionMode'],
       'autofocus' => $attr['focusGreedy'],
-      'title'     => $this->parseLocalName($attr['sectionTitle']),
+      'title'     => $title,
       'extraMain' => '',
       'extra'     => $this->parseTemplate($T['extra'], $T),
       'items'     => $root,
@@ -1820,159 +1825,179 @@ EOD;
   # }}}
   private function getCategoryTree($root, $hasEmpty) # {{{
   {
-    # get root identifier {{{
+    # determine root identifier
+    # {{{
     if (!empty($root))
     {
       # check valid
       if (strlen($root) > 200) {
         return null;
       }
-      # check exact identifier specified
-      if (ctype_digit($root)) {
-        $root = intval($root);
+      # check type
+      if (ctype_digit($root))
+      {
+        # check exact identifier
+        if (($root = intval($root)) < 0) {
+          return null;
+        }
       }
       else
       {
-        # create a search query
-        $q = $this->db->real_escape_string($root);
-        $q = <<<EOD
+        # check instance cache
+        if (!array_key_exists($root, $this->cache['categorySlug']))
+        {
+          # search by slug
+          # create a query
+          $q = $this->db->real_escape_string($root);
+          $q = <<<EOD
 
-          SELECT term_id
-          FROM {$this->prefix}terms
-          WHERE slug = '{$q}'
+            SELECT term_id
+            FROM {$this->prefix}terms
+            WHERE slug = '{$q}'
 
 EOD;
-        # execute
-        if (($q = $this->db->query($q)) === false) {
-          return null;
+          # execute
+          if (($q = $this->db->query($q)) === false) {
+            return null;
+          }
+          # checkout the result
+          if (!($a = $q->fetch_row()) || count($a) !== 1) {
+            return null;
+          }
+          # cleanup
+          $q->free();
+          # set cache
+          $this->cache['categorySlug'][$root] = $a[0];
         }
-        # checkout the result
-        if (!($a = $q->fetch_row()) || count($a) !== 1) {
-          return null;
-        }
-        # cleanup
-        $q->free();
-        # done
-        $root = $a[0];
+        # get from cache
+        $root = $this->cache['categorySlug'][$root];
       }
     }
     else {
       $root = 0;
     }
+    # convert to string
     $root = ''.$root;
     # }}}
-    # get categories {{{
-    # create a query
-    $q = $hasEmpty
-      ? ''
-      : 'AND CAST(tmc.meta_value AS UNSIGNED) > 0';
-    $q = <<<EOD
+    # check instance cache
+    $k = ($hasEmpty ? '1-' : '0-').$root;
+    if (!array_key_exists($k, $this->cache['categoryTree'])) {
+      # query categories {{{
+      # create a query
+      $q = $hasEmpty
+        ? ''
+        : 'AND CAST(tmc.meta_value AS UNSIGNED) > 0';
+      $q = <<<EOD
 
-      SELECT
-        tm.term_id,
-        tm.name,
-        tx.parent,
-        CAST(tmo.meta_value AS UNSIGNED) AS t_order,
-        tmc.meta_value
-      FROM {$this->prefix}term_taxonomy AS tx
-        JOIN {$this->prefix}terms AS tm
-          ON tm.term_id = tx.term_id
-        LEFT JOIN {$this->prefix}termmeta AS tmo
-          ON tmo.term_id  = tx.term_id AND
-             tmo.meta_key = 'order'
-        LEFT JOIN {$this->prefix}termmeta AS tmc
-          ON tmc.term_id  = tx.term_id AND
-             tmc.meta_key = 'product_count_product_cat'
-      WHERE
-        tx.taxonomy = 'product_cat' {$q}
-      ORDER BY
-        t_order, tm.term_id
+        SELECT
+          tm.term_id,
+          tm.name,
+          tx.parent,
+          CAST(tmo.meta_value AS UNSIGNED) AS t_order,
+          tmc.meta_value
+        FROM {$this->prefix}term_taxonomy AS tx
+          JOIN {$this->prefix}terms AS tm
+            ON tm.term_id = tx.term_id
+          LEFT JOIN {$this->prefix}termmeta AS tmo
+            ON tmo.term_id  = tx.term_id AND
+              tmo.meta_key = 'order'
+          LEFT JOIN {$this->prefix}termmeta AS tmc
+            ON tmc.term_id  = tx.term_id AND
+              tmc.meta_key = 'product_count_product_cat'
+        WHERE
+          tx.taxonomy = 'product_cat' {$q}
+        ORDER BY
+          t_order, tm.name
 
 EOD;
-    # execute
-    if (($q = $this->db->query($q)) === false) {
-      #$a = mysqli_error($this->db);
-      return null;
-    }
-    # get the result and cleanup
-    $a = $q->fetch_all(MYSQLI_NUM);
-    $q->free();
-    # }}}
-    # build a tree {{{
-    # collect all items into map: [id => item]
-    $q = [];
-    foreach ($a as $b)
-    {
-      $q[$b[0]] = [
-        'id'     => intval($b[0]),
-        'name'   => $b[1],
-        'master' => intval($b[2]),
+      # execute
+      if (($q = $this->db->query($q)) === false) {
+        #$a = mysqli_error($this->db);
+        return null;
+      }
+      # get the result and cleanup
+      $a = $q->fetch_all(MYSQLI_NUM);
+      $q->free();
+      # }}}
+      # build a tree {{{
+      # collect all items into map: [id => item]
+      $q = [];
+      foreach ($a as $b)
+      {
+        $q[$b[0]] = [
+          'id'     => intval($b[0]),
+          'name'   => $b[1],
+          'master' => intval($b[2]),
+          'depth'  => 0,
+          'arrow'  => true,
+          'order'  => $b[3] === null ? 0 : intval($b[3]),
+          'count'  => intval($b[4]),
+          'total'  => intval($b[4]),
+          'slaves' => null,
+        ];
+      }
+      unset($a);
+      # add fantom master node
+      $q[0] = [
+        'id'     => 0,
+        'name'   => '',
+        'master' => -1,
         'depth'  => 0,
         'arrow'  => true,
-        'order'  => $b[3] === null ? 0 : intval($b[3]),
-        'count'  => intval($b[4]),
-        'total'  => intval($b[4]),
+        'order'  => 0,
+        'count'  => 0,
+        'total'  => 0,
         'slaves' => null,
       ];
-    }
-    unset($a);
-    # add fantom master node
-    $q[0] = [
-      'id'     => 0,
-      'name'   => '',
-      'master' => -1,
-      'depth'  => 0,
-      'arrow'  => true,
-      'order'  => 0,
-      'count'  => 0,
-      'total'  => 0,
-      'slaves' => null,
-    ];
-    # create slave items map: [master_id => slave]
-    $p = [];
-    foreach ($q as &$a)
-    {
-      # skip fantom master
-      if (($b = $a['master']) !== -1)
+      # create slave items map: [master_id => slave]
+      $p = [];
+      foreach ($q as &$a)
       {
-        # create a master entry
-        $b = ''.$b;
-        if (!array_key_exists($b, $p)) {
-          $p[$b] = [];
+        # skip fantom master
+        if (($b = $a['master']) !== -1)
+        {
+          # create a master entry
+          $b = ''.$b;
+          if (!array_key_exists($b, $p)) {
+            $p[$b] = [];
+          }
+          # add slave
+          $p[$b][] = &$a;
         }
-        # add slave
-        $p[$b][] = &$a;
       }
-    }
-    unset($a);
-    # create recursive helper and
-    # determine relationships
-    $f = function(&$item, $depth) use (&$f, $q, $p)
-    {
-      # set depth
-      $item['depth'] = $depth;
-      # check
-      $a = ''.$item['id'];
-      if (array_key_exists($a, $p))
+      unset($a);
+      # create recursive helper and
+      # determine relationships
+      $f = function(&$item, $depth) use (&$f, $q, $p)
       {
-        # set slaves
-        $item['slaves'] = &$p[$a];
-        # recurse to determine own count
-        foreach ($item['slaves'] as &$a) {
-          $item['count'] -= $f($a, $depth + 1);
+        # set depth
+        $item['depth'] = $depth;
+        # check
+        $a = ''.$item['id'];
+        if (array_key_exists($a, $p))
+        {
+          # set slaves
+          $item['slaves'] = &$p[$a];
+          # recurse to determine own count
+          foreach ($item['slaves'] as &$a) {
+            $item['count'] -= $f($a, $depth + 1);
+          }
+          unset($a);
         }
-        unset($a);
-      }
-      else
-      {
-        # no slaves, clear arrow
-        $item['arrow'] = false;
-      }
-      return $item['total'];
-    };
-    $f($q[$root], 0);
-    # }}}
-    return $q[$root];
+        else
+        {
+          # no slaves, clear arrow
+          $item['arrow'] = false;
+        }
+        return $item['total'];
+      };
+      $f($q[$root], 0);
+      # set cache
+      $this->cache['categoryTree'][$k] = &$q[$root];
+      # }}}
+    }
+    # done
+    return $this->cache['categoryTree'][$k];
   }
   # }}}
   public function getCurrency() # {{{

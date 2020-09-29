@@ -5,9 +5,7 @@
 defined('ABSPATH') || exit();
 get_header('shop');
 # initial state
-# {{{
-# products grid
-$og = json_encode([
+$og  = json_encode([ # products grid {{{
   ##
   "size"        => 8,
   "columns"     => 4,
@@ -25,36 +23,39 @@ $og = json_encode([
   "itemPrice"    => true,
   "itemControls" => true,
 ]);
-# paginator
-$op = json_encode([
+# }}}
+$op  = json_encode([ # paginator {{{
   "rangeMode" => 2,
   #"rangePlus"  => 2,
   #"rangeMinus" => 2,
 ]);
-# orderer
-$oo = json_encode([
+# }}}
+$oo  = json_encode([ # orderer {{{
   "switchMode" => 1,
 ]);
-# price filter
-$opf = json_encode([
-  "sectionMode" => 1|2|4|8|16,
+# }}}
+$opf = json_encode([ # price filter {{{
+  'sectionMode' => 1|2|4|8|16,
 ]);
-# category filter
-$ocf = json_encode([
-  "hasEmpty" => true,
+# }}}
+$ocf = json_encode([ # category filter {{{
+  'baseCategory' => '16',
+  #'operator'     => 'AND',
+  'hasEmpty'     => true,
+  'hasCount'     => true,
 ]);
+# }}}
 # page title
 $o = substr(get_locale(), 0, 2) === 'en'
   ? 'test version'
   : 'версия для тестирования';
-# }}}
 # generate markup
 $o = <<<EOD
 
 <div id="sm-demo">
   <div class="a">
-    <!-- wp:sm-blocks/category-filter {$ocf} /-->
     <!-- wp:sm-blocks/price-filter {$opf} /-->
+    <!-- wp:sm-blocks/category-filter {$ocf} /-->
   </div>
   <div class="b">
     <h3>{$o}</h3>

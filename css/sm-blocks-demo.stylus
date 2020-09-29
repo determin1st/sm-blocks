@@ -6,7 +6,7 @@
 	padding: 0 8px 0 8px
 	> .a
 		flex: 1 1 0
-		max-width: 300px
+		max-width: 320px
 		padding-right: 8px
 	> .b
 		flex: 1 1 0
