@@ -2,7 +2,7 @@
 "use strict";
 var smBlocks, slice$ = [].slice, arrayFrom$ = Array.from || function(x){return slice$.call(x);};
 smBlocks = async function(){
-  var BRAND, soFetch, newPromise, newDelay, querySelectorChildren, querySelectorChild, newMetaObject, BlockState, sMainSection, sCart, sGridCard, KING, mCategoryFilter, mProductsGrid, mCategoryFilter_backup, mPriceFilter, mPaginator, mOrderer;
+  var BRAND, soFetch, newPromise, newDelay, querySelectorChildren, querySelectorChild, newMetaObject, BlockState, sMainSection, sCart, sGridCard, KING, mProductGrid, mCategoryFilter, mPriceFilter, mPaginator, mOrderer;
   BRAND = 'sm-blocks';
   soFetch = httpFetch.create({
     baseUrl: '/?rest_route=/' + BRAND + '/kiss',
@@ -366,7 +366,7 @@ smBlocks = async function(){
       }
     };
     Block = function(root, state){
-      var box, sect, item, list, a, b;
+      var box, sect, item, list, a, b, this$ = this;
       this.root = root;
       this.rootBox = box = root.firstChild;
       this.rootItem = root = new Item(this, box, null);
@@ -389,9 +389,9 @@ smBlocks = async function(){
       this.onChange = null;
       this.onFocus = null;
       this.onAutofocus = function(node){
-        if (root.config.autofocus) {
-          if (root.arrow) {
-            root.arrow.focus();
+        if (this$.rootItem.config.autofocus) {
+          if (this$.rootItem.arrow) {
+            this$.rootItem.arrow.focus();
           } else if (node) {
             node.focus();
           }
@@ -427,7 +427,7 @@ smBlocks = async function(){
         }
       },
       setTitle: function(name){
-        this.rootItem.title.textContent = name;
+        this.rootItem.title.firstChild.textContent = name;
       },
       refresh: function(){},
       finit: function(){
@@ -622,8 +622,7 @@ smBlocks = async function(){
       return f;
     }();
     gridLoader = function(){
-      var cooldown, iFetch, res, req, setState, clearState, unloadItems, newMasterPromise;
-      cooldown = 800;
+      var iFetch, res, req, setState, clearState, unloadItems, newMasterPromise;
       iFetch = httpFetch.create({
         baseUrl: '/?rest_route=/' + BRAND + '/kiss',
         mounted: true,
@@ -704,7 +703,7 @@ smBlocks = async function(){
         var i$, ref$, len$, c, a, b;
         if (gridState.dirty) {
           gridState.dirty = false;
-          gridLock = newDelay(cooldown);
+          gridLock = newDelay(400);
         } else if (!gridLock) {
           gridLock = newMasterPromise();
           for (i$ = 0, len$ = (ref$ = gridControl).length; i$ < len$; ++i$) {
@@ -1076,6 +1075,30 @@ smBlocks = async function(){
       }
     };
   }();
+  mProductGrid = function(){
+    var Block, State, state;
+    Block = function(root){
+      this.root = root;
+      this.rootBox = root.firstChild;
+      this.state = new State(this);
+    };
+    State = function(block){
+      this.block = block;
+      this.lock = null;
+      this.dirty = false;
+      this.level = 0;
+      this.total = 0;
+      this.count = 0;
+      this.pageCount = 0;
+      this.pageIndex = 0;
+      this.orderOption = null;
+      this.orderFilter = ['', 0];
+    };
+    state = new BlockState('grid', 0, function(event, data){
+      return true;
+    });
+    return state;
+  }();
   mCategoryFilter = function(){
     var Checkbox, Block, state, blocks, i$, len$, b, a;
     Checkbox = function(block, item, parent){
@@ -1378,361 +1401,346 @@ smBlocks = async function(){
     }
     return state;
   }();
-  mProductsGrid = function(){
-    var Block, State, state;
-    Block = function(root){
-      this.root = root;
-      this.rootBox = root.firstChild;
-      this.state = new State(this);
-    };
-    State = function(block){
-      this.block = block;
-      this.lock = null;
-      this.dirty = false;
-      this.level = 0;
-      this.total = 0;
-      this.count = 0;
-      this.pageCount = 0;
-      this.pageIndex = 0;
-      this.orderOption = null;
-      this.orderFilter = ['', 0];
-    };
-    state = new BlockState('grid', 0, function(event, data){
-      return true;
-    });
-    return state;
-  }();
-  mCategoryFilter_backup = function(){
-    var Item, ItemState, ItemEvents, Block;
-    Item = function(block, node){
-      var name;
-      this.block = block;
-      this.node = node;
-      this.id = +node.dataset.id;
-      this.parent = null;
-      this.children = null;
-      this.name = name = node.children[0];
-      this.nameBox = name.querySelector('.box');
-      this.input = name.querySelector('.box > input');
-      this.checkbox = name.querySelector('.box > .check');
-      this.count = name.querySelector('.count');
-      this.arrow = name.querySelector('.arrow');
-      this.sect = node.children[1] ? node.children[1] : null;
-      this.state = newMetaObject(new ItemState(this));
-      this.events = new ItemEvents(this);
-    };
-    Item.prototype = {
-      toggleCheckbox: function(){
-        var setChildren, setParent;
-        setChildren = function(items, checked){
-          var list, i$, len$, a;
-          list = [];
-          for (i$ = 0, len$ = items.length; i$ < len$; ++i$) {
-            a = items[i$];
-            if (a.state.checked !== checked) {
-              a.state.checked = checked;
-              list[list.length] = a.id;
-              if (a.children) {
-                list = list.concat(setChildren(a.children, checked));
-              }
-            }
-          }
-          return list;
-        };
-        setParent = function(item, checked){
-          var a, i$, ref$, len$, b;
-          if (checked === 2) {
-            a = 2;
-          } else {
-            a = checked;
-            for (i$ = 0, len$ = (ref$ = item.children).length; i$ < len$; ++i$) {
-              b = ref$[i$];
-              if (b.state.checked !== a) {
-                a = 2;
-                break;
-              }
-            }
-          }
-          if (item.state.checked === a) {
-            b = [];
-          } else {
-            item.state.checked = a;
-            b = [item.id];
-          }
-          return item.parent ? setParent(item.parent, a).concat(b) : b;
-        };
-        return function(){
-          var s, list;
-          s = this.state;
-          s.checked = s.checked === 2
-            ? 1
-            : s.checked ? 0 : 1;
-          list = [this.id];
-          if (this.parent) {
-            list = list.concat(setParent(this.parent, s.checked));
-          }
-          if (this.children) {
-            list = list.concat(setChildren(this.children, s.checked));
-          }
-          this.block.refresh(list);
-        };
-      }()
-    };
-    ItemState = function(item){
-      this.checked = 0;
-      this.opened = item.sect ? item.sect.classList.contains('opened') : false;
-      this.count = +item.node.dataset.count;
-      this.order = +item.node.dataset.order;
-    };
-    ItemEvents = function(item){
-      this.item = item;
-      this.toggleSection = function(e){
-        var s;
-        e.preventDefault();
-        e.stopPropagation();
-        s = item.state;
-        s.opened = !s.opened;
-        item.sect.classList.toggle('opened', s.opened);
-        item.arrow.classList.toggle('opened', s.opened);
-        item.input.focus();
-      };
-      this.toggleCheckbox = function(e){
-        e.preventDefault();
-        e.stopPropagation();
-        item.toggleCheckbox();
-        item.input.focus();
-      };
-    };
-    ItemEvents.prototype = {
-      attach: function(){
-        var item;
-        if ((item = this.item).sect) {
-          item.arrow.addEventListener('click', this.toggleSection);
-        }
-        item.nameBox.addEventListener('click', this.toggleCheckbox, true);
-      },
-      detach: function(){
-        var item;
-        if ((item = this.item).sect) {
-          item.arrow.removeEventListener('click', this.toggleSection);
-        }
-        item.nameBox.removeEventListener('click', this.toggleCheckbox, true);
-      }
-    };
-    Block = function(root){
-      var rootBox, item, sect, list, i$, len$, a, b, c, ref$, d;
-      this.root = root;
-      this.rootBox = rootBox = root.firstChild;
-      this.op = rootBox.dataset.op;
-      this.index = 0;
-      this.item = item = {};
-      this.sect = sect = {};
-      this.locked = true;
-      list = arrayFrom$(root.querySelectorAll('.item'));
-      for (i$ = 0, len$ = list.length; i$ < len$; ++i$) {
-        a = list[i$];
-        b = new Item(this, a);
-        item[b.id] = b;
-        if (b.sect) {
-          sect[b.id] = b;
-        }
-      }
-      for (a in sect) {
-        b = sect[a];
-        b.children = c = [];
-        for (i$ = 0, len$ = (ref$ = b.sect.children).length; i$ < len$; ++i$) {
-          a = ref$[i$];
-          d = item[a.dataset.id];
-          d.parent = b;
-          c[c.length] = item[a.dataset.id];
-        }
-      }
-      for (a in item) {
-        a = item[a];
-        a.events.attach();
-      }
-      root.classList.add('v');
-    };
-    Block.prototype = {
-      init: function(index){
-        this.index = index;
-        state.data[index] = [this.op, []];
-      },
-      refresh: function(list){
-        var i$, len$, a, b, ref$;
-        for (i$ = 0, len$ = list.length; i$ < len$; ++i$) {
-          a = list[i$];
-          a = this.item[a];
-          if (b = a.state._checked) {
-            a.checkbox.classList.remove(b === 2 ? 'indeterminated' : 'checked');
-          }
-          if (b = a.state.checked) {
-            a.checkbox.classList.add(b === 2 ? 'indeterminated' : 'checked');
-          }
-        }
-        list = [];
-        for (a in ref$ = this.item) {
-          b = ref$[a];
-          a = b.id;
-          b = b.state;
-          if (b.checked === 1 && b.count > 0) {
-            list[list.length] = a;
-          }
-        }
-        b = state.data[this.index][1];
-        if (b.length === list.length) {
-          a = list.every(function(a){
-            return b.indexOf(a) !== -1;
-          });
-          if (a) {
-            return;
-          }
-        }
-        state.data[this.index][1] = list;
-        state.change();
-      },
-      unlock: function(){
-        this.rootBox.classList.add('v');
-        this.locked = false;
-      }
-    };
-    /***
-    # {{{
-    # create common state
-    state = new BlockState 'category', 2, (event, data) ->
-    	switch event
-    	case 'init'
-    		# initialize
-    		for a,b in blocks
-    			a.init b
-    	case 'load'
-    		# check locked
-    		for a in blocks when a.locked
-    			a.unlock!
-    	# done
-    	return true
-    # create widget's data
-    state.data = []
-    # create individual blocks
-    blocks = [...(document.querySelectorAll '.sm-blocks.category-filter')]
-    blocks = blocks.map (root) -> new Block root
-    # }}}
-    return state
-    /***/
-    return null;
-  }();
   mPriceFilter = function(){
-    var TextInputs, Block, state, blocks;
-    TextInputs = function(block){
-      var a, b, c, this$ = this;
-      this.block = block;
-      a = block.rootBox;
-      b = a.children[0];
-      c = a.children[2];
-      this.boxes = [b, c];
-      this.svg = a.children[1];
-      this.resetBtn = querySelectorChild(this.svg, '.state');
-      this.input = [b.children[0], c.children[0]];
-      this.label = [b.children[1], c.children[1]];
-      this.rootHover = function(e){
+    var InputNum, TextInputs, Block, state, blocks;
+    InputNum = function(id, box){
+      var this$ = this;
+      this.id = id;
+      this.box = box;
+      this.input = box.children[0];
+      this.label = box.children[1];
+      this.value = '';
+      this.state = ['', '', 0, 0];
+      this.changed = false;
+      this.hovered = false;
+      this.focused = false;
+      this.locked = true;
+      this.regex = /^[0-9]{0,9}$/;
+      this.onHover = null;
+      this.onFocus = null;
+      this.onSubmit = null;
+      this.onScroll = null;
+      this.onChange = null;
+      this.hover = function(e){
         e.preventDefault();
-        if (!block.locked && !this$.hovered[3]) {
-          this$.hovered[3] = true;
-          block.rootBox.classList.add('hovered');
+        e.stopPropagation();
+        if (!this$.locked) {
+          this$.hovered = true;
+          this$.box.classList.add('hovered');
+          if (e = this$.onHover) {
+            e(this$);
+          }
         }
       };
-      this.rootUnhover = function(e){
+      this.unhover = function(e){
         e.preventDefault();
-        if (this$.hovered[3]) {
-          this$.hovered[3] = false;
-          block.rootBox.classList.remove('hovered');
+        if (this$.hovered) {
+          this$.hovered = false;
+          this$.box.classList.remove('hovered');
+          if (e = this$.onHover) {
+            e(this$);
+          }
         }
       };
-      this.boxHovers = [this.boxHover(0), this.boxUnhover(0), this.boxHover(1), this.boxUnhover(1)];
-      this.inputFocus = [this.inputFocusIn(0), this.inputFocusOut(0), this.inputFocusIn(1), this.inputFocusOut(1)];
-      this.labelClicks = [this.labelClick(0), this.labelClick(1)];
-      this.inputEvents = [this.inputChange(0), this.inputChange(1), this.inputKey(0), this.inputKey(1)];
-      this.inputWheels = [this.inputWheel(0), this.inputWheel(1), this.inputWheel(-1)];
-      this.reset = function(e){
-        var c;
-        if (this$.block.locked) {
-          return;
-        }
-        if (e) {
+      this.focus = function(e){
+        if (this$.locked) {
           e.preventDefault();
           e.stopPropagation();
-        }
-        if ((c = this$.block.current)[0]) {
-          c[0] = false;
-          c[1] = c[2] = -1;
-          this$.set(c[3], c[4]);
-          this$.submit();
+        } else {
+          this$.focused = true;
+          this$.box.classList.add('focused');
+          this$.select();
+          if (e = this$.onFocus) {
+            e(this$);
+          }
         }
       };
-      this.hovered = [false, false, false];
-      this.focused = [false, false, false];
-      this.values = ['', '', 0, 0, 0, 0];
-      this.changed = 0;
-      this.locked = 1;
-      this.regex = /^[0-9]{0,9}$/;
-      this.stepSz = 10 / 100;
-      this.waiter = newDelay(0);
+      this.unfocus = function(e){
+        this$.focused = false;
+        this$.box.classList.remove('focused');
+        if (e = this$.onFocus) {
+          e(this$);
+        }
+      };
+      this.inputChange = function(e){
+        var s, v, w;
+        s = this$.state;
+        v = this$.input.value;
+        w = this$.value;
+        if (v.length) {
+          if (!this$.regex.test(v)) {
+            this$.input.value = s[1];
+            this$.input.setSelectionRange(s[2], s[3]);
+          } else {
+            if (this$.onChange && v !== this$.value) {
+              v = this$.onChange(this$, v);
+            }
+            s[1] = this$.value = v;
+            s[2] = this$.input.selectionStart;
+            s[3] = this$.input.selectionEnd;
+            return true;
+          }
+        } else {
+          this$.set(s[0]);
+          this$.input.select();
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      };
+      this.inputKey = function(e){
+        var ref$;
+        if (this$.locked) {
+          return;
+        }
+        if (e.keyCode === 13) {
+          if (!this$.onSubmit) {
+            return;
+          }
+          this$.onSubmit(this$, e.ctrlKey);
+        } else if ((ref$ = e.keyCode) === 38 || ref$ === 40) {
+          if (!this$.onScroll) {
+            return;
+          }
+          if (this$.onScroll(this$, e.keyCode === 38)) {
+            this$.input.select();
+          }
+        } else {
+          return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+      };
+      this.inputWheel = function(e){
+        if (this$.locked || !this$.onScroll) {
+          return false;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        this$.onScroll(this$, e.deltaY < 0);
+      };
+      this.onLabel = function(e){
+        if (this$.locked || !this$.focused || !this$.onSubmit) {
+          return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        if (this$.value !== this$.state[0]) {
+          this$.set(this$.state[0]);
+          this$.input.select();
+          this$.onSubmit(this$, true);
+        }
+      };
     };
-    TextInputs.prototype = {
-      init: function(cfg){
-        this.label[0].textContent = cfg.min;
-        this.label[1].textContent = cfg.max;
+    InputNum.prototype = {
+      init: function(label, v){
+        this.label.textContent = label;
+        this.set(v);
+        this.state[0] = v;
       },
       attach: function(){
-        var B, a, b;
-        B = this.block;
-        B.rootBox.addEventListener('pointerenter', this.rootHover);
-        B.rootBox.addEventListener('pointerleave', this.rootUnhover);
-        a = this.boxHovers;
-        b = this.boxes;
-        b[0].addEventListener('pointerenter', a[0]);
-        b[0].addEventListener('pointerleave', a[1]);
-        b[1].addEventListener('pointerenter', a[2]);
-        b[1].addEventListener('pointerleave', a[3]);
-        a = this.inputFocus;
-        b = this.input;
-        b[0].addEventListener('focusin', a[0]);
-        b[0].addEventListener('focusout', a[1]);
-        b[1].addEventListener('focusin', a[2]);
-        b[1].addEventListener('focusout', a[3]);
-        a = this.label;
-        b = this.labelClicks;
-        a[0].addEventListener('pointerdown', b[0], true);
-        a[1].addEventListener('pointerdown', b[1], true);
-        a = this.inputEvents;
-        b = this.input;
-        b[0].addEventListener('input', a[0], true);
-        b[1].addEventListener('input', a[1], true);
-        b[0].addEventListener('keydown', a[2], true);
-        b[1].addEventListener('keydown', a[3], true);
-        a = this.inputWheels;
-        b = this.boxes;
-        b[0].addEventListener('wheel', a[0]);
-        b[1].addEventListener('wheel', a[1]);
-        this.svg.addEventListener('wheel', a[2]);
-        if (a = this.resetBtn) {
-          a.addEventListener('click', this.reset);
+        this.box.addEventListener('pointerenter', this.hover);
+        this.box.addEventListener('pointerleave', this.unhover);
+        this.box.addEventListener('wheel', this.inputWheel);
+        this.input.addEventListener('focusin', this.focus);
+        this.input.addEventListener('focusout', this.unfocus);
+        this.input.addEventListener('input', this.inputChange, true);
+        this.input.addEventListener('keydown', this.inputKey, true);
+        this.label.addEventListener('pointerdown', this.labelClick, true);
+      },
+      detach: function(){},
+      set: function(v){
+        var s;
+        s = this.state;
+        s[1] = this.input.value = this.value = '' + v;
+        s[2] = 0;
+        s[3] = s[1].length;
+      },
+      lock: function(flag){
+        if (flag === this.locked) {
+          return;
+        }
+        this.locked = flag;
+        this.input.readOnly = flag;
+        this.input.value = flag
+          ? ''
+          : this.value;
+        this.box.classList.toggle('locked', flag);
+      },
+      select: function(){
+        var s;
+        s = this.state;
+        s[2] = 0;
+        s[3] = this.value.length;
+        this.input.select();
+      }
+    };
+    TextInputs = function(block, box){
+      var n0, n1, this$ = this;
+      this.block = block;
+      this.box = box;
+      this.n0 = n0 = new InputNum(0, box.children[0]);
+      this.svg = box.children[1];
+      this.rst = querySelectorChild(this.svg, '.X');
+      this.n1 = n1 = new InputNum(1, box.children[2]);
+      this.changed = 0;
+      this.hovered = false;
+      this.focused = false;
+      this.locked = true;
+      this.onFocus = null;
+      n0.onHover = n1.onHover = function(o){
+        this$.box.classList.toggle('h' + o.id, o.hovered);
+        if (!this$.block.focused) {
+          this$.block.onAutofocus(o.input);
+        }
+      };
+      n0.onFocus = n1.onFocus = function(){
+        var p;
+        p = newDelay(0);
+        return async function(o){
+          var v;
+          p.cancel();
+          v = o.focused;
+          this$.box.classList.toggle('f' + o.id, v);
+          if (this$.focused = v) {
+            o.select();
+          } else {
+            this$.check(o.id);
+            if (this$.changed) {
+              this$.changed = 0;
+              this$.block.submit();
+            }
+          }
+          if (this$.onFocus && (await (p = newDelay(60)))) {
+            this$.onFocus(this$);
+          }
+          return true;
+        };
+      }();
+      n0.onSubmit = n1.onSubmit = function(o, strict){
+        if (!this$.check(o.id) && strict) {
+          o.select();
+          return;
+        }
+        if (this$.changed) {
+          this$.changed = 0;
+          this$.block.submit();
+        }
+        if (!strict) {
+          o = o === this$.n1
+            ? this$.n0
+            : this$.n1;
+          o.input.focus();
+        }
+      };
+      n0.onScroll = n1.onScroll = function(o, direction){
+        var c, d, a, b, e;
+        c = this$.block.current;
+        d = c[4] - c[3];
+        if (d > 200) {
+          a = d / 100 | 0;
+          b = '' + a;
+          if ((e = b.length) > 1) {
+            e = e > 2 ? e - 2 : 1;
+            b = b.slice(0, -e) + '0'.repeat(e);
+            a = +b;
+          } else {
+            e = 0;
+          }
+        } else {
+          e = 0;
+          a = 1;
+        }
+        b = +o.value;
+        if (direction) {
+          b += a;
+        } else {
+          b -= a;
+        }
+        a = e ? +(('' + b).slice(0, -e) + '0'.repeat(e)) : b;
+        if (o.id) {
+          b = a;
+          a = +this$.n0.value;
+          if (b >= c[4]) {
+            b = c[4];
+          } else if (b <= a) {
+            b = a + 1;
+          }
+        } else {
+          b = +this$.n1.value;
+          if (a <= c[3]) {
+            a = c[3];
+          } else if (a >= b) {
+            a = b - 1;
+          }
+        }
+        this$.set(a, b);
+        this$.check(o.id);
+        if (this$.changed) {
+          this$.changed = 0;
+          this$.block.submit();
+        }
+        return true;
+      };
+      this.hover = function(e){
+        e.preventDefault();
+        if (!this$.locked && !this$.hovered) {
+          this$.hovered = true;
+          this$.box.classList.add('hovered');
+          if (!this$.block.focused) {
+            this$.block.onAutofocus();
+          }
+        }
+      };
+      this.unhover = function(e){
+        e.preventDefault();
+        if (this$.hovered) {
+          this$.hovered = false;
+          this$.box.classList.remove('hovered');
+        }
+      };
+      this.reset = function(e){
+        var c;
+        if (!this$.locked) {
+          if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+          if ((c = this$.block.current)[0]) {
+            c[0] = false;
+            c[1] = c[2] = -1;
+            this$.set(c[3], c[4]);
+            this$.changed = 0;
+            this$.block.submit();
+          }
+        }
+      };
+    };
+    TextInputs.prototype = {
+      init: function(locale){
+        var c;
+        c = this.block.current;
+        this.n0.init(locale.min, c[3]);
+        this.n1.init(locale.max, c[4]);
+      },
+      attach: function(){
+        this.box.addEventListener('pointerenter', this.hover);
+        this.box.addEventListener('pointerleave', this.unhover);
+        this.n0.attach();
+        this.n1.attach();
+        if (this.rst) {
+          this.rst.addEventListener('click', this.reset);
         }
       },
       detach: function(){},
       set: function(min, max){
-        var v;
-        v = this.values;
-        v[0] = this.input[0].value = '' + min;
-        v[1] = this.input[1].value = '' + max;
-        v[2] = v[3] = 0;
-        v[4] = v[0].length;
-        v[5] = v[1].length;
+        this.n0.set(min);
+        this.n1.set(max);
       },
-      check: function(n){
+      check: function(id){
         var a, b, c, d;
-        a = +this.input[0].value;
-        b = +this.input[1].value;
+        a = +this.n0.value;
+        b = +this.n1.value;
         c = this.block.current;
         d = true;
         if (a > b) {
@@ -1741,7 +1749,7 @@ smBlocks = async function(){
           b = d;
           d = false;
         } else if (a === b) {
-          if (n) {
+          if (id) {
             if ((a = c[3]) === b) {
               ++b;
             }
@@ -1789,311 +1797,81 @@ smBlocks = async function(){
         }
         return d;
       },
-      submit: function(){
-        this.changed = 0;
-        this.block.submit();
-      },
-      lock: function(level){
-        var I, B, F;
-        I = this.input;
-        B = this.boxes;
-        F = this.focused;
-        switch (level) {
-        case 1:
-          if (!this.locked) {
-            I[0].readOnly = true;
-            I[1].readOnly = true;
-            B[0].classList.add('locked');
-            B[1].classList.add('locked');
-            if (F[2]) {
-              if (F[1]) {
-                I[1].setSelectionRange(0, 0);
-              } else {
-                I[0].setSelectionRange(0, 0);
-              }
-            }
-          }
-          break;
-        default:
-          if (this.locked) {
-            I[0].readOnly = false;
-            I[1].readOnly = false;
-            B[0].classList.remove('locked');
-            B[1].classList.remove('locked');
-            if (F[2]) {
-              if (F[1]) {
-                I[1].select();
-              } else {
-                I[0].select();
-              }
-            }
-          }
+      lock: function(flag){
+        if (this.locked === flag) {
+          return;
         }
-        this.locked = level;
+        this.locked = flag;
+        this.n0.lock(flag);
+        this.n1.lock(flag);
       },
-      setFocus: function(){
-        this.input[0].focus();
-      },
-      inputScroll: function(n, direction){
-        var c, d, a, b, e;
-        c = this.block.current;
-        d = c[4] - c[3];
-        if (d > 200) {
-          a = d / 100 | 0;
-          b = '' + a;
-          if ((e = b.length) > 1) {
-            e = e > 2 ? e - 2 : 1;
-            b = b.slice(0, -e) + '0'.repeat(e);
-            a = +b;
-          } else {
-            e = 0;
-          }
-        } else {
-          e = 0;
-          a = 1;
-        }
-        b = +this.values[n];
-        if (direction) {
-          b += a;
-        } else {
-          b -= a;
-        }
-        a = e ? +(('' + b).slice(0, -e) + '0'.repeat(e)) : b;
-        if (n) {
-          b = a;
-          a = +this.values[0];
-          if (b >= c[4]) {
-            b = c[4];
-          } else if (b <= a) {
-            b = a + 1;
-          }
-        } else {
-          b = +this.values[1];
-          if (a <= c[3]) {
-            a = c[3];
-          } else if (a >= b) {
-            a = b - 1;
-          }
-        }
-        this.set(a, b);
-      },
-      boxHover: function(n){
-        var this$ = this;
-        return function(e){
-          var B, H;
-          e.preventDefault();
-          e.stopPropagation();
-          if (!(B = this$.block).locked) {
-            H = this$.hovered;
-            H[n] = true;
-            if (!H[2]) {
-              H[2] = true;
-              B.rootBox.classList.add('hovered');
-            }
-            B.rootBox.classList.add(n ? 'R' : 'L');
-            this$.boxes[n].classList.add('hovered');
-          }
-        };
-      },
-      boxUnhover: function(n){
-        var this$ = this;
-        return function(e){
-          var H, B;
-          e.preventDefault();
-          if ((H = this$.hovered)[n]) {
-            B = this$.block;
-            H[n] = false;
-            if (!this$.focused[n]) {
-              B.rootBox.classList.remove(n ? 'R' : 'L');
-            }
-            this$.boxes[n].classList.remove('hovered');
-          }
-        };
-      },
-      inputFocusIn: function(n){
-        var this$ = this;
-        return function(e){
-          var B, H, F;
-          if ((B = this$.block).locked) {
-            e.preventDefault();
-            e.stopPropagation();
-          } else {
-            H = this$.hovered;
-            F = this$.focused;
-            F[n] = true;
-            if (!F[2]) {
-              F[2] = true;
-              B.rootBox.classList.add('focused');
-            }
-            if (!H[n]) {
-              B.rootBox.classList.add(n ? 'R' : 'L');
-            }
-            this$.input[n].select();
-            this$.boxes[n].classList.add('focused');
-          }
-        };
-      },
-      inputFocusOut: function(n){
-        var this$ = this;
-        return function(e){
-          var B, F;
-          B = this$.block;
-          F = this$.focused;
-          F[n] = false;
-          F[2] = false;
-          B.rootBox.classList.remove('focused');
-          if (!this$.hovered[n]) {
-            B.rootBox.classList.remove(n ? 'R' : 'L');
-          }
-          this$.boxes[n].classList.remove('focused');
-          this$.check(n);
-          if (this$.changed) {
-            this$.submit();
-          }
-        };
-      },
-      labelClick: function(n){
-        var this$ = this;
-        return function(e){
-          var a;
-          if (this$.block.locked || !this$.focused[n]) {
-            return;
-          }
-          e.preventDefault();
-          e.stopPropagation();
-          a = '' + this$.block.current[3 + n];
-          e = this$.values;
-          if (e[n] !== a) {
-            e[n] = this$.input[n].value = a;
-            e[2 + n] = 0;
-            e[4 + n] = a.length;
-            this$.check(n);
-            if (this$.changed) {
-              this$.submit();
-            }
-          }
-          this$.input[n].select();
-        };
-      },
-      inputChange: function(n){
-        var this$ = this;
-        return function(e){
-          var v, a, b, c;
-          v = this$.values;
-          a = this$.input[n];
-          b = a.value;
-          if (b.length) {
-            if (!this$.regex.test(b)) {
-              a.value = v[n];
-              a.setSelectionRange(v[2 + n], v[4 + n]);
-            } else {
-              v[n] = b;
-              v[2 + n] = a.selectionStart;
-              v[4 + n] = a.selectionEnd;
-              return true;
-            }
-          } else {
-            c = this$.block.current;
-            if ((b = c[3 + n]) >= 0 || (b = c[1 + n]) >= 0) {
-              v[n] = a.value = "" + b;
-              v[2 + n] = 0;
-              v[4 + n] = v[n].length;
-              a.select();
-            }
-          }
-          e.preventDefault();
-          e.stopPropagation();
-          return false;
-        };
-      },
-      inputKey: function(n){
-        var this$ = this;
-        return function(e){
-          var ref$;
-          if (this$.block.locked) {
-            return;
-          }
-          if (e.keyCode === 13) {
-            e.preventDefault();
-            e.stopPropagation();
-            if (e.ctrlKey) {
-              this$.check(n);
-              if (this$.changed) {
-                this$.submit();
-              }
-            } else {
-              if (this$.check(n) && this$.changed) {
-                this$.submit();
-              }
-              this$.input[n ^ 1].focus();
-            }
-          } else if ((ref$ = e.keyCode) === 38 || ref$ === 40) {
-            e.preventDefault();
-            e.stopPropagation();
-            this$.inputScroll(n, e.keyCode === 38);
-            this$.input[n].select();
-          }
-        };
-      },
-      inputWheel: function(n){
-        var this$ = this;
-        return async function(e){
-          if (this$.block.locked) {
-            return;
-          }
-          e.preventDefault();
-          e.stopPropagation();
-          this$.waiter.cancel();
-          if (n < 0) {
-            e = e.deltaY < 0;
-            this$.inputScroll(0, !e);
-            this$.inputScroll(1, e);
-          } else {
-            this$.inputScroll(n, e.deltaY < 0);
-            if (this$.focused[n]) {
-              this$.input[n].select();
-            }
-          }
-          if ((await (this$.waiter = newDelay(400)))) {
-            this$.check(n);
-            if (this$.changed) {
-              this$.submit();
-            }
-          }
-          return true;
-        };
+      focus: function(){
+        this.n0.input.focus();
       }
     };
     Block = function(root, state){
-      var box, mode, ref$, this$ = this;
+      var box, mode, I, S, ref$, this$ = this;
       this.root = root;
       this.rootBox = box = root.firstChild;
       this.config = JSON.parse(root.dataset.cfg);
       mode = box.classList.contains('text') ? 0 : 1;
-      this.inputs = mode === 0 ? new TextInputs(this) : null;
-      box = root.parentNode.parentNode.parentNode;
-      this.section = box = sMainSection(box);
+      this.inputs = I = new TextInputs(this, box);
+      this.section = S = sMainSection(root.parentNode.parentNode.parentNode);
       this.mode = mode;
       this.state = state;
       this.locked = 2;
+      this.focused = false;
       this.current = [false, -1, -1, -1, -1];
-      (ref$ = state.ready)[ref$.length] = box.init().then(function(x){
+      this.pending = false;
+      this.onAutofocus = S.onAutofocus;
+      S.onChange = function(o){
+        var c;
+        if (!this$.config.sectionSwitch || o.parent) {
+          return;
+        }
+        c = this$.current;
+        if (o.opened) {
+          if (!c[0] && (~c[1] || ~c[2])) {
+            c[0] = true;
+            this$.submit();
+          }
+        } else {
+          if (c[0]) {
+            c[0] = false;
+            this$.submit();
+          }
+        }
+      };
+      I.onFocus = S.onFocus = function(){
+        var p;
+        p = null;
+        return async function(o){
+          if (p && p.pending) {
+            p.resolve(false);
+          }
+          if (o.focused) {
+            this$.focused = true;
+            this$.section.root.classList.add('f');
+          } else if ((await (p = newDelay(60)))) {
+            this$.focused = false;
+            this$.section.root.classList.remove('f');
+          }
+          return true;
+        };
+      }();
+      (ref$ = state.ready)[ref$.length] = S.init().then(function(x){
         if (x) {
           this$.inputs.attach();
           this$.root.classList.add('v');
-          if (this$.config.sectionSwitch) {
-            box.onChange = this$.sectionChange();
-          }
         }
         return x;
       });
     };
     Block.prototype = {
-      init: function(cfg){
-        var d;
-        this.inputs.init(cfg);
-        d = this.state.data;
-        this.inputs.set(d[3], d[4]);
+      init: function(locale){
+        var ref$, ref1$;
+        ref1$ = this.state.data, (ref$ = this.current)[0] = ref1$[0], ref$[1] = ref1$[1], ref$[2] = ref1$[2], ref$[3] = ref1$[3], ref$[4] = ref1$[4];
+        this.inputs.init(locale);
       },
       refresh: function(){
         var a, b;
@@ -2109,22 +1887,32 @@ smBlocks = async function(){
         b[0] = a[0], b[1] = a[1], b[2] = a[2], b[3] = a[3], b[4] = a[4];
       },
       submit: function(){
-        var a, b;
-        a = this.current;
-        b = this.state.data;
-        if (a[0] !== b[0]) {
-          this.rootBox.classList.toggle('active', a[0]);
-          this.section.setClass('active', a[0]);
-        }
-        b[0] = a[0], b[1] = a[1], b[2] = a[2];
-        this.state.change();
-      },
+        var p;
+        p = newDelay(0);
+        return async function(){
+          var a, b;
+          p.cancel();
+          a = this.current;
+          b = this.state.data;
+          if (a[0] !== b[0]) {
+            this.rootBox.classList.toggle('active', a[0]);
+            this.section.setClass('active', a[0]);
+          }
+          b[0] = a[0], b[1] = a[1], b[2] = a[2];
+          this.pending = true;
+          if ((await (p = newDelay(400)))) {
+            this.pending = false;
+            this.state.change();
+          }
+          return true;
+        };
+      }(),
       lock: function(level){
         switch (level) {
         case 2:
           switch (this.locked) {
           case 1:
-            this.inputs.lock(1);
+            this.inputs.lock(true);
             // fallthrough
           case 0:
             this.rootBox.classList.remove('v');
@@ -2133,7 +1921,7 @@ smBlocks = async function(){
           break;
         case 1:
           if (!this.locked) {
-            this.inputs.lock(1);
+            this.inputs.lock(true);
           }
           break;
         default:
@@ -2143,31 +1931,10 @@ smBlocks = async function(){
             this.rootBox.classList.add('v');
             // fallthrough
           case 1:
-            this.inputs.lock(0);
+            this.inputs.lock(false);
           }
         }
         this.locked = level;
-      },
-      sectionChange: function(){
-        var this$ = this;
-        return function(item){
-          var c;
-          if (!item.parent) {
-            c = this$.current;
-            if (item.opened) {
-              if (!c[0] && (c[1] >= 0 || c[2] >= 0)) {
-                c[0] = true;
-                this$.submit();
-              }
-              this$.inputs.setFocus();
-            } else {
-              if (c[0]) {
-                c[0] = false;
-                this$.submit();
-              }
-            }
-          }
-        };
       }
     };
     state = new BlockState('price', 2, function(event, data){
@@ -2181,10 +1948,10 @@ smBlocks = async function(){
         }
         break;
       case 'change':
-        if (!this.pending) {
-          for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
-            a = ref$[i$];
-            a.lock(1);
+        for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
+          b = ref$[i$];
+          if (b.pending) {
+            return false;
           }
         }
         break;

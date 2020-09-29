@@ -29,6 +29,7 @@
   margin: 0;
   padding: 0;
   outline: 0;
+  border: 0;
   background-color: transparent;
 }
 .sm-blocks button,
@@ -90,7 +91,7 @@
   display: none;
 }
 .sm-blocks.v.f > div.v {
-  box-shadow: inset 0px 0px 8px 1px rgba(238,130,238,0.2);
+  box-shadow: inset 0px 0px 8px 1px rgba(106,90,205,0.25);
   border-radius: 2px;
 }
 .sm-blocks.grid {
@@ -699,6 +700,9 @@
   cursor: pointer;
   user-select: none;
 }
+.sm-blocks.main-section .item > .title > h3 > label {
+  cursor: pointer;
+}
 .sm-blocks.main-section .item > .title > button {
   background-color: transparent;
   display: none;
@@ -799,7 +803,7 @@
 .sm-blocks.main-section > div.item {
   display: flex;
   flex-direction: column;
-  padding: 0 2px 0 8px;
+  padding: 0 6px 0 6px;
 }
 .sm-blocks.main-section > div.item > .title {
   height: 3em;
@@ -897,18 +901,18 @@
   fill: #c0c0c0;
   touch-action: none;
 }
-.sm-blocks.price-filter > div.text > svg > .left {
+.sm-blocks.price-filter > div.text > svg > .L {
   fill: #a9a9a9;
 }
-.sm-blocks.price-filter > div.text > svg > .state {
+.sm-blocks.price-filter > div.text > svg > .X {
   fill: transparent;
 }
-.sm-blocks.price-filter > div.text > svg > .right {
+.sm-blocks.price-filter > div.text > svg > .R {
   fill: #a9a9a9;
 }
-.sm-blocks.price-filter > div.text.v > svg > .state {
+.sm-blocks.price-filter > div.text.v > svg > .X {
   cursor: pointer;
-  fill: #708090;
+  fill: #d3d3d3;
 }
 .sm-blocks.price-filter > div.text.v > div > input {
   color: #2f4f4f;
@@ -946,32 +950,33 @@
   background-color: #2f4f4f;
   color: #dcdcdc;
 }
-.sm-blocks.price-filter > div.text.v.hovered > svg > .state {
+.sm-blocks.price-filter > div.text.v.hovered > svg > .X {
   fill: #708090;
 }
-.sm-blocks.price-filter > div.text.v.hovered:not(.L):not(.R) > svg > .state {
-  fill: #483d8b;
-}
-.sm-blocks.price-filter > div.text.v.hovered.L > svg > .left {
+.sm-blocks.price-filter > div.text.v.h0 > svg > .L {
   fill: #708090;
   transform: translateX(1px);
 }
-.sm-blocks.price-filter > div.text.v.hovered.R > svg > .right {
+.sm-blocks.price-filter > div.text.v.h1 > svg > .R {
   fill: #708090;
   transform: translateX(-1px);
 }
-.sm-blocks.price-filter > div.text.v.focused.L > svg > .left {
+.sm-blocks.price-filter > div.text.v.f0 > svg > .X,
+.sm-blocks.price-filter > div.text.v.f1 > svg > .X {
   fill: #708090;
+}
+.sm-blocks.price-filter > div.text.v.f0 > svg > .L {
+  fill: #6a5acd;
   transform: translateX(1px);
 }
-.sm-blocks.price-filter > div.text.v.focused.R > svg > .right {
-  fill: #708090;
+.sm-blocks.price-filter > div.text.v.f1 > svg > .R {
+  fill: #6a5acd;
   transform: translateX(-1px);
 }
 .sm-blocks.price-filter > div.text.v.active > svg {
   filter: brightness(110%);
 }
-.sm-blocks.price-filter > div.text.v.active > svg > .state {
+.sm-blocks.price-filter > div.text.v.active > svg > .X {
   fill: #6a5acd;
 }
 .sm-blocks.main-section.category-filter .item > .title > button.checkbox {

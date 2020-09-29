@@ -27,6 +27,7 @@ WebSafeFontMono = Consolas, Courier, monospace
 		margin:  0
 		padding: 0
 		outline: 0
+		border:  0
 		background-color: transparent
 	button,input,optgroup,select,textarea,label,h3
 		font-family: inherit
@@ -81,7 +82,7 @@ WebSafeFontMono = Consolas, Courier, monospace
 		// focused state
 		&.f
 			> div.v
-				box-shadow: inset 0px 0px 8px 1px alpha(violet, 0.2)
+				box-shadow: inset 0px 0px 8px 1px alpha(slateblue, 0.25)
 				border-radius: 2px
 // }}}
 // ===
@@ -770,6 +771,8 @@ WebSafeFontMono = Consolas, Courier, monospace
 				border-radius: 4px
 				cursor: pointer
 				user-select: none
+				> label
+					cursor: pointer
 			> button
 				background-color: transparent
 				display: none
@@ -871,7 +874,7 @@ WebSafeFontMono = Consolas, Courier, monospace
 	> div.item
 		display: flex
 		flex-direction: column
-		padding: 0 2px 0 8px
+		padding: 0 6px 0 6px
 		> .title // {{{
 			height: 3em
 			padding: 4px 0 4px 0
@@ -964,19 +967,19 @@ WebSafeFontMono = Consolas, Courier, monospace
 				max-width: 48px
 				fill: silver
 				touch-action: none
-				> .left
+				> .L
 					fill: darkgray
-				> .state
+				> .X
 					fill: transparent
-				> .right
+				> .R
 					fill: darkgray
 			// }}}
 			&.v // {{{
 				> svg
 					//cursor: ew-resize
-					> .state
+					> .X
 						cursor: pointer
-						fill: slategray
+						fill: lightgray
 				> div
 					> input
 						color: darkslategray
@@ -1011,33 +1014,27 @@ WebSafeFontMono = Consolas, Courier, monospace
 								color: gainsboro
 				////
 				&.hovered
-					> svg > .state
+					> svg > .X
 						fill: slategray
-					&:not(.L):not(.R) > svg > .state
-						fill: darkslateblue
-					&.L > svg
-						> .left
-							fill: slategray
-							transform: translateX(1px)
-					&.R > svg
-						> .right
-							fill: slategray
-							transform: translateX(-1px)
-				&.focused
-					&.L
-						> svg > .left
-							fill: slategray
-							transform: translateX(1px)
-					&.R
-						> svg > .right
-							fill: slategray
-							transform: translateX(-1px)
-					//> svg > .inputState
-					//	fill: darkslateblue
+				&.h0 > svg > .L
+					fill: slategray
+					transform: translateX(1px)
+				&.h1 > svg > .R
+					fill: slategray
+					transform: translateX(-1px)
+				&.f0,&.f1
+					> svg > .X
+						fill: slategray
+				&.f0 > svg > .L
+					fill: slateblue
+					transform: translateX(1px)
+				&.f1 > svg > .R
+					fill: slateblue
+					transform: translateX(-1px)
 				&.active
 					> svg
 						filter: brightness(110%)
-						> .state
+						> .X
 							fill: slateblue
 			// }}}
 	// end

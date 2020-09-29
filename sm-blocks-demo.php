@@ -53,8 +53,8 @@ $o = <<<EOD
 
 <div id="sm-demo">
   <div class="a">
-    <!-- wp:sm-blocks/price-filter {$opf} /-->
     <!-- wp:sm-blocks/category-filter {$ocf} /-->
+    <!-- wp:sm-blocks/price-filter {$opf} /-->
   </div>
   <div class="b">
     <h3>{$o}</h3>
