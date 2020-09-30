@@ -39,7 +39,8 @@ $opf = json_encode([ # price filter {{{
 ]);
 # }}}
 $ocf = json_encode([ # category filter {{{
-  'baseCategory' => '16',
+  #'baseCategory' => '16',
+  #'baseCategory' => '37',
   #'operator'     => 'AND',
   'hasEmpty'     => true,
   'hasCount'     => true,
@@ -56,6 +57,7 @@ $o = <<<EOD
   <div class="a">
     <!-- wp:sm-blocks/price-filter {$opf} /-->
     <!-- wp:sm-blocks/category-filter {$ocf} /-->
+    <!-- wp:sm-blocks/category-filter {"baseCategory":"37"} /-->
   </div>
   <div class="b">
     <h3>{$o}</h3>
