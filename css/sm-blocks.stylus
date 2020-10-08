@@ -86,7 +86,247 @@ WebSafeFontMono = Consolas, Courier, monospace
 				border-radius: 2px
 // }}}
 // ===
-.sm-blocks.grid // {{{
+.sm-blocks.main-section // {{{
+	// root
+	width:  100%
+	height: auto
+	padding: 0 0 4px 0
+	// content
+	.item // {{{
+		//=== DISABLED
+		//=== CLOSED {{{
+		> .title
+			position: relative
+			display: flex
+			flex-direction: row
+			height: 2em
+			padding: 0.1em 0 0.1em 0
+			> h3
+				flex: 1 1 0
+				order: 1
+				font-family: WebSafeFontSans
+				font-size: 1em
+				font-weight: bold
+				//font-weight: bold
+				display: flex
+				align-items: center
+				color: slategray
+				background-color: transparent
+				border-radius: 4px
+				cursor: pointer
+				user-select: none
+				> label
+					cursor: pointer
+			> button
+				background-color: transparent
+				display: none
+				&.v
+					display: block
+				&.arrow
+					flex: 0 0 0
+					order: 2
+					min-width: 2.8em
+					padding: 0.1em 0.1em 0.1em 1.1em
+					height: 100%
+					background-color: transparent
+					border-radius: 4px
+					> svg
+						fill: silver
+						stroke: slategray
+						> .a
+							transform-origin: 50% 50%
+							transform: rotate(90deg)
+		> .section
+			width: 100%
+			min-height: 0
+			overflow: hidden
+			////
+			display: none
+			height:  0
+			opacity: 0
+		// }}}
+		//=== OPENED {{{
+		&.opened
+			> .title > button.arrow
+				> svg
+					fill: slategray
+					stroke: silver
+					> .a
+						transform: rotate(0deg)
+			> .section
+				display: block
+				height:  auto
+				opacity: 1
+		// }}}
+		//=== ENABLED
+		&.v
+			//=== CLOSED {{{
+			&.hovered
+				> .title
+					> h3.h
+						color: darkslategray
+					> h3
+						background-color: alpha(lightslategray, 0.04)
+					> button.arrow.h
+						background-color: alpha(lightslategray, 0.04)
+						> svg
+							fill: darkslategray
+							stroke: gainsboro
+			&.focused
+				> .title
+					> h3.f
+						color: darkslateblue
+					> h3
+						background-color: alpha(mediumslateblue, 0.04)
+					> button.arrow.f
+						background-color: alpha(mediumslateblue, 0.04)
+						> svg
+							fill: slateblue
+							stroke: silver
+			// }}}
+			//=== OPENED {{{
+			&.opened
+				> .title
+					> h3
+						color: darkslategray
+					> button.arrow > svg
+						fill: darkslategray
+				&.hovered
+					> .title
+						> h3.h
+							color: alpha(darkslategray, 0.8)
+						> button.arrow.h > svg
+							fill: silver
+							stroke: slategray
+				&.focused
+					> .title
+						> h3.f
+							color: alpha(darkslateblue, 0.8)
+						> button.arrow.f > svg
+							fill: slateblue
+							stroke: mediumslateblue
+			// }}}
+			&.active
+				> .title
+					> h3
+						color: slateblue
+						filter: brightness(80%)
+				> svg
+					fill: alpha(slateblue, 0.4)
+	// }}}
+	// rootBox (first .item)
+	> div.item
+		display: flex
+		flex-direction: column
+		padding: 0 6px 0 6px
+		> .title // {{{
+			height: 3em
+			padding: 4px 0 4px 0
+			> h3
+				font-size: 2em
+				font-weight: bold
+			> button.arrow
+				height: 100%
+				min-width: calc(3em - 8px)
+				padding: 4px
+		// }}}
+		> .section // {{{
+			padding: 0
+		// }}}
+		> svg // {{{
+			height: 3px
+			fill: gainsboro
+		// }}}
+// }}}
+.sm-blocks.main-section.category-filter // {{{
+	////
+	.item
+		> .title
+			> button.checkbox
+				flex: 0 0 0
+				order: 0
+				min-width: 2.2em
+				height: 100%
+				padding: 0 0.4em 0 0
+				> svg
+					background-color: alpha(gainsboro, 0.2)
+					border: 1px solid slategray
+					border-radius: 2px
+					fill: transparent
+					stroke: transparent
+		> .section
+			padding: 0 0 0 0.6em
+		//===
+		&.v
+			//=== CLOSED {{{
+			&.checked
+				> .title > h3
+					color: darkslategray
+				&.c1 > .title > button.checkbox > svg
+					background-color: black
+					> .c1
+						fill: white
+				&.c2 > .title > button.checkbox > svg
+					background-color: black
+					> .c2
+						fill: white
+			&.hovered-2
+				> .title
+					> button.checkbox
+						background-color: alpha(lightslategray, 0.04)
+						> svg
+							background-color: alpha(gainsboro, 0.4)
+							border-color: slateblue
+					> h3
+						color: darkslategray
+						background-color: alpha(lightslategray, 0.04)
+					> button.arrow
+						background-color: transparent
+						> svg
+							fill: silver
+							stroke: slategray
+			&.focused-2
+				> .title
+					> h3
+						color: darkslateblue
+						background-color: alpha(mediumslateblue, 0.04)
+					> button.checkbox
+						background-color: alpha(mediumslateblue, 0.04)
+						> svg
+							box-shadow: inset 0 0 0 1px mediumslateblue
+							border-color: darkslateblue
+				&.checked
+					&.c1 > .title > button.checkbox > svg
+						background-color: darkslateblue
+					&.c2 > .title > button.checkbox > svg
+						background-color: darkslateblue
+			// }}}
+			//=== OPENED {{{
+			&.opened
+				> .title
+					> h3
+						color: darkslategray
+					> button.arrow > svg
+						fill: darkslategray
+				&.hovered-2
+					> .title
+						> h3
+							color: alpha(darkslategray, 0.8)
+						> button.arrow > svg
+							fill: silver
+							stroke: slategray
+				&.focused-2
+					> .title
+						> h3
+							color: alpha(darkslateblue, 0.8)
+			// }}}
+		////
+	> .item
+		> .section
+			padding: 4px 0 4px 0
+// }}}
+// ===
+.sm-blocks.products // {{{
 	display: flex
 	flex-direction: column // just in case
 	align-items: center // grid is centered, not stretched
@@ -425,6 +665,151 @@ WebSafeFontMono = Consolas, Courier, monospace
 				background-color: transparent
 		// }}}
 // }}}
+.sm-blocks.price-filter // {{{
+	// root
+	width:  100%
+	height: calc(8px + var(--height))
+	padding: 4px 0 4px 0
+	// rootBox
+	> div
+		width:  100%
+		height: 100%
+		display: flex
+		flex-direction: row
+		align-items: center
+		// text inputs: [left][delimiter][right]
+		&.text
+			> div // {{{
+				position: relative
+				flex: 3 1 0
+				height: 100%
+				display: flex
+				flex-direction: row
+				align-items: center
+				touch-action: none
+				> input
+					width:  100%
+					height: 100%
+					font-family: WebSafeFontMono
+					font-size:   1.2em
+					font-weight: bold
+					padding: 0.6em 0 0.3em 0
+					background-color: gainsboro
+					border: 1px solid silver
+					border-radius: 2px
+					box-shadow: inset 0 0 10px 0 silver
+					touch-action: none
+				> label
+					position:  absolute
+					top:       0
+					width:     100%
+					font-family: WebSafeFontSans
+					font-size:   0.8em
+					font-weight: bold
+					padding: 0.2em 0 0 0
+					background-color: transparent
+					color: slategray
+					user-select: none
+					cursor: text
+				&.L
+					> input
+						border-right-width: 0
+						border-top-right-radius: 0
+						border-bottom-right-radius: 0
+						padding-right: 0.6em
+						text-align: right
+					> label
+						padding-right: 0.4em
+						text-align: right
+				&.R
+					> input
+						border-left-width: 0
+						border-top-left-radius: 0
+						border-bottom-left-radius: 0
+						padding-left: 0.6em
+						text-align: left
+					> label
+						padding-left: 0.4em
+						text-align: left
+			// }}}
+			> svg // {{{
+				flex: 1 3 0
+				height: var(--height)
+				max-width: 48px
+				fill: silver
+				touch-action: none
+				> .L
+					fill: darkgray
+				> .X
+					fill: transparent
+				> .R
+					fill: darkgray
+			// }}}
+			&.v // {{{
+				> svg
+					//cursor: ew-resize
+					> .X
+						cursor: pointer
+						fill: lightgray
+				> div
+					> input
+						color: darkslategray
+						&::selection
+							background-color: darkslateblue
+							color: gainsboro
+					&.hovered
+						> input
+							border-color: gray
+							box-shadow: inset 0 0 0 2px silver
+					&.hovered:not(.focused)
+						> input,
+						> label
+							cursor: ns-resize
+					&.focused
+						> input
+							color: black
+							background-color: alpha(gainsboro, 0.6)
+							border-color: gray
+							box-shadow: inset 0 0 0 2px silver
+						> label
+							cursor: pointer
+							&:hover
+								color: slateblue
+					&.locked
+						> input
+							color: darkslategray
+							background-color: gainsboro
+							border-color: silver
+							&::selection
+								background-color: darkslategray
+								color: gainsboro
+				////
+				&.hovered
+					> svg > .X
+						fill: slategray
+				&.h0 > svg > .L
+					fill: slategray
+					transform: translateX(1px)
+				&.h1 > svg > .R
+					fill: slategray
+					transform: translateX(-1px)
+				&.f0,&.f1
+					> svg > .X
+						fill: slategray
+				&.f0 > svg > .L
+					fill: slateblue
+					transform: translateX(1px)
+				&.f1 > svg > .R
+					fill: slateblue
+					transform: translateX(-1px)
+				&.active
+					> svg
+						filter: brightness(110%)
+						> .X
+							fill: slateblue
+			// }}}
+	// end
+// }}}
 .sm-blocks.paginator // {{{
 	// configuration
 	--width: calc(1.35 * var(--height))
@@ -741,389 +1126,3 @@ WebSafeFontMono = Consolas, Courier, monospace
 				border-color: darkslategray
 		// }}}
 // }}}
-// ===
-.sm-blocks.main-section // {{{
-	// root
-	width:  100%
-	height: auto
-	padding: 0 0 4px 0
-	// content
-	.item // {{{
-		//=== DISABLED
-		//=== CLOSED {{{
-		> .title
-			position: relative
-			display: flex
-			flex-direction: row
-			height: 2em
-			padding: 0.1em 0 0.1em 0
-			> h3
-				flex: 1 1 0
-				order: 1
-				font-family: WebSafeFontSans
-				font-size: 1em
-				font-weight: bold
-				//font-weight: bold
-				display: flex
-				align-items: center
-				color: slategray
-				background-color: transparent
-				border-radius: 4px
-				cursor: pointer
-				user-select: none
-				> label
-					cursor: pointer
-			> button
-				background-color: transparent
-				display: none
-				&.v
-					display: block
-				&.arrow
-					flex: 0 0 0
-					order: 2
-					min-width: 2.8em
-					padding: 0.1em 0.1em 0.1em 1.1em
-					height: 100%
-					background-color: transparent
-					border-radius: 4px
-					> svg
-						fill: silver
-						stroke: slategray
-						> .a
-							transform-origin: 50% 50%
-							transform: rotate(90deg)
-		> .section
-			width: 100%
-			min-height: 0
-			overflow: hidden
-			////
-			display: none
-			height:  0
-			opacity: 0
-		// }}}
-		//=== OPENED {{{
-		&.opened
-			> .title > button.arrow
-				> svg
-					fill: slategray
-					stroke: silver
-					> .a
-						transform: rotate(0deg)
-			> .section
-				display: block
-				height:  auto
-				opacity: 1
-		// }}}
-		//=== ENABLED
-		&.v
-			//=== CLOSED {{{
-			&.hovered
-				> .title
-					> h3.h
-						color: darkslategray
-					> h3
-						background-color: alpha(lightslategray, 0.04)
-					> button.arrow.h
-						background-color: alpha(lightslategray, 0.04)
-						> svg
-							fill: darkslategray
-							stroke: gainsboro
-			&.focused
-				> .title
-					> h3.f
-						color: darkslateblue
-					> h3
-						background-color: alpha(mediumslateblue, 0.04)
-					> button.arrow.f
-						background-color: alpha(mediumslateblue, 0.04)
-						> svg
-							fill: slateblue
-							stroke: silver
-			// }}}
-			//=== OPENED {{{
-			&.opened
-				> .title
-					> h3
-						color: darkslategray
-					> button.arrow > svg
-						fill: darkslategray
-				&.hovered
-					> .title
-						> h3.h
-							color: alpha(darkslategray, 0.8)
-						> button.arrow.h > svg
-							fill: silver
-							stroke: slategray
-				&.focused
-					> .title
-						> h3.f
-							color: alpha(darkslateblue, 0.8)
-						> button.arrow.f > svg
-							fill: slateblue
-							stroke: mediumslateblue
-			// }}}
-			&.active
-				> .title
-					> h3
-						color: slateblue
-						filter: brightness(80%)
-				> svg
-					fill: alpha(slateblue, 0.4)
-	// }}}
-	// rootBox (first .item)
-	> div.item
-		display: flex
-		flex-direction: column
-		padding: 0 6px 0 6px
-		> .title // {{{
-			height: 3em
-			padding: 4px 0 4px 0
-			> h3
-				font-size: 2em
-				font-weight: bold
-			> button.arrow
-				height: 100%
-				min-width: calc(3em - 8px)
-				padding: 4px
-		// }}}
-		> .section // {{{
-			padding: 0
-		// }}}
-		> svg // {{{
-			height: 3px
-			fill: gainsboro
-		// }}}
-// }}}
-.sm-blocks.price-filter // {{{
-	// root
-	width:  100%
-	height: calc(8px + var(--height))
-	padding: 4px 0 4px 0
-	// rootBox
-	> div
-		width:  100%
-		height: 100%
-		display: flex
-		flex-direction: row
-		align-items: center
-		// text inputs: [left][delimiter][right]
-		&.text
-			> div // {{{
-				position: relative
-				flex: 3 1 0
-				height: 100%
-				display: flex
-				flex-direction: row
-				align-items: center
-				touch-action: none
-				> input
-					width:  100%
-					height: 100%
-					font-family: WebSafeFontMono
-					font-size:   1.2em
-					font-weight: bold
-					padding: 0.6em 0 0.3em 0
-					background-color: gainsboro
-					border: 1px solid silver
-					border-radius: 2px
-					box-shadow: inset 0 0 10px 0 silver
-					touch-action: none
-				> label
-					position:  absolute
-					top:       0
-					width:     100%
-					font-family: WebSafeFontSans
-					font-size:   0.8em
-					font-weight: bold
-					padding: 0.2em 0 0 0
-					background-color: transparent
-					color: slategray
-					user-select: none
-					cursor: text
-				&.L
-					> input
-						border-right-width: 0
-						border-top-right-radius: 0
-						border-bottom-right-radius: 0
-						padding-right: 0.6em
-						text-align: right
-					> label
-						padding-right: 0.4em
-						text-align: right
-				&.R
-					> input
-						border-left-width: 0
-						border-top-left-radius: 0
-						border-bottom-left-radius: 0
-						padding-left: 0.6em
-						text-align: left
-					> label
-						padding-left: 0.4em
-						text-align: left
-			// }}}
-			> svg // {{{
-				flex: 1 3 0
-				height: var(--height)
-				max-width: 48px
-				fill: silver
-				touch-action: none
-				> .L
-					fill: darkgray
-				> .X
-					fill: transparent
-				> .R
-					fill: darkgray
-			// }}}
-			&.v // {{{
-				> svg
-					//cursor: ew-resize
-					> .X
-						cursor: pointer
-						fill: lightgray
-				> div
-					> input
-						color: darkslategray
-						&::selection
-							background-color: darkslateblue
-							color: gainsboro
-					&.hovered
-						> input
-							border-color: gray
-							box-shadow: inset 0 0 0 2px silver
-					&.hovered:not(.focused)
-						> input,
-						> label
-							cursor: ns-resize
-					&.focused
-						> input
-							color: black
-							background-color: alpha(gainsboro, 0.6)
-							border-color: gray
-							box-shadow: inset 0 0 0 2px silver
-						> label
-							cursor: pointer
-							&:hover
-								color: slateblue
-					&.locked
-						> input
-							color: darkslategray
-							background-color: gainsboro
-							border-color: silver
-							&::selection
-								background-color: darkslategray
-								color: gainsboro
-				////
-				&.hovered
-					> svg > .X
-						fill: slategray
-				&.h0 > svg > .L
-					fill: slategray
-					transform: translateX(1px)
-				&.h1 > svg > .R
-					fill: slategray
-					transform: translateX(-1px)
-				&.f0,&.f1
-					> svg > .X
-						fill: slategray
-				&.f0 > svg > .L
-					fill: slateblue
-					transform: translateX(1px)
-				&.f1 > svg > .R
-					fill: slateblue
-					transform: translateX(-1px)
-				&.active
-					> svg
-						filter: brightness(110%)
-						> .X
-							fill: slateblue
-			// }}}
-	// end
-// }}}
-.sm-blocks.main-section.category-filter // {{{
-	////
-	.item
-		> .title
-			> button.checkbox
-				flex: 0 0 0
-				order: 0
-				min-width: 2.2em
-				height: 100%
-				padding: 0 0.4em 0 0
-				> svg
-					background-color: alpha(gainsboro, 0.2)
-					border: 1px solid slategray
-					border-radius: 2px
-					fill: transparent
-					stroke: transparent
-		> .section
-			padding: 0 0 0 0.6em
-		//===
-		&.v
-			//=== CLOSED {{{
-			&.checked
-				> .title > h3
-					color: darkslategray
-				&.c1 > .title > button.checkbox > svg
-					background-color: black
-					> .c1
-						fill: white
-				&.c2 > .title > button.checkbox > svg
-					background-color: black
-					> .c2
-						fill: white
-			&.hovered-2
-				> .title
-					> button.checkbox
-						background-color: alpha(lightslategray, 0.04)
-						> svg
-							background-color: alpha(gainsboro, 0.4)
-							border-color: slateblue
-					> h3
-						color: darkslategray
-						background-color: alpha(lightslategray, 0.04)
-					> button.arrow
-						background-color: transparent
-						> svg
-							fill: silver
-							stroke: slategray
-			&.focused-2
-				> .title
-					> h3
-						color: darkslateblue
-						background-color: alpha(mediumslateblue, 0.04)
-					> button.checkbox
-						background-color: alpha(mediumslateblue, 0.04)
-						> svg
-							box-shadow: inset 0 0 0 1px mediumslateblue
-							border-color: darkslateblue
-				&.checked
-					&.c1 > .title > button.checkbox > svg
-						background-color: darkslateblue
-					&.c2 > .title > button.checkbox > svg
-						background-color: darkslateblue
-			// }}}
-			//=== OPENED {{{
-			&.opened
-				> .title
-					> h3
-						color: darkslategray
-					> button.arrow > svg
-						fill: darkslategray
-				&.hovered-2
-					> .title
-						> h3
-							color: alpha(darkslategray, 0.8)
-						> button.arrow > svg
-							fill: silver
-							stroke: slategray
-				&.focused-2
-					> .title
-						> h3
-							color: alpha(darkslateblue, 0.8)
-			// }}}
-		////
-	> .item
-		> .section
-			padding: 4px 0 4px 0
-// }}}
-

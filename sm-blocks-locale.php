@@ -12,6 +12,9 @@ return [
       'min'   => 'min',
       'max'   => 'max',
     ],
+    'category' => [
+      'title' => 'Categories',
+    ],
   ],
   # }}}
   'ru' => [ # {{{
@@ -25,6 +28,9 @@ return [
       'title' => 'Цена',
       'min'   => 'минимум',
       'max'   => 'максимум',
+    ],
+    'category' => [
+      'title' => 'Категории',
     ],
   ],
   # }}}

@@ -25,39 +25,45 @@ class StorefrontModernBlocks {
     $dir_inc   = __DIR__.DIRECTORY_SEPARATOR.'inc'.DIRECTORY_SEPARATOR,
     $blocks    = [
       'grid' => [ # {{{
-        'render_callback' => [null, 'renderGrid'],
+        'render_callback' => [null, 'renderProducts'],
         'attributes'      => [
           ### common
           'customClass'   => [
             'type'        => 'string',
             'default'     => 'custom',
           ],
-          ###
-          'size'          => [
+          ### dimensions
+          'rowsMin'       => [
             'type'        => 'number',
-            'default'     => 4,
+            'default'     => 1,
           ],
-          'columns'       => [
+          'rowsMax'       => [
             'type'        => 'number',
-            'default'     => 4,
+            'default'     => 3,
           ],
           'columnsMin'    => [
             'type'        => 'number',
             'default'     => 1,
           ],
-          'orderOptions' => [
+          'columnsMax'    => [
+            'type'        => 'number',
+            'default'     => 4,
+          ],
+          ### content
+          'orderOptions'  => [
             'type'        => 'string',
             'default'     => 'featured,new,price',
           ],
-          'orderIndex'    => [
-            'type'        => 'number',
-            'default'     => 0,
+          'orderTag'      => [
+            'type'        => 'string',
+            'default'     => 'price:asc',
           ],
-          'maxX'          => [
+          ### item
+          'itemWidth'     => [
             'type'        => 'number',
             'default'     => 304,
           ],
-          'maxY'          => [
+          'itemHeight'    => [
             'type'        => 'number',
             'default'     => 640,
           ],
@@ -84,10 +90,6 @@ class StorefrontModernBlocks {
           'itemControls'  => [
             'type'        => 'boolean',
             'default'     => true,
-          ],
-          'fontSize'      => [
-            'type'        => 'number',
-            'default'     => 24,
           ],
         ],
       ],
@@ -269,8 +271,8 @@ class StorefrontModernBlocks {
     $templates = [
       'grid' => [ # {{{
         'main' => '
-        <div class="sm-blocks grid {{custom}}">
-          <div class="{{class}}" style="{{style}}" {{data}}>
+        <div class="sm-blocks products {{custom}}">
+          <div style="{{style}}" data-cfg=\'{{cfg}}\'>
             {{items}}
           </div>
           {{placeholder}}
@@ -635,8 +637,8 @@ class StorefrontModernBlocks {
       $a.'css/'.$this->name.'.css'
     );
     wp_register_style(
-      $this->name.'-design-css',
-      $a.'css/'.$this->name.'-design.css',
+      $this->name.'-gutenberg-css',
+      $a.'css/'.$this->name.'-gutenberg.css',
       [$this->name.'-css']
     );
     wp_register_style(
@@ -650,8 +652,8 @@ class StorefrontModernBlocks {
       false, true
     );
     wp_register_script(
-      $this->name.'-design-js',
-      $a.'js/'.$this->name.'-design.js',
+      $this->name.'-gutenberg-js',
+      $a.'js/'.$this->name.'-gutenberg.js',
       [
         'wp-blocks', 'wp-element',
         'wp-editor', 'wp-components'
@@ -668,19 +670,19 @@ class StorefrontModernBlocks {
     add_action('rest_api_init', function() use ($me) {
       register_rest_route($me->name, 'kiss', [
         'methods'  => 'POST',
-        'callback' => [$me, 'apiKiss'],
+        'callback' => [$me, 'apiEntry'],
       ]);
     });
     add_action('enqueue_block_assets', function() use ($me) {
       if (is_admin())
       {
-        # design mode
-        wp_enqueue_style($me->name.'-design-css');
-        wp_enqueue_script($me->name.'-design-js');
+        # gutenberg mode
+        wp_enqueue_style($me->name.'-gutenberg-css');
+        wp_enqueue_script($me->name.'-gutenberg-js');
       }
       else
       {
-        # usage mode
+        # standard
         wp_enqueue_style($me->name.'-css');
         wp_enqueue_script($me->name.'-js');
         # check demo-shop
@@ -713,80 +715,53 @@ class StorefrontModernBlocks {
   }
   # }}}
   # ssr (rendering)
-  # grid {{{
-  public function renderGrid($attr, $content)
+  # products {{{
+  public function renderProducts($attr, $content)
   {
     # prepare
     $T = $this->templates['grid'];
-    $D = $this->blocks['grid']['attributes'];
-    $class = $style = $data = $items = '';
     # create elements
     # grid items {{{
-    $size    = $attr['size'];
-    $columns = (($a = $attr['columns']) > $size)
-      ? $size
-      : $a;
-    $rows    = (($a = $size / $columns) % 1)
-      ? ($rows | 0) + 1
-      : $a;
-    # clone
+    $items   = '';
+    $columns = $attr['columnsMax'];
+    $rows    = $attr['rowsMax'];
+    $size    = $columns * $rows;
+    ###
     $a = $this->parseTemplate($T['item'], $T, $attr);
     $b = 1 + $size;
     while (--$b) {
       $items .= $a;
     }
     # }}}
-    # class name and style {{{
-    $class = $columns === 1
-      ? 'list'
-      : '';
+    # class and style {{{
     # using default to ssr-preset comparison here,
     # expands logic into 2 equal mod directions:
     # CSS class preset and/or SSR inline preset
-    $style = "--columns:{$columns};--rows:{$rows};";
-    if ($attr['maxX'] != $D['maxX']['default']) {
-      $style .= "--item-max-x:{$attr['maxX']}px;";
-    }
-    if ($attr['maxY'] != $D['maxY']['default']) {
-      $style .= "--item-max-y:{$attr['maxY']}px;";
-    }
-    if (($a = trim(substr($attr['itemSizeBalance'], 0, 20))) &&
-        $a !== $D['itemSizeBalance']['default'] &&
-        ($a = explode(':', $a)) && count($a) === 3 &&
-        ($a[0] = intval($a[0])) > 0 && $a[0] < 100 &&
-        ($a[1] = intval($a[1])) > 0 && $a[1] < 100 &&
-        ($a[2] = intval($a[2])) > 0 && $a[2] < 100 &&
-        ($a[0] + $a[1] + $a[2]) <= 100)
-    {
-      $style .= "--item-sz-1:{$a[0]};--item-sz-2:{$a[1]};--item-sz-3:{$a[2]}";
-    }
+    $style  = "--columns:{$columns};--rows:{$rows};";
+    $style .= "--item-max-x:{$attr['itemWidth']}px;";
+    $style .= "--item-max-y:{$attr['itemHeight']}px;";
+    $a = explode(':', $attr['itemSizeBalance']);
+    $style .= "--item-sz-1:{$a[0]};--item-sz-2:{$a[1]};--item-sz-3:{$a[2]}";
     # }}}
-    # data attributes {{{
+    # initial configuration {{{
     # these are client-controller side options which serve
-    # only the script's logic, with no direct effect on styles
-    # 1: minimal count of columns in the grid
-    $a = (!($b = intval($attr['columnsMin'])) || $b > $columns)
-      ? $columns
-      : $b;
-    $data .= ' data-cols="'.$a.'"';
-    # 2: the order of the records
-    $a = (!($b = $attr['orderOptions']) || empty($b))
-      ? $D['orderOptions']['default']
-      : $b;
-    $data .= ' data-order="'.$a.'"';
-    $a = (!($b = $attr['orderIndex']) || empty($b))
-      ? $D['orderIndex']['default']
-      : $b;
-    $data .= ' data-index="'.$a.'"';
-    # complete
-    $data = trim($data);
+    # to the content displayed, without direct effect on styles
+    # prepare
+    $a = explode(':', $attr['orderTag']);
+    $a[1] = count($a) === 2
+      ? ($a[1] === 'desc' ? 2 : 1)
+      : 0;
+    $cfg = json_encode([
+      'columns'      => [$attr['columnsMin'], $attr['columnsMax']],
+      'orderOptions' => explode(',', $attr['orderOptions']),
+      'orderTag'     => $a,
+    ]);
     # }}}
-    # compose
+    # compose all
     return $this->parseTemplate($T['main'], $T, [
       'custom' => $attr['customClass'],
-      'class'  => $class,
       'style'  => $style,
-      'data'   => $data,
+      'cfg'    => $cfg,
       'items'  => $items,
       'placeholder' => $this->templates['svg']['placeholder'],
     ]);
@@ -1146,174 +1121,125 @@ EOD;
   }
   # }}}
   # rest api
-  # entry point {{{
-  public function apiKiss($request)
+  public function apiEntry($request) # {{{
   {
+    # refine parameters {{{
     # get parameters
-    if (!($request = $request->get_json_params()) ||
-        !is_array($request))
-    {
+    if (!($P = $request->get_json_params()) || !is_array($P)) {
       $this->apiFail(400, 'incorrect request');
     }
-    # check
-    if (!array_key_exists('func', $request)) {
-      $this->apiFail(400, 'missing request function');
-    }
-    # operate
-    switch ($request['func']) {
-    case 'config':
-      $this->apiConfig($request);
-      break;
-    case 'grid':
-      $this->apiGrid($request);
-      break;
-    case 'cart':
-      $this->apiCart($request);
-      break;
-    default:
-      $this->apiFail(400, 'unknown request function');
-      break;
-    }
-    # terminate
-    exit;
-  }
-  # }}}
-  # config {{{
-  private function apiConfig($request)
-  {
-    # prepare
-    # refine request parameters {{{
-    # create key filter
+    # check defaults
     $a = [
-      'lang',
-      'category',
+      'func','lang',
+      'category','price','order',
+      'limit','offset',
     ];
-    # iterate and apply filter
-    $c = [];
-    foreach ($a as $b)
-    {
-      if (!array_key_exists($b, $request)) {
-        $this->apiFail(400, 'missing "'.$b.'" in the request');
+    foreach ($a as $b) {
+      if (!array_key_exists($b, $P)) {
+        $this->apiFail(400, 'missing "'.$b.'" parameter');
       }
-      $c[$b] = $request[$b];
     }
-    $request = $c;
     # refine
     # language
-    if (!($lang = $request['lang']) || empty($lang)) {
-      $lang = $this->lang;
-    }
-    else if (strlen($lang) !== 2) {
-      $this->apiFail(400, 'incorrect limit/offset');
-    }
-    # base categories
-    $cats = $this->parseCategoryFilter($request['category']);
-    if ($cats === null) {
-      $this->apiFail(400, 'incorrect category filter');
-    }
-    # }}}
-    # get product map metadata {{{
-    # set parameters for base query
-    $ids = [
-      'order'    => [''],
-      'category' => $cats,
-      'price'    => null,
-    ];
-    # get identifiers
-    if (($ids = $this->getProductIds($ids)) === null) {
-      $this->apiFail(500, 'failed to fetch products');
-    }
-    # determine
-    # total count
-    $total = count($ids);
-    # price range
-    $priceRange = $this->getProductPriceRange($ids);
-    # currency settings
-    $currency = $this->getCurrency();
-    # }}}
-    # get localized config {{{
-    $locale = __DIR__.DIRECTORY_SEPARATOR.$this->name.'-config.php';
-    $locale = (include $locale);
-    $locale = array_key_exists($lang, $locale)
-      ? $locale[$lang]
-      : $locale['en'];
-    # }}}
-    # send
-    header('content-type: application/json');
-    echo json_encode([
-      'locale'     => $locale,
-      'total'      => $total,
-      'priceRange' => $priceRange,
-      'currency'   => $currency,
-    ]);
-  }
-  # }}}
-  # grid {{{
-  private function apiGrid($request)
-  {
-    # prepare
-    # TODO: cache
-    # refine request parameters {{{
-    # create key filter
-    $a = [
-      'limit',
-      'offset',
-      'category',
-      'order',
-      'price',
-    ];
-    # iterate and apply filter
-    $c = [];
-    foreach ($a as $b)
-    {
-      if (!array_key_exists($b, $request)) {
-        $this->apiFail(400, 'missing "'.$b.'" in the request');
-      }
-      $c[$b] = $request[$b];
-    }
-    $request = $c;
-    # refine
-    # limit and offset
-    $limit  = intval($request['limit']);
-    $offset = intval($request['offset']);
-    if ($limit < 0 || $limit > 200 || $offset < 0) {
-      $this->apiFail(400, 'incorrect limit/offset');
-    }
+    $a = strval($P['lang']);
+    $P['lang'] = (strlen($a) !== 2)
+      ? $this->lang
+      : $a;
     # category filter
-    $cats = $this->parseCategoryFilter($request['category']);
-    if ($cats === null) {
-      $this->apiFail(400, 'incorrect category filter');
+    $P['category'] = $this->parseCategoryFilter($P['category']);
+    # price filter
+    if (!($a = $P['price']) ||
+        !is_array($a) || count($a) !== 5 || !$a[0])
+    {
+      $P['price'] = null;
+    }
+    else {
+      $P['price'] = [intval($a[1]), intval($a[2])];
     }
     # order
-    $a = $request['order'];
+    $a = $P['order'];
     if (!is_array($a) || !is_string($a[0]) || !is_int($a[1])) {
-      $this->apiFail(400, 'incorrect order parameter');
+      $P['order'] = null;
     }
-    # price filter
-    if (!($a = $request['price']) ||
-        !is_array($a) || count($a) !== 5)
-    {
-      $this->apiFail(400, 'incorrect price parameter');
-    }
-    $priceFilter = $a[0]
-      ? [intval($a[1]), intval($a[2])]
-      : null;
+    # offset and limit
+    $a = intval($P['offset']);
+    $P['offset'] = ($a < 0)
+      ? 0
+      : $a;
+    $a = intval($P['limit']);
+    $P['limit'] = ($a < 0 || $a > 200)
+      ? 0
+      : $a;
     # }}}
+    # operate {{{
+    switch ($P['func']) {
+    case 'config':
+      $this->apiConfig($P);
+      break;
+    case 'data':
+      $this->apiData($P);
+      break;
+    default:
+      $this->apiFail(400, 'invalid request function');
+      break;
+    }
+    # }}}
+    exit; # terminate
+  }
+  # }}}
+  private function apiConfig($p) # {{{
+  {
+    # query products (thin parameters)
+    $q = [
+      'order'    => null,
+      'category' => $p['category'],
+      'price'    => null,
+    ];
+    if (($q = $this->db_Products($q)) === null) {
+      $this->apiFail(500, 'failed to get products map');
+    }
+    # determine
+    # count of records and pages
+    $count = count($q);
+    $page  = [0, ceil($count / $p['limit'])];
+    # language specific data
+    $locale = __DIR__.DIRECTORY_SEPARATOR.$this->name.'-locale.php';
+    $locale = (include $locale);
+    $locale = array_key_exists($p['lang'], $locale)
+      ? $locale[$p['lang']]
+      : $locale['en'];
+    # send
+    header('content-type: application/json');
+    echo(json_encode([
+      'total'     => $count,
+      'page'      => $page,
+      'category'  => $p['category'],
+      'price'     => $this->db_PriceFilter($q),
+      'order'     => $p['order'],
+      'currency'  => $this->db_Currency(),
+      'cart'      => $this->db_Cart(),
+      'locale'    => $locale,
+    ], JSON_INVALID_UTF8_SUBSTITUTE));
+  }
+  # }}}
+  private function apiData($p) # {{{
+  {
+    # TODO: cache
     # get products map {{{
     # set parameters (heavy)
     $ids = [
-      'order'    => $request['order'],
-      'category' => $cats,
-      'price'    => $priceFilter,
+      'order'    => $p['order'],
+      'category' => $p['category'],
+      'price'    => $p['price'],
     ];
     # get identifiers
-    if (($ids = $this->getProductIds($ids)) === null) {
-      $this->apiFail(500, 'failed to fetch products');
+    if (($ids = $this->db_Products($ids)) === null) {
+      $this->apiFail(500, 'failed to get products map');
     }
     # determine total count
     $total = count($ids);
     # check overflow
-    if ($total && $offset >= $total) {
+    if ($total && $p['offset'] >= $total) {
       $this->apiFail(400, 'incorrect offset, too large');
     }
     # }}}
@@ -1329,9 +1255,8 @@ EOD;
     # send
     $this->sendInt($total);
     # }}}
-    # operate
-    # send items data
-    $ids = array_slice($ids, $offset, $limit);
+    # send items {{{
+    $ids = array_slice($ids, $p['offset'], $p['limit']);
     foreach ($ids as $id)
     {
       # get product
@@ -1377,10 +1302,10 @@ EOD;
       $this->sendJSON($item);
       #usleep(500 * 1000);
     }
+    # }}}
   }
   # }}}
-  # cart {{{
-  private function apiCart($request)
+  private function apiCart($request) # {{{
   {
     # check
     if (!array_key_exists('op', $request)) {
@@ -1593,21 +1518,19 @@ EOD;
   }
   # }}}
   # database processing {{{
-  public function getProductIds($o) # {{{
+  private function db_Products($o) # {{{
   {
     # prepare
     $joins = $filts = $order = '';
-    # compose filters {{{
+    # determine filters {{{
     if (!!($a = $o['category']) && count($a) > 0)
     {
       $joins .= <<<EOD
-
         JOIN {$this->prefix}term_taxonomy AS tCat
           ON tCat.taxonomy = 'product_cat'
         JOIN {$this->prefix}term_relationships AS tCatRel
           ON tCatRel.term_taxonomy_id = tCat.term_taxonomy_id AND
              tCatRel.object_id = p.ID
-
 EOD;
       foreach ($a as $b)
       {
@@ -1619,11 +1542,9 @@ EOD;
     if ($a = $o['price'])
     {
       $joins .= <<<EOD
-
         LEFT JOIN {$this->prefix}postmeta as mPrice
           ON mPrice.post_id  = p.ID AND
              mPrice.meta_key = '_price'
-
 EOD;
       if ($a[0] >= 0) {
         $filts .= 'AND CAST(mPrice.meta_value AS SIGNED) >= '.$a[0].' ';
@@ -1633,51 +1554,48 @@ EOD;
       }
     }
     # }}}
-    # compose order
-    switch ($o['order'][0]) {
-    case 'featured':
-      # {{{
+    # determine order {{{
+    if (!($order = $o['order']))
+    {
+      # NON-SPECIFIED DEFAULT
+      $order = 'p.menu_order, p.ID';
+    }
+    else if ($order[0] === 'featured')
+    {
       $joins .= <<<EOD
-
         LEFT JOIN {$this->prefix}terms as tFeatured
           ON tFeatured.name = 'featured'
         LEFT JOIN {$this->prefix}term_relationships as tFeatRel
           ON tFeatRel.term_taxonomy_id = tFeatured.term_id AND
              tFeatRel.object_id = p.ID
-
 EOD;
       $order = 'tFeatRel.term_taxonomy_id DESC, p.menu_order, p.post_title';
-      # }}}
-      break;
-    case 'new':
-      # {{{
+    }
+    else if ($order[0] === 'new')
+    {
       $order = 'p.post_date DESC, p.post_title';
-      # }}}
-      break;
-    case 'price':
-      # {{{
-      # add price joins only
-      # when the price filter unset
-      if (!$o['price']) {
+    }
+    else if ($order[0] === 'price')
+    {
+      # add joins only if required
+      if (!$o['price'])
+      {
         $joins .= <<<EOD
-
-        LEFT JOIN {$this->prefix}postmeta as mPrice
-          ON mPrice.post_id  = p.ID AND
-             mPrice.meta_key = '_price'
-
+          LEFT JOIN {$this->prefix}postmeta as mPrice
+            ON mPrice.post_id  = p.ID AND
+              mPrice.meta_key = '_price'
 EOD;
       }
-      $order = 'CAST(mPrice.meta_value AS SIGNED)';
-      if ($o['order'][1] === 2) {
-        $order .= ' DESC';
-      }
-      # }}}
-      break;
-    default:
-      $order = 'p.menu_order, p.ID';
-      break;
+      $order = ($order[1] === 2)
+        ? ' DESC'
+        : '';
+      $order = 'CAST(mPrice.meta_value AS SIGNED)'.$order;
     }
-    # compose the query
+    else {
+      return null;
+    }
+    # }}}
+    # compose
     $q = <<<EOD
 
       SELECT DISTINCT p.ID
@@ -1705,10 +1623,10 @@ EOD;
     return $res;
   }
   # }}}
-  private function getProductPriceRange($ids) # {{{
+  private function db_PriceFilter($ids) # {{{
   {
     # prepare
-    $x   = [-1, -1];# undetermined values
+    $x   = [false, -1, -1, 0, 1];# enabled,a,b,aMax,bMax
     $ids = implode(',', $ids);
     $wp_ = $this->prefix;
     # compose database query
@@ -1745,7 +1663,31 @@ EOD;
       $a[1] = 1;
     }
     # done
+    $x[3] = $a[0];
+    $x[4] = $a[1];
+    return $x;
+  }
+  # }}}
+  private function db_Currency() # {{{
+  {
+    # get currency settings (secret woo funcs :/)
+    $a = [
+      html_entity_decode(get_woocommerce_currency_symbol(), ENT_HTML5, 'UTF-8'),
+      wc_get_price_decimal_separator(),
+      wc_get_price_thousand_separator(),
+      wc_get_price_decimals(),
+    ];
+    # add simbol position
+    $b   = get_option('woocommerce_currency_pos');
+    $a[] = (strpos($b, 'right') === 0);
+    # done
     return $a;
+  }
+  # }}}
+  private function db_Cart() # {{{
+  {
+    global $woocommerce;
+    return $woocommerce->cart->get_cart_contents();
   }
   # }}}
   public function getProduct($id) # {{{
@@ -2000,29 +1942,6 @@ EOD;
     return $this->cache['categoryTree'][$k];
   }
   # }}}
-  public function getCurrency() # {{{
-  {
-    # get currency settings (secret woo funcs :/)
-    $a = [
-      html_entity_decode(get_woocommerce_currency_symbol(), ENT_HTML5, 'UTF-8'),
-      wc_get_price_decimal_separator(),
-      wc_get_price_thousand_separator(),
-      wc_get_price_decimals(),
-    ];
-    # add simbol position
-    $b   = get_option('woocommerce_currency_pos');
-    $a[] = (strpos($b, 'right') === 0);
-    # done
-    return $a;
-  }
-  # }}}
-  public function getCart() # {{{
-  {
-    global $woocommerce;
-    ###
-    return $woocommerce->cart->get_cart_contents();
-  }
-  # }}}
   public function setCart($id) # {{{
   {
     global $woocommerce;
@@ -2047,7 +1966,7 @@ EOD;
 }
 function_exists('register_activation_hook') && register_activation_hook(__FILE__, function() {
   # {{{
-  # check/activate woocommerce plugin
+  # activate woocommerce plugin
   if (!class_exists('WooCommerce', false))
   {
     $a = 'woocommerce';

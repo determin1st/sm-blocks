@@ -59,11 +59,11 @@ $o = <<<EOD
     <!-- wp:sm-blocks/category-filter {$ocf} /-->
     <!-- wp:sm-blocks/category-filter {"baseCategory":"37"} /-->
   </div>
-  <div class="b">
+  <div class="b sm-blocks-resizer">
     <h3>{$o}</h3>
-    <div class="c">
-      <!-- wp:sm-blocks/paginator {$op} /-->
+    <div class="c sm-blocks-resizer">
       <!-- wp:sm-blocks/orderer {$oo} /-->
+      <!-- wp:sm-blocks/paginator {$op} /-->
     </div>
     <!-- wp:sm-blocks/grid {$og} /-->
   </div>
