@@ -861,9 +861,6 @@ smBlocks = function(){
     Block.prototype = {
       group: 'products',
       level: 3,
-      event: function(e, data){
-        return true;
-      },
       configure: function(o){
         var a;
         a = this.config.columns;
@@ -877,8 +874,14 @@ smBlocks = function(){
         this.locked = level;
         return true;
       },
+      notify: function(){
+        return true;
+      },
       refresh: function(){
         true;
+      },
+      eat: function(record){
+        return true;
       }
     };
     return Block;
@@ -1168,26 +1171,6 @@ smBlocks = function(){
     Block.prototype = {
       group: 'category',
       level: 2,
-      event: function(e, data){
-        var i$, ref$, len$, a;
-        switch (e) {
-        case 'change':
-          true;
-          break;
-        case 'lock':
-          for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
-            a = ref$[i$];
-            a.lock(1);
-          }
-          break;
-        case 'load':
-          for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
-            a = ref$[i$];
-            a.lock(0);
-          }
-        }
-        return true;
-      },
       init: async function(cfg){
         if (!(await this.section.init())) {
           return false;
@@ -1201,6 +1184,9 @@ smBlocks = function(){
           (await this.section.lock(level));
         }
         this.locked = level;
+        return true;
+      },
+      notify: function(){
         return true;
       },
       refresh: function(list){
@@ -1724,32 +1710,6 @@ smBlocks = function(){
     Block.prototype = {
       group: 'price',
       level: 2,
-      event: function(e, data){
-        var i$, ref$, len$, b, a;
-        switch (e) {
-        case 'change':
-          for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
-            b = ref$[i$];
-            if (b.pending) {
-              return false;
-            }
-          }
-          break;
-        case 'lock':
-          for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
-            a = ref$[i$];
-            a.lock(2);
-          }
-          break;
-        case 'load':
-          for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
-            a = ref$[i$];
-            a.refresh();
-            a.lock(0);
-          }
-        }
-        return true;
-      },
       init: async function(cfg){
         var ref$, ref1$;
         if (!(await this.section.init())) {
@@ -1777,6 +1737,9 @@ smBlocks = function(){
           }
         }
         this.locked = level;
+        return true;
+      },
+      notify: function(){
         return true;
       },
       refresh: function(){
@@ -2422,49 +2385,29 @@ smBlocks = function(){
         this.locked = level;
         return true;
       },
-      event: function(e, data){
-        var i$, ref$, len$, a;
-        switch (e) {
-        case 'lock':
-          for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
-            a = ref$[i$];
-            a.lock(1);
-          }
-          break;
-        case 'change':
-          for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
-            a = ref$[i$];
-            if ((a = a.ctrl.lock) && a.pending) {
-              return false;
-            }
-          }
-          break;
-        case 'load':
-          for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
-            a = ref$[i$];
-            if (a.locked) {
-              a.lock(0);
-            }
-            if (a.ctrl.lock) {
-              return true;
-            }
-          }
-          state.data[0] = data.pageIndex;
-          state.data[1] = data.pageCount;
-          for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
-            a = ref$[i$];
-            a.refresh();
-          }
+      notify: function(){
+        var a;
+        if ((a = this.ctrl.lock) && a.pending) {
+          return false;
         }
         return true;
       },
-      focus: function(){
-        var a;
-        if (!this.locked && this.range && (a = this.range.current) && document.activeElement !== a) {
-          a.focus();
-        }
-      },
       refresh: function(){
+        /***
+        case 'load'
+        	# check first
+        	for a in blocks
+        		# continue interactions..
+        		a.lock 0 if a.locked
+        		# in case of active block,
+        		# prevent self-refreshing..
+        		return true if a.ctrl.lock
+        	# update
+        	state.data.0 = data.pageIndex
+        	state.data.1 = data.pageCount
+        	for a in blocks
+        		a.refresh!
+        /***/
         var R, index, count, nCount, nPages, nGap1, nGap2, nFirst, nLast, mode, current, i$, to$, a, b, c, d, len$;
         if (!(R = this.range)) {
           return;
@@ -2613,6 +2556,12 @@ smBlocks = function(){
           }
           R.current = current;
         }
+      },
+      focus: function(){
+        var a;
+        if (!this.locked && this.range && (a = this.range.current) && document.activeElement !== a) {
+          a.focus();
+        }
       }
     };
     return Block;
@@ -2755,18 +2704,7 @@ smBlocks = function(){
         this.locked = level;
         return true;
       },
-      event: function(e, data){
-        var i$, ref$, len$, a;
-        switch (event) {
-        case 'load':
-          for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
-            a = ref$[i$];
-            if (a.locked) {
-              a.lock(0);
-            }
-            a.refresh();
-          }
-        }
+      notify: function(){
         return true;
       },
       refresh: function(){
@@ -2806,7 +2744,7 @@ smBlocks = function(){
   }();
   M = [[mProducts, '.sm-blocks.products'], [mCategoryFilter, '.sm-blocks.category-filter'], [mPriceFilter, '.sm-blocks.price-filter'], [mPaginator, '.sm-blocks.paginator'], [mOrderer, '.sm-blocks.orderer']];
   SUPERVISOR = function(){
-    var newLoader, newResizer, Group, Supervisor;
+    var newLoader, newResizer, GroupState, Group, Visor;
     newLoader = function(){
       var State, RequestData, Loader;
       State = function(){
@@ -2829,7 +2767,7 @@ smBlocks = function(){
       };
       Loader = function(s){
         this['super'] = s;
-        this.dirty = false;
+        this.dirty = true;
         this.level = 100;
         this.lock = null;
         this.fetch = null;
@@ -2837,13 +2775,15 @@ smBlocks = function(){
         this.data = null;
       };
       Loader.prototype = {
+        name: 'loader',
         init: async function(){
-          var S, D, T, i$, ref$, len$, a, cfg, b, c;
+          var T, S, D, B, i$, len$, a, cfg, ref$, b, c;
+          T = window.performance.now();
           S = new State();
           D = new RequestData();
-          T = window.performance.now();
-          for (i$ = 0, len$ = (ref$ = this['super'].blocks).length; i$ < len$; ++i$) {
-            a = ref$[i$];
+          B = this['super'].blocks;
+          for (i$ = 0, len$ = B.length; i$ < len$; ++i$) {
+            a = B[i$];
             if (a.configure) {
               a.configure(D);
               import$(S.config, a.config);
@@ -2867,14 +2807,14 @@ smBlocks = function(){
           D.func = 'data';
           for (i$ = 0, len$ = (ref$ = this['super'].groups).length; i$ < len$; ++i$) {
             a = ref$[i$];
-            a.config = S.config;
+            a.state.config = S.config;
             if (S.hasOwnProperty(a.name)) {
-              a.data = S[a.name];
+              a.state.data = S[a.name];
             }
           }
           a = [];
-          for (i$ = 0, len$ = (ref$ = this['super'].blocks).length; i$ < len$; ++i$) {
-            b = ref$[i$];
+          for (i$ = 0, len$ = B.length; i$ < len$; ++i$) {
+            b = B[i$];
             a[a.length] = b.init ? b.init(cfg) : true;
           }
           c = [];
@@ -2885,11 +2825,11 @@ smBlocks = function(){
               consoleError('Failed to initialize a block');
               return false;
             }
-            c[c.length] = this['super'].blocks[b].lock(0);
+            c[c.length] = B[b].lock(0);
           }
           (await Promise.all(c));
-          for (i$ = 0, len$ = (ref$ = this['super'].blocks).length; i$ < len$; ++i$) {
-            a = ref$[i$];
+          for (i$ = 0, len$ = B.length; i$ < len$; ++i$) {
+            a = B[i$];
             a.root.classList.add('v');
             a.rootBox.classList.add('v');
           }
@@ -2911,112 +2851,131 @@ smBlocks = function(){
           this.lock = this.fetch = this.state = this.data = null;
         },
         charge: function(){
-          var r, p, i$, ref$, len$, a;
-          r = null;
-          p = new Promise(function(resolve){
-            r = resolve;
-          });
-          p.pending = true;
-          p.resolve = r = this.set(p, r);
-          this.lock = p;
-          for (i$ = 0, len$ = (ref$ = this['super'].groups).length; i$ < len$; ++i$) {
-            a = ref$[i$];
-            a.resolve = r;
+          var p, r, i$, ref$, len$, a;
+          if (this.dirty) {
+            this.lock = p = newDelay(400);
+            this.dirty = false;
+          } else {
+            r = null;
+            p = new Promise(function(resolve){
+              r = resolve;
+            });
+            p.pending = true;
+            p.resolve = r = this.set(p, r);
+            this.lock = p;
+            for (i$ = 0, len$ = (ref$ = this['super'].groups).length; i$ < len$; ++i$) {
+              a = ref$[i$];
+              a.resolve = r;
+            }
           }
+          return p;
         },
-        unload: function(){
+        set: function(p, r){
+          var loader;
+          loader = this;
+          return function(){
+            var S, D;
+            if (this.level < loader.level) {
+              return false;
+            }
+            S = loader.state;
+            D = loader.data;
+            if (this.level > loader.level) {
+              loader.level = this.level;
+            }
+            switch (this.name) {
+            case 'category':
+              D.offset = S.page[0] = 0;
+              break;
+            case 'price':
+              D.offset = S.page[0] = 0;
+              break;
+            case 'page':
+              D.offset = S.page[0] * D.limit;
+            }
+            if (p.pending) {
+              p.pending = false;
+              r();
+            } else if (!this.dirty) {
+              this.dirty = true;
+              if (this.fetch) {
+                this.fetch.cancel();
+              }
+            }
+            return true;
+          };
+        },
+        reset: function(){
           var a;
           if ((a = this.state.records).length) {
             a.length = 0;
           }
         },
-        set: function(p, r){
-          var this$ = this;
-          return function(s){
-            if (!s || this$.level > s.level) {
-              return;
-            }
-            if (this$.level < s.level) {
-              this$.level = s.level;
-            }
-            switch (s.name) {
-            case 'category':
-              this$.data.offset = this$.state.pageIndex = 0;
-              break;
-            case 'price':
-              this$.data.offset = this$.state.pageIndex = 0;
-              break;
-            case 'page':
-              this$.state.pageIndex = s.data[0];
-              this$.data.offset = this$.state.pageIndex * this$.data.limit;
-              break;
-            case 'order':
-              this$.state.orderFilter[0] = s.data[0];
-              this$.state.orderFilter[1] = s.data[1];
-            }
-            if (p.pending) {
-              p.pending = false;
-              r();
-            } else if (!this$.dirty) {
-              this$.dirty = true;
-              if (this$.fetch) {
-                this$.fetch.cancel();
+        operate: async function(){
+          var B, a, b, R, i$, len$, ref$, c;
+          if (!(await this.charge())) {
+            return true;
+          }
+          B = this['super'].blocks;
+          a = B.length;
+          while (~--a) {
+            if ((b = B[a]).level < this.level) {
+              if (!b.locked) {
+                b.lock(1, this.level);
+              }
+            } else {
+              if (!b.notify()) {
+                return true;
               }
             }
-          };
-        },
-        get: async function(){
-          var i$, ref$, len$, a, b, c;
-          if (this.dirty) {
-            this.dirty = false;
-            this.lock = newDelay(400);
-          } else {
-            this.charge();
           }
-          (await this.lock);
-          this.unload();
           if (this.dirty) {
             return true;
           }
+          R = (await (this.fetch = oFetch(this.data)));
+          this.fetch = null;
+          if (R instanceof Error) {
+            return R.id === 4 ? true : false;
+          }
+          if ((a = (await R.readInt())) === null) {
+            R.cancel();
+            return false;
+          }
+          this.state.total = a;
+          this.state.page[1] = Math.ceil(a / this.data.limit);
+          for (i$ = 0, len$ = B.length; i$ < len$; ++i$) {
+            a = B[i$];
+            if (a.locked) {
+              a.lock(0, this.level);
+            }
+            a.refresh();
+          }
           for (i$ = 0, len$ = (ref$ = this['super'].groups).length; i$ < len$; ++i$) {
             a = ref$[i$];
-            if (!a.onChange(this.state)) {
-              return true;
+            if (a.state.pending) {
+              a.state.pending = false;
             }
-          }
-          a = (await (this.fetch = oFetch(this.request)));
-          this.fetch = null;
-          if (a instanceof Error) {
-            return a.id === 4 ? true : false;
-          }
-          if ((b = (await a.readInt())) === null || this.dirty) {
-            a.cancel();
-            return this.dirty;
-          }
-          this.state.total = b;
-          this.state.count = (c = b - this.data.offset) < this.data.limit
-            ? c
-            : this.data.limit;
-          this.state.pageCount = Math.ceil(b / this.data.limit);
-          for (i$ = 0, len$ = (ref$ = this['super'].groups).length; i$ < len$; ++i$) {
-            c = ref$[i$];
-            c.onLoad(this.state);
           }
           this.level = 0;
-          c = -1;
-          while (++c < this.state.count && !this.dirty) {
-            if ((b = (await a.readJSON())) === null) {
-              a.cancel();
-              return false;
+          if ((B = this['super'].eaters).length) {
+            a = this.data.limit;
+            while (~--a && !this.dirty) {
+              if ((b = (await R.readJSON())) === null) {
+                R.cancel();
+                return false;
+              }
+              for (i$ = 0, len$ = B.length; i$ < len$; ++i$) {
+                c = B[i$];
+                c.eat(b);
+              }
             }
-            gridList[c].set(b);
+            for (i$ = 0, len$ = B.length; i$ < len$; ++i$) {
+              c = B[i$];
+              c.eat(null);
+            }
+            (await R.read());
           }
-          if (c !== this.state.count) {
-            this.state.count = c;
-          } else {
-            (await a.read());
-          }
-          a.cancel();
+          R.cancel();
           return true;
         }
       };
@@ -3074,42 +3033,30 @@ smBlocks = function(){
         return R;
       };
     }();
+    GroupState = function(group){
+      this.config = null;
+      this.data = null;
+      this.pending = false;
+      this.change = function(){
+        this.pending = true;
+        group.resolve();
+      };
+    };
     Group = function(MasterBlock, nodes){
-      var a;
+      var s, a;
+      s = new GroupState(this);
       a = -1;
       while (++a < nodes.length) {
-        nodes[a] = new MasterBlock(this, nodes[a], a);
+        nodes[a] = new MasterBlock(s, nodes[a], a);
       }
       a = nodes[0];
       this.blocks = nodes;
       this.name = a.group;
       this.level = a.level;
-      this.event = a.event;
-      this.config = null;
-      this.data = null;
-      this.pending = false;
       this.resolve = null;
+      this.state = s;
     };
-    Group.prototype = {
-      change: function(){
-        this.pending = true;
-        this.resolve(this);
-      },
-      onChange: function(m){
-        if (this.level < m.level) {
-          this.event('lock');
-          return true;
-        }
-        return this.event('change', m);
-      },
-      onLoad: function(m){
-        if (this.pending) {
-          this.pending = false;
-        }
-        return this.event('load', m);
-      }
-    };
-    Supervisor = function(m){
+    Visor = function(m){
       this.masters = (m && M.concat(m)) || M;
       this.root = null;
       this.resizer = null;
@@ -3117,12 +3064,13 @@ smBlocks = function(){
       this.counter = 0;
       this.groups = [];
       this.blocks = [];
+      this.eaters = [];
       m = (m && 'custom ') || '';
       consoleInfo('new ' + m + 'supervisor');
     };
-    Supervisor.prototype = {
+    Visor.prototype = {
       attach: async function(root){
-        var groups, blocks, i$, ref$, len$, ref1$, a, b, loader;
+        var groups, blocks, eaters, i$, ref$, len$, ref1$, a, b, loader;
         if (!root) {
           return false;
         } else if (this.root) {
@@ -3135,6 +3083,7 @@ smBlocks = function(){
         }
         groups = this.groups;
         blocks = this.blocks;
+        eaters = this.eaters;
         for (i$ = 0, len$ = (ref$ = this.masters).length; i$ < len$; ++i$) {
           ref1$ = ref$[i$], a = ref1$[0], b = ref1$[1];
           if ((b = arrayFrom$(root.querySelectorAll(b))).length) {
@@ -3153,8 +3102,14 @@ smBlocks = function(){
             ? -1
             : a.level === b.level ? 0 : 1;
         };
-        blocks.sort(a);
         groups.sort(a);
+        blocks.sort(a);
+        for (i$ = 0, len$ = blocks.length; i$ < len$; ++i$) {
+          a = blocks[i$];
+          if (a.eat) {
+            eaters[eaters.length] = a;
+          }
+        }
         this.root = root;
         this.loader = loader = newLoader(this);
         this.resizer = newResizer(this);
@@ -3165,7 +3120,7 @@ smBlocks = function(){
           return false;
         }
         consoleInfo('supervisor attached');
-        while ((await loader.get())) {
+        while ((await loader.operate())) {
           ++this.counter;
         }
         consoleInfo('supervisor detached, ' + this.counter + ' actions');
@@ -3177,7 +3132,7 @@ smBlocks = function(){
         return true;
       }
     };
-    return Supervisor;
+    return Visor;
   }();
   return function(m){
     return new SUPERVISOR(m);

@@ -936,9 +936,6 @@ smBlocks = do ->
 		Block.prototype =
 			group: 'products'
 			level: 3
-			event: (e, data) -> # {{{
-				return true
-			# }}}
 			configure: (o) !-> # {{{
 				a = @config.columns
 				o.limit = a.0 * a.1
@@ -955,8 +952,14 @@ smBlocks = do ->
 				@locked = level
 				return true
 			# }}}
+			notify: -> # {{{
+				return true
+			# }}}
 			refresh: !-> # {{{
 				true
+			# }}}
+			eat: (record) -> # {{{
+				return true
 			# }}}
 		# }}}
 		return Block
@@ -1269,20 +1272,6 @@ smBlocks = do ->
 		Block.prototype =
 			group: 'category'
 			level: 2
-			event: (e, data) -> # {{{
-				switch e
-				case 'change'
-					true
-				case 'lock'
-					for a in blocks
-						a.lock 1
-				case 'load'
-					for a in blocks
-						#a.refresh! # not needed!
-						a.lock 0
-				# done
-				return true
-			# }}}
 			init: (cfg) ->> # {{{
 				# initialize
 				if not (await @section.init!)
@@ -1302,10 +1291,13 @@ smBlocks = do ->
 				@locked = level
 				return true
 			# }}}
+			notify: -> # {{{
+				return true
+			# }}}
 			refresh: (list) !-> # {{{
 				# it's assumed that categories doesn't intersect
-				# in the composed UI blocks, so there may be
-				# only single originator, so, the refresh is
+				# in the attached UI root, so there may be
+				# only single originator and the refresh is
 				# the only source of the change..
 				# (no external calls needed)
 				if list
@@ -1872,24 +1864,6 @@ smBlocks = do ->
 		Block.prototype =
 			group: 'price'
 			level: 2
-			event: (e, data) -> # {{{
-				switch e
-				case 'change'
-					# prevent loading
-					for b in blocks when b.pending
-						return false
-				case 'lock'
-					# stop any interactions
-					for a in blocks
-						a.lock 2
-				case 'load'
-					# refresh and unlock
-					for a in blocks
-						a.refresh!
-						a.lock 0
-				# done
-				return true
-			# }}}
 			init: (cfg) ->> # {{{
 				if not (await @section.init!)
 					return false
@@ -1926,6 +1900,9 @@ smBlocks = do ->
 						###
 				###
 				@locked = level
+				return true
+			# }}}
+			notify: -> # {{{
 				return true
 			# }}}
 			refresh: !-> # {{{
@@ -2680,18 +2657,15 @@ smBlocks = do ->
 				@locked = level
 				return true
 			# }}}
-			event: (e, data) -> # {{{
-				switch e
-				case 'lock'
-					# stop any interactions..
-					for a in blocks
-						a.lock 1
-				case 'change'
-					# in case of any block active,
-					# prevent current change
-					for a in blocks
-						if (a = a.ctrl.lock) and a.pending
-							return false
+			notify: -> # {{{
+				# check active
+				if (a = @ctrl.lock) and a.pending
+					return false
+				# done
+				return true
+			# }}}
+			refresh: !-> # {{{
+				/***
 				case 'load'
 					# check first
 					for a in blocks
@@ -2705,18 +2679,7 @@ smBlocks = do ->
 					state.data.1 = data.pageCount
 					for a in blocks
 						a.refresh!
-				# done
-				return true
-			# }}}
-			focus: !-> # {{{
-				# set focus to the current node
-				if not @locked and \
-				   @range and (a = @range.current) and \
-				   document.activeElement != a
-					###
-					a.focus!
-			# }}}
-			refresh: !-> # {{{
+				/***/
 				# check range doesn't exist
 				if not (R = @range)
 					return
@@ -2878,6 +2841,14 @@ smBlocks = do ->
 				# }}}
 				# done
 			# }}}
+			focus: !-> # {{{
+				# set focus to the current node
+				if not @locked and \
+				   @range and (a = @range.current) and \
+				   document.activeElement != a
+					###
+					a.focus!
+			# }}}
 		# }}}
 		return Block
 	# }}}
@@ -3034,14 +3005,7 @@ smBlocks = do ->
 				@locked = level
 				return true
 			# }}}
-			event: (e, data) -> # {{{
-				switch event
-				case 'load'
-					# update
-					for a in blocks
-						a.lock 0 if a.locked
-						a.refresh!
-				# done
+			notify: -> # {{{
 				return true
 			# }}}
 			refresh: !-> # {{{
@@ -3106,8 +3070,8 @@ smBlocks = do ->
 				@limit    = 0
 			# }}}
 			Loader = (s) !-> # {{{
-				@super = s
-				@dirty = false # resolved-in-process flag
+				@super = s     # s-supervisor
+				@dirty = true  # resolved-in-process flag
 				@level = 100   # current priority (highest for the first)
 				@lock  = null  # current load promise
 				@fetch = null  # request promise
@@ -3115,15 +3079,17 @@ smBlocks = do ->
 				@data  = null
 			###
 			Loader.prototype =
+				name: 'loader'
 				init: ->> # {{{
 					# prepare
+					T = window.performance.now!
 					S = new State!
 					D = new RequestData!
-					T = window.performance.now!
+					B = @super.blocks
 					###
 					# manage configuration
-					# set local
-					for a in @super.blocks when a.configure
+					# set local (low -> high)
+					for a in B when a.configure
 						a.configure D
 						S.config <<< a.config
 					# get remote
@@ -3146,15 +3112,15 @@ smBlocks = do ->
 					# initialize groups
 					for a in @super.groups
 						# shared
-						a.config = S.config
+						a.state.config = S.config
 						# individual
 						if S.hasOwnProperty a.name
-							a.data = S[a.name]
+							a.state.data = S[a.name]
 					###
 					# initialize blocks
 					# execute standard method
 					a = []
-					for b in @super.blocks
+					for b in B
 						a[*] = if b.init
 							then b.init cfg
 							else true
@@ -3166,11 +3132,11 @@ smBlocks = do ->
 							consoleError 'Failed to initialize a block'
 							return false
 						# unlock
-						c[*] = @super.blocks[b].lock 0
+						c[*] = B[b].lock 0
 					# gracefully await unlock completion
 					await Promise.all c
 					# set constructed & functional class
-					for a in @super.blocks
+					for a in B
 						a.root.classList.add 'v'
 						a.rootBox.classList.add 'v'
 					# done
@@ -3190,20 +3156,76 @@ smBlocks = do ->
 					# cleanup
 					@lock = @fetch = @state = @data = null
 				# }}}
-				charge: !-> # {{{
-					# create custom promise
-					r = null
-					p = new Promise (resolve) !->
-						r := resolve
-					# initialize
-					p.pending = true
-					p.resolve = r = @set p, r
-					# set promise and resolver
-					@lock = p
-					for a in @super.groups
-						a.resolve = r
+				charge: -> # {{{
+					# check
+					if @dirty
+						# lazy pull
+						# to guard against excessive fetch requests,
+						# resulted by fast, multiple user actions,
+						# actions are throttled here:
+						@lock  = p = newDelay 400
+						@dirty = false
+					else
+						# charge the trigger
+						# create custom promise
+						r = null
+						p = new Promise (resolve) !->
+							r := resolve
+						# initialize
+						p.pending = true
+						p.resolve = r = @set p, r
+						# set promise and resolver
+						@lock = p
+						for a in @super.groups
+							a.resolve = r
+					# done
+					return p
 				# }}}
-				unload: !-> # {{{
+				set: (p, r) -> # {{{
+					loader = @
+					return ->
+						# GROUP RESOLVER
+						# prevent lower level change
+						if @level < loader.level
+							return false
+						# prepare
+						S = loader.state
+						D = loader.data
+						# rise priority level
+						if @level > loader.level
+							loader.level = @level
+						# operate
+						switch @name
+						case 'category'
+							# it's assumed that filter combinations
+							# does not interset.. so, always
+							# reset query offset & page index
+							D.offset = S.page.0 = 0
+						case 'price'
+							# TODO: price range may limit the same
+							# set of items (be ineffective),
+							# which means that page index should not
+							# reset for better optimization & integrity,
+							# but for the sake of dev speed,
+							# let's reset it for now..
+							D.offset = S.page.0 = 0
+						case 'page'
+							# determine first record offset
+							D.offset = S.page.0 * D.limit
+						###
+						# complete
+						if p.pending
+							# clean
+							p.pending = false
+							r!
+						else if not @dirty
+							# dirty
+							@dirty = true
+							@fetch.cancel! if @fetch
+						# done
+						return true
+				# }}}
+				reset: !-> # {{{
 					if (a = @state.records).length
 						# clear product cards in the reverse order
 						#while --c >= 0
@@ -3211,118 +3233,73 @@ smBlocks = do ->
 						# cleanup
 						a.length = 0
 				# }}}
-				set: (p, r) -> (s) !~> # {{{
-					# check update priority and
-					# prevent changes from lower levels
-					if not s or @level > s.level
-						return
-					# update current level (rise)
-					if @level < s.level
-						@level = s.level
-					# synchronize
-					switch s.name
-					case 'category'
-						# it's assumed that filter combinations
-						# does not interset.. so, always
-						# reset query offset & page index
-						@data.offset = @state.pageIndex = 0
-					case 'price'
-						# TODO: price range may limit the same
-						# set of items (be ineffective),
-						# which means that page index should not
-						# reset for better optimization & integrity,
-						# but for the sake of dev speed,
-						# let's reset it for now..
-						@data.offset = @state.pageIndex = 0
-					case 'page'
-						# set page index and
-						# determine first record offset
-						@state.pageIndex = s.data.0
-						@data.offset = @state.pageIndex * @data.limit
-					case 'order'
-						# set
-						@state.orderFilter.0 = s.data.0
-						@state.orderFilter.1 = s.data.1
-					# finish
-					if p.pending
-						# clean
-						p.pending = false
-						r!
-					else if not @dirty
-						# dirty
-						@dirty = true
-						@fetch.cancel! if @fetch
-				# }}}
-				get: ->> # {{{
-					# check
-					if @dirty
-						# to guard against excessive load calls
-						# caused by multiple user actions,
-						# it's important to do a short cooldown..
-						@dirty = false
-						@lock  = newDelay 400
-					else
-						# create standard lock
-						@charge!
-					# wait for resolution
-					await @lock
-					# clear current data
-					@unload!
-					# multiple updates may not squeeze in here,
-					# otherwise, restart early..
-					if @dirty
+				operate: ->> # {{{
+					###
+					# wait for update
+					if not (await @charge!)
 						return true
-					# synchronize group state (allow restart)
-					for a in @super.groups
-						if not a.onChange @state
-							return true
-					# send request
-					a = await (@fetch = oFetch @request)
+					###
+					# manage blocks (high -> low)
+					B = @super.blocks
+					a = B.length
+					while ~--a
+						if (b = B[a]).level < @level
+							# lock lower levels (dont wait)
+							if not b.locked
+								b.lock 1, @level
+						else
+							# notify higher levels (allow restart)
+							if not b.notify!
+								return true
+					# check for restart
+					return true if @dirty
+					###
+					# execute fetcher
+					R = await (@fetch = oFetch @data)
 					@fetch = null
 					# check
-					if a instanceof Error
-						return if a.id == 4
-							then true   # dirty update, cancelled
+					if R instanceof Error
+						return if R.id == 4
+							then true   # cancelled, dirty state
 							else false  # fatal failure
-					# get total
-					if (b = await a.readInt!) == null or @dirty
-						a.cancel!
-						return @dirty
-					# update state
-					# {{{
-					# set total items
-					@state.total = b
-					# set count of displayed
-					@state.count = if (c = b - @data.offset) < @data.limit
-						then c
-						else @data.limit
-					# set count of pages
-					@state.pageCount = Math.ceil (b / @data.limit)
-					# dispatch load event
-					for c in @super.groups
-						c.onLoad @state
+					# read metadata
+					if (a = await R.readInt!) == null
+						R.cancel!
+						return false
+					###
+					# manage state
+					# update total records and page count
+					@state.total  = a
+					@state.page.1 = Math.ceil (a / @data.limit)
+					# unlock and refresh blocks
+					for a in B
+						a.lock 0, @level if a.locked
+						a.refresh!
+					# clear group flags
+					for a in @super.groups when a.state.pending
+						a.state.pending = false
 					# reset priority
 					@level = 0
-					# }}}
-					# get records
-					c = -1
-					while ++c < @state.count and not @dirty
-						# get item data
-						if (b = await a.readJSON!) == null
-							a.cancel!
-							return false
-						# apply
-						gridList[c].set b
-					# check aborted
-					if c != @state.count
-						# fix display count
-						@state.count = c
-					else
-						# satisfy chrome browser (2020-04),
-						# as it produces unnecessary console error
-						await a.read!
+					###
+					# feed eaters (with records)
+					if (B = @super.eaters).length
+						# iterate for projected count
+						a = @data.limit
+						while ~--a and not @dirty
+							# get record
+							if (b = await R.readJSON!) == null
+								R.cancel!
+								return false
+							# feed
+							for c in B
+								c.eat b
+						# end feed
+						for c in B
+							c.eat null
+						# satisfy chrome (2020-04), it produces unnecessary errors
+						await R.read!
 					# complete
-					a.cancel!
+					R.cancel!
 					return true
 				# }}}
 			# }}}
@@ -3375,47 +3352,32 @@ smBlocks = do ->
 				return R
 		# }}}
 		# constructors
+		GroupState = (group) !-> # {{{
+			# create object shape
+			@config  = null
+			@data    = null
+			@pending = false
+			@change  = !->
+				# group resolution api
+				@pending = true
+				group.resolve!
+		# }}}
 		Group = (MasterBlock, nodes) !-> # {{{
 			# initialize
+			s = new GroupState @
 			a = -1
 			while ++a < nodes.length
-				nodes[a] = new MasterBlock @, nodes[a], a
+				nodes[a] = new MasterBlock s, nodes[a], a
 			# get first block
 			a = nodes.0
 			# create object shape
 			@blocks  = nodes
 			@name    = a.group
 			@level   = a.level
-			@event   = a.event
-			@config  = null
-			@data    = null
-			@pending = false
 			@resolve = null
-		###
-		Group.prototype =
-			change: !->
-				# set the flag and
-				# let the master find the solution
-				@pending = true
-				@resolve @
-			onChange: (m) ->
-				# check update priority
-				if @level < m.level
-					# OBEY only to higher update levels,
-					# lock the block
-					@event 'lock'
-					return true
-				# dispatch notification and
-				# allow the negative response for the group control
-				# (the privilege of the first)
-				return @event 'change', m
-			onLoad: (m) ->
-				# reset the flag and
-				# dispatch notification
-				@pending = false if @pending
-				return @event 'load', m
+			@state   = s
 		# }}}
-		Supervisor = (m) !-> # {{{
+		Visor = (m) !-> # {{{
 			@masters = (m and M ++ m) or M
 			@root    = null
 			@resizer = null
@@ -3423,11 +3385,13 @@ smBlocks = do ->
 			@counter = 0 # user's action count
 			@groups  = []
 			@blocks  = []
+			@eaters  = []
 			m = (m and 'custom ') or ''
 			consoleInfo 'new '+m+'supervisor'
 		###
-		Supervisor.prototype =
+		Visor.prototype =
 			attach: (root) ->> # {{{
+				###
 				# check
 				if not root
 					return false
@@ -3439,43 +3403,49 @@ smBlocks = do ->
 					consoleInfo 're-attaching..'
 				else
 					consoleInfo 'attaching..'
+				###
+				# initialize lists
 				# prepare
 				groups = @groups
 				blocks = @blocks
-				# create master groups
+				eaters = @eaters
+				# create groups
 				for [a, b] in @masters
-					# collect root nodes and create group
 					if (b = [...(root.querySelectorAll b)]).length
 						groups[*] = new Group a, b
-				# check empty
+				# check
 				if not groups.length
 					return false
-				# collect all blocks
+				# collect blocks
 				for a in groups
 					blocks.push ...a.blocks
-				# order blocks by priority level (ascending),
-				# also, order groups in this manner
+				# order blocks and groups by priority level (ascending)
 				a = (a, b) ->
 					return if a.level < b.level
 						then -1
 						else if a.level == b.level
 							then 0
 							else 1
-				blocks.sort a
 				groups.sort a
-				# set controllers
+				blocks.sort a
+				# collect eaters
+				for a in blocks when a.eat
+					eaters[*] = a
+				###
+				# initialize controllers
 				@root    = root
 				@loader  = loader = newLoader @
 				@resizer = newResizer @
 				@counter = 0
-				# initialize
+				###
+				# start
 				if not (await loader.init!)
 					await @detach!
 					consoleError 'attachment failed'
 					return false
 				# enter the dragon
 				consoleInfo 'supervisor attached'
-				while await loader.get!
+				while await loader.operate!
 					++@counter
 				# complete
 				consoleInfo 'supervisor detached, '+@counter+' actions'
@@ -3489,7 +3459,7 @@ smBlocks = do ->
 				return true
 			# }}}
 		# }}}
-		return Supervisor
+		return Visor
 	# }}}
 	# factory
 	return (m) -> new SUPERVISOR m
