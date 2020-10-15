@@ -1885,7 +1885,7 @@ smBlocks = do ->
 			lock: (level) ->> # {{{
 				###
 				if level != @locked
-					console.log 'lock', @locked, level
+					console.log 'price-filter.lock', @locked, level
 					if not level
 						# unlock
 						@section.lock 0
@@ -2299,7 +2299,9 @@ smBlocks = do ->
 			@resize = (e) !~> # {{{
 				# prepare
 				R = @block.range
-				# dynamic axis {{{
+				debugger
+				###
+				# dynamic axis
 				# check operation mode and
 				# determine current
 				if e
@@ -2318,8 +2320,8 @@ smBlocks = do ->
 					@baseSz.2 = parseFloat (R.cs.getPropertyValue 'width')
 				# update
 				@currentSz.0 = w
-				# }}}
-				# static axis {{{
+				###
+				# static axis
 				# determine deviation from the base
 				e = w / @baseSz.0
 				# calculate current size
@@ -2377,7 +2379,7 @@ smBlocks = do ->
 						@block.range.box.style.removeProperty '--page-size'
 					else if d and (Math.abs (d - b)) > 0.1
 						@block.range.box.style.setProperty '--page-size', d+'px'
-				# }}}
+				# done
 			# }}}
 		###
 		Control.prototype = {
@@ -2648,7 +2650,6 @@ smBlocks = do ->
 				else
 					# dualgap
 					# {{{
-					console.log 'dualgap'
 					mode    = 2
 					current = @index
 					count   = pages.length

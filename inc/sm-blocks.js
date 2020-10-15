@@ -1728,7 +1728,7 @@ smBlocks = function(){
       },
       lock: async function(level){
         if (level !== this.locked) {
-          console.log('lock', this.locked, level);
+          console.log('price-filter.lock', this.locked, level);
           if (!level) {
             this.section.lock(0);
             this.rootBox.classList.add('v');
@@ -2071,6 +2071,7 @@ smBlocks = function(){
       this.resize = function(e){
         var R, w, a, b, c, d;
         R = this$.block.range;
+        debugger;
         if (e) {
           w = e[0].contentRect.width;
         } else {
@@ -2369,7 +2370,6 @@ smBlocks = function(){
           first = 0;
           last = a - 1;
         } else {
-          console.log('dualgap');
           mode = 2;
           current = this.index;
           count = pages.length;

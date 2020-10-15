@@ -1,7 +1,7 @@
 <?php
 /***
 * Plugin Name: sm-blocks
-* Description: A fully-asynchronous product catalogue for WooCommerce
+* Description: A fully-asynchronous e-commerce catalogue
 * Plugin URI: github.com/determin1st/sm-blocks
 * Author: determin1st
 * Version: 1
@@ -618,29 +618,24 @@ class StorefrontModernBlocks {
         : 'https://cdn.jsdelivr.net/npm/http-fetch-json@2/httpFetch.js',
       [], false, true
     );
-    # register core styles and scripts
+    # register styles and scripts
     wp_register_style(
       $this->name.'-css',
-      $a.'css/'.$this->name.'.css'
-    );
-    wp_register_style(
-      $this->name.'-gutenberg-css',
-      $a.'css/'.$this->name.'-gutenberg.css',
-      [$this->name.'-css']
+      $a.'inc/'.$this->name.'.css'
     );
     wp_register_style(
       $this->name.'-demo-css',
-      $a.'css/'.$this->name.'-demo.css'
+      $a.'inc/pages/demo.css'
     );
     wp_register_script(
       $this->name.'-js',
-      $a.'js/'.$this->name.'.js',
+      $a.'inc/'.$this->name.'.js',
       ['http-fetch'],
       false, true
     );
     wp_register_script(
       $this->name.'-gutenberg-js',
-      $a.'js/'.$this->name.'-gutenberg.js',
+      $a.'inc/'.$this->name.'-gutenberg.js',
       [
         'wp-blocks', 'wp-element',
         'wp-editor', 'wp-components'
@@ -664,7 +659,6 @@ class StorefrontModernBlocks {
       if (is_admin())
       {
         # gutenberg mode
-        wp_enqueue_style($me->name.'-gutenberg-css');
         wp_enqueue_script($me->name.'-gutenberg-js');
       }
       else
@@ -676,7 +670,7 @@ class StorefrontModernBlocks {
         if ($me->cfg['enableDemoShop'] && is_shop()) {
           wp_enqueue_style($me->name.'-demo-css');
         }
-        # for removing gutenberg's default/core blocks:
+        # remove gutenberg's default/core blocks:
         #wp_dequeue_style('wp-block-library');
         #wp_deregister_style('wp-block-library');
       }
@@ -684,9 +678,9 @@ class StorefrontModernBlocks {
     # set demo-shop template
     if ($this->cfg['enableDemoShop'])
     {
-      add_filter('template_include', function($t) {
+      add_filter('template_include', function($t) use ($me) {
         return is_shop()
-          ? __DIR__.DIRECTORY_SEPARATOR.'sm-blocks-demo.php'
+          ? $me->dir_inc.'pages'.DIRECTORY_SEPARATOR.'demo.php'
           : $t;
         ###
       }, 11, 1);
@@ -1835,14 +1829,6 @@ EOD;
     return $cid;
   }
   # }}}
-  # TODO
-  private function purgeCache()
-  {
-    # delete cache files
-    foreach (glob($this->dir_data.'*.tmp') as $a) {
-      unlink($a);
-    }
-  }
   # }}}
 }
 function_exists('register_activation_hook') && register_activation_hook(__FILE__, function() {
