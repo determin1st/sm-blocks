@@ -2,7 +2,7 @@
 "use strict";
 var smBlocks, slice$ = [].slice, arrayFrom$ = Array.from || function(x){return slice$.call(x);};
 smBlocks = function(){
-  var consoleError, consoleInfo, newPromise, newDelay, querySelectorChildren, querySelectorChild, soFetch, oFetch, sMainSection, sCard, mProducts, mCategoryFilter, mPriceFilter, mPaginator, mOrderer, M, SUPERVISOR;
+  var consoleError, consoleInfo, newPromise, newDelay, querySelectorChildren, querySelectorChild, queryFirstChildren, soFetch, oFetch, sMainSection, sCard, mProducts, mCategoryFilter, mPriceFilter, mPaginator, mOrderer, M, SUPERVISOR;
   consoleError = function(msg){
     var a;
     a = '%csm-blocks: %c' + msg;
@@ -68,6 +68,18 @@ smBlocks = function(){
     }
     a = querySelectorChildren(parentNode, selector);
     return a.length ? a[0] : null;
+  };
+  queryFirstChildren = function(list){
+    var a, i$, len$, b;
+    if (!list || !list.length) {
+      return null;
+    }
+    a = [];
+    for (i$ = 0, len$ = list.length; i$ < len$; ++i$) {
+      b = list[i$];
+      a[a.length] = b.firstChild;
+    }
+    return a;
   };
   soFetch = httpFetch.create({
     baseUrl: '/?rest_route=/sm-blocks/kiss',
@@ -1111,16 +1123,16 @@ smBlocks = function(){
       }
     };
     Block = function(state, root, index){
-      var rootBox, box, this$ = this;
+      var rootBox, S, this$ = this;
       this.state = state;
       this.root = root;
       this.index = index;
       this.rootBox = rootBox = root.firstChild;
-      this.section = box = sMainSection(root);
-      this.checks = new Checkbox(this, box.rootItem);
+      this.section = S = sMainSection(root);
+      this.checks = new Checkbox(this, S.rootItem);
       this.locked = -1;
       this.focused = false;
-      box.onRefocus = function(i1, i2, direction){
+      S.onRefocus = function(i1, i2, direction){
         var a;
         a = null;
         if (i2) {
@@ -1140,7 +1152,7 @@ smBlocks = function(){
         }
         return !!a;
       };
-      this.onFocus = box.onFocus = function(){
+      this.onFocus = S.onFocus = function(){
         var p;
         p = null;
         return async function(item){
@@ -1157,9 +1169,9 @@ smBlocks = function(){
           return true;
         };
       }();
-      this.onAutofocus = box.onAutofocus = function(node){
+      this.onAutofocus = S.onAutofocus = function(node){
         var a;
-        if (!this$.focused && (a = box.rootItem).config.autofocus) {
+        if (!this$.focused && (a = S.rootItem).config.autofocus) {
           if (a.arrow) {
             a.arrow.focus();
           } else {
@@ -1429,29 +1441,23 @@ smBlocks = function(){
           this$.block.onAutofocus(o.input);
         }
       };
-      n0.onFocus = n1.onFocus = function(){
-        var p;
-        p = newDelay(0);
-        return async function(o){
-          var v;
-          p.cancel();
-          v = o.focused;
-          this$.box.classList.toggle('f' + o.id, v);
-          if (this$.focused = v) {
-            o.select();
-          } else {
-            this$.check(o.id);
-            if (this$.changed) {
-              this$.changed = 0;
-              this$.block.submit();
-            }
+      n0.onFocus = n1.onFocus = function(o){
+        var v;
+        v = o.focused;
+        this$.box.classList.toggle('f' + o.id, v);
+        if (this$.focused = v) {
+          o.select();
+        } else {
+          this$.check(o.id);
+          if (this$.changed) {
+            this$.changed = 0;
+            this$.block.submit();
           }
-          if (this$.onFocus && (await (p = newDelay(60)))) {
-            this$.onFocus(this$);
-          }
-          return true;
-        };
-      }();
+        }
+        if (o = this$.onFocus) {
+          o(this$);
+        }
+      };
       n0.onSubmit = n1.onSubmit = function(o, strict){
         if (!this$.check(o.id) && strict) {
           o.select();
@@ -1686,10 +1692,10 @@ smBlocks = function(){
             p.resolve(false);
           }
           if (o.focused) {
-            this$.focused = true;
+            this$.focused = this$.section.focused = true;
             this$.section.root.classList.add('f');
           } else if ((await (p = newDelay(60)))) {
-            this$.focused = false;
+            this$.focused = this$.section.focused = false;
             this$.section.root.classList.remove('f');
           }
           return true;
@@ -1722,6 +1728,7 @@ smBlocks = function(){
       },
       lock: async function(level){
         if (level !== this.locked) {
+          console.log('lock', this.locked, level);
           if (!level) {
             this.section.lock(0);
             this.rootBox.classList.add('v');
@@ -1780,7 +1787,7 @@ smBlocks = function(){
     return Block;
   }();
   mPaginator = function(){
-    var Control, BlockRange, Block;
+    var Control, PageGoto, PageRange, Block;
     Control = function(block){
       var this$ = this;
       this.block = block;
@@ -1788,29 +1795,29 @@ smBlocks = function(){
       this.lockType = 0;
       this.rootCS = getComputedStyle(block.root);
       this.rootBoxCS = getComputedStyle(block.rootBox);
-      this.rangeCS = getComputedStyle(block.rangeBox);
       this.rootPads = [0, 0, 0, 0];
       this.baseSz = [0, 0, 0, 0, 0];
       this.currentSz = [0, 0, 0, 0, 0];
+      this.observer = null;
       this.dragbox = [];
       this.maxSpeed = 10;
       this.brake = 15;
       this.observer = null;
       this.keyDown = function(e){
         var a;
-        if (this$.lock || this$.block.locked || !this$.block.range || !this$.block.mode) {
+        if (this$.lock || this$.block.locked || !this$.block.range.mode) {
           return;
         }
         switch (e.code) {
         case 'ArrowLeft':
         case 'ArrowDown':
-          a = this$.block.gotoP ? this$.block.gotoP.firstChild : null;
+          a = this$.block.gotos.btnPN[0];
           this$.lockType = 1;
           this$.fast(null, a, false);
           break;
         case 'ArrowRight':
         case 'ArrowUp':
-          a = this$.block.gotoN ? this$.block.gotoN.firstChild : null;
+          a = this$.block.gotos.btnPN[1];
           this$.lockType = 1;
           this$.fast(null, a, true);
           break;
@@ -1835,7 +1842,7 @@ smBlocks = function(){
       this.hover = function(e){
         e.preventDefault();
         e.stopPropagation();
-        if (!this$.block.locked && this$.block.mode && (e = e.currentTarget)) {
+        if (!this$.block.locked && this$.block.range.mode && (e = e.currentTarget)) {
           e.classList.add('hovered');
         }
       };
@@ -1848,7 +1855,7 @@ smBlocks = function(){
       };
       this.wheel = function(e){
         var a, b, i$, ref$, len$;
-        if (this$.lock || this$.block.locked || !this$.block.mode) {
+        if (this$.lock || this$.block.locked || !this$.block.range.mode) {
           return;
         }
         e.preventDefault();
@@ -1874,7 +1881,7 @@ smBlocks = function(){
       this.fastForward = function(e){
         e.preventDefault();
         e.stopPropagation();
-        if (this$.block.mode === 1 && !this$.lock && !this$.block.locked && e.isPrimary && !e.button) {
+        if (this$.block.range.mode === 2 && !this$.lock && !this$.block.locked && e.isPrimary && !e.button) {
           this$.lockType = 0;
           this$.fast(e.pointerId, e.currentTarget, true);
         }
@@ -1882,7 +1889,7 @@ smBlocks = function(){
       this.fastBackward = function(e){
         e.preventDefault();
         e.stopPropagation();
-        if (this$.block.mode === 1 && !this$.lock && !this$.block.locked && e.isPrimary && !e.button) {
+        if (this$.block.range.mode === 2 && !this$.lock && !this$.block.locked && e.isPrimary && !e.button) {
           this$.lockType = 0;
           this$.fast(e.pointerId, e.currentTarget, false);
         }
@@ -1895,12 +1902,14 @@ smBlocks = function(){
         }
       };
       this.dragStart = async function(e){
-        var node, a, c, b, d, i$, ref$, len$;
+        var B, R, node, c, b, a, d, i$, ref$, len$;
         e.preventDefault();
         e.stopPropagation();
-        if (this$.lock || this$.block.locked || this$.block.mode !== 1 || !e.isPrimary || e.button || typeof e.offsetX !== 'number') {
+        if (this$.lock || this$.block.locked || this$.block.range.mode !== 2 || !e.isPrimary || e.button || typeof e.offsetX !== 'number') {
           return true;
         }
+        B = this$.block;
+        R = B.range;
         this$.lock = newPromise();
         this$.lockType = 2;
         this$.block.focus();
@@ -1909,19 +1918,18 @@ smBlocks = function(){
           this$.lock = null;
           return true;
         }
-        node = this$.block.rangeBox;
+        node = this$.block.range.box;
         node.classList.add('active', 'drag');
         if (!node.hasPointerCapture(e.pointerId)) {
           node.setPointerCapture(e.pointerId);
         }
-        a = this$.block.range;
-        if ((c = a.pages.length) > 1) {
-          b = a.index;
-          c = c - a.index - 1;
+        if ((c = R.pages.length) > 1) {
+          b = R.index;
+          c = c - R.index - 1;
         } else {
           b = 0;
         }
-        if (a.first) {
+        if (R.first) {
           b += 1;
           c += 1;
         }
@@ -1941,7 +1949,7 @@ smBlocks = function(){
         e[4] = a + c * d;
         e[3] = e[4] / (c + 1);
         e[4] = e[4] - e[3];
-        e[2] = parseFloat(this$.rangeCS.getPropertyValue('width'));
+        e[2] = parseFloat(R.cs.getPropertyValue('width'));
         e[2] = e[2] - e[0] - e[4];
         if (!this$.currentSz[4]) {
           a = e[2] / (state.data[1] - (b + c));
@@ -2018,7 +2026,7 @@ smBlocks = function(){
         var a, b, c;
         e.preventDefault();
         e.stopPropagation();
-        if (this$.lock || this$.block.locked || !this$.block.mode) {
+        if (this$.lock || this$.block.locked || !this$.block.range.mode) {
           return;
         }
         a = e.currentTarget.parentNode.className;
@@ -2061,7 +2069,8 @@ smBlocks = function(){
         return a;
       }();
       this.resize = function(e){
-        var w, a, b, c, d;
+        var R, w, a, b, c, d;
+        R = this$.block.range;
         if (e) {
           w = e[0].contentRect.width;
         } else {
@@ -2071,7 +2080,7 @@ smBlocks = function(){
             w = 0;
           }
           this$.baseSz[0] = parseFloat(this$.rootBoxCS.getPropertyValue('width'));
-          this$.baseSz[2] = parseFloat(this$.rangeCS.getPropertyValue('width'));
+          this$.baseSz[2] = parseFloat(R.cs.getPropertyValue('width'));
         }
         this$.currentSz[0] = w;
         e = w / this$.baseSz[0];
@@ -2089,7 +2098,7 @@ smBlocks = function(){
           this$.currentSz[2] = e * this$.baseSz[3];
           this$.currentSz[3] = e * this$.baseSz[4];
         }
-        if (this$.block.flexy && this$.block.mode === 1) {
+        if (this$.block.flexy && this$.block.range.mode === 2) {
           a = this$.baseSz[0] - this$.baseSz[2];
           a = e > 0.999
             ? w - a
@@ -2108,85 +2117,62 @@ smBlocks = function(){
           }
           this$.currentSz[4] = d;
           if (c && !d) {
-            this$.block.rangeBox.style.removeProperty('--page-size');
+            this$.block.range.box.style.removeProperty('--page-size');
           } else if (d && Math.abs(d - b) > 0.1) {
-            this$.block.rangeBox.style.setProperty('--page-size', d + 'px');
+            this$.block.range.box.style.setProperty('--page-size', d + 'px');
           }
         }
       };
     };
     Control.prototype = {
-      attach: function(){
-        var B, R, a, i$, len$, c, b, ref$;
-        B = this.block;
-        R = B.range;
+      init: function(){
+        var R, a, b;
+        R = this.block.range;
         a = ['padding-top', 'padding-right', 'padding-bottom', 'padding-left'];
-        for (i$ = 0, len$ = a.length; i$ < len$; ++i$) {
-          c = i$;
-          b = a[i$];
-          this.rootPads[c] = parseInt(this.rootCS.getPropertyValue(b));
+        b = -1;
+        while (++b < a.length) {
+          this.rootPads[b] = parseInt(this.rootCS.getPropertyValue(a[b]));
         }
         this.baseSz[0] = 0;
         this.baseSz[1] = parseInt(this.rootCS.getPropertyValue('--height'));
-        this.baseSz[2] = parseFloat(this.rangeCS.getPropertyValue('width'));
-        if (R) {
-          a = getComputedStyle(R.pages[R.index]);
-          this.baseSz[3] = parseFloat(a.getPropertyValue('min-width'));
-          this.baseSz[4] = 0;
-          if (R.pages.length > 1) {
-            a = R.index > 0
-              ? 0
-              : R.index + 1;
-            a = getComputedStyle(R.pages[a]);
-            this.baseSz[4] = parseFloat(a.getPropertyValue('min-width'));
-          }
-        }
+        this.baseSz[2] = parseFloat(R.cs.getPropertyValue('width'));
+        a = getComputedStyle(R.pages[0]);
+        this.baseSz[3] = parseFloat(a.getPropertyValue('min-width'));
+        a = 1 + this.block.config.index;
+        a = getComputedStyle(R.pages[a]);
+        this.baseSz[4] = parseFloat(a.getPropertyValue('min-width'));
+      },
+      attach: function(){
+        var B, R, a, i$, ref$, len$, b;
+        B = this.block;
+        R = B.range;
+        this.init();
         B.root.addEventListener('keydown', this.keyDown, true);
         B.root.addEventListener('keyup', this.keyUp, true);
         B.root.addEventListener('click', this.setFocus);
         B.rootBox.addEventListener('wheel', this.wheel, true);
         B.rootBox.addEventListener('pointerenter', this.hover);
         B.rootBox.addEventListener('pointerleave', this.unhover);
-        if (B.gotoF) {
-          a = B.gotoF.firstChild;
-          a.addEventListener('click', this.goto);
-          a = B.gotoL.firstChild;
-          a.addEventListener('click', this.goto);
+        a = R.pages[0].firstChild;
+        a.addEventListener('click', this.goto);
+        a = R.pages.length - 1;
+        a = R.pages[a].firstChild;
+        a.addEventListener('click', this.goto);
+        for (i$ = 0, len$ = (ref$ = R.pages).length; i$ < len$; ++i$) {
+          b = i$;
+          a = ref$[i$];
+          a.firstChild.addEventListener('click', this.rangeGoto[b]);
         }
-        if (B.gotoP) {
-          a = B.gotoP.firstChild;
-          a.addEventListener('pointerdown', this.fastBackward);
-          a.addEventListener('pointerup', this.fastStop);
-          a.addEventListener('click', this.goto);
-          a = B.gotoN.firstChild;
-          a.addEventListener('pointerdown', this.fastForward);
-          a.addEventListener('pointerup', this.fastStop);
-          a.addEventListener('click', this.goto);
-        }
-        if (R) {
-          if (R.first) {
-            a = R.first.firstChild;
-            a.addEventListener('click', this.goto);
-            a = R.last.firstChild;
-            a.addEventListener('click', this.goto);
-          }
-          for (i$ = 0, len$ = (ref$ = R.buttons).length; i$ < len$; ++i$) {
-            b = i$;
-            a = ref$[i$];
-            a.addEventListener('click', this.rangeGoto[b]);
-          }
-          a = R.buttons[R.index];
-          a.addEventListener('pointerdown', this.dragStart);
-          B.rangeBox.addEventListener('pointermove', this.drag);
-          B.rangeBox.addEventListener('pointerup', this.dragStop);
-          this.observer = a = new ResizeObserver(this.resize);
-          a.observe(B.root);
-        }
+        a = R.pages[R.index].firstChild;
+        a.addEventListener('pointerdown', this.dragStart);
+        B.range.box.addEventListener('pointermove', this.drag);
+        B.range.box.addEventListener('pointerup', this.dragStop);
+        this.observer = a = new ResizeObserver(this.resize);
+        a.observe(B.root);
       },
       detach: function(){
-        var a;
-        if (a = this.observer) {
-          a.disconnect();
+        if (this.observer) {
+          this.observer.disconnect();
           this.observer = null;
         }
       },
@@ -2196,10 +2182,10 @@ smBlocks = function(){
           var a;
           e.preventDefault();
           e.stopPropagation();
-          if (this$.lock || this$.block.locked || !this$.block.mode) {
+          if (this$.lock || this$.block.locked || !this$.block.range.mode) {
             return;
           }
-          if (this$.block.mode === 1) {
+          if (this$.block.range.mode === 2) {
             a = state.data[0] + i;
           } else {
             a = this$.block.range.first
@@ -2253,7 +2239,7 @@ smBlocks = function(){
           return true;
         }
         this.block.focus();
-        this.block.rangeBox.classList.add('active');
+        this.block.range.box.classList.add('active');
         node.parentNode.classList.add('active');
         if (id !== null && !node.hasPointerCapture(id)) {
           node.setPointerCapture(id);
@@ -2281,7 +2267,7 @@ smBlocks = function(){
           }
         }
         node.parentNode.classList.remove('active');
-        this.block.rangeBox.classList.remove('active');
+        this.block.range.box.classList.remove('active');
         if (!this.block.locked) {
           state.master.resolve(state);
           for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
@@ -2302,7 +2288,7 @@ smBlocks = function(){
         b = this.block;
         requestAnimationFrame(function(){
           b.refresh();
-          if (b.mode === 2) {
+          if (b.range.mode === 2) {
             b.focus();
           }
           requestAnimationFrame(function(){
@@ -2312,73 +2298,240 @@ smBlocks = function(){
         return a;
       }
     };
-    BlockRange = function(box){
-      var a, b, c;
-      this.pages = a = arrayFrom$(box.querySelectorAll('.page.x'));
-      this.buttons = a.map(function(a){
-        return a.firstChild;
-      });
-      this.gap1 = box.querySelector('.gap.first');
-      this.gap2 = box.querySelector('.gap.last');
-      this.first = box.querySelector('.page.first');
-      this.last = box.querySelector('.page.last');
-      b = -1;
-      c = a.length;
-      while (++b < c) {
-        if (a[b].classList.contains('current')) {
-          break;
+    PageGoto = function(block){
+      var a, b;
+      this.block = block;
+      this.boxFL = a = querySelectorChildren(block.rootBox, '.goto.a');
+      this.boxPN = b = querySelectorChildren(block.rootBox, '.goto.b');
+      this.btnFL = queryFirstChildren(a);
+      this.btnPN = queryFirstChildren(b);
+      this.sepFL = querySelectorChildren(block.rootBox, '.sep');
+    };
+    PageGoto.prototype = {
+      attach: function(){
+        var E, a;
+        E = this.block.ctrl;
+        if (a = this.btnFL) {
+          a[0].addEventListener('click', E.goto);
+          a[1].addEventListener('click', E.goto);
+        }
+        if (a = this.btnPN) {
+          a[0].addEventListener('pointerdown', E.fastBackward);
+          a[0].addEventListener('pointerup', E.fastStop);
+          a[0].addEventListener('click', E.goto);
+          a[1].addEventListener('pointerdown', E.fastForward);
+          a[1].addEventListener('pointerup', E.fastStop);
+          a[1].addEventListener('click', E.goto);
+        }
+      },
+      detach: function(){
+        true;
+      }
+    };
+    PageRange = function(block){
+      var box, pages, gaps, i;
+      this.block = block;
+      this.box = box = querySelectorChild(block.rootBox, '.range');
+      this.cs = getComputedStyle(box);
+      this.pages = pages = querySelectorChildren(box, '.page');
+      this.gaps = gaps = querySelectorChildren(box, '.gap');
+      this.index = i = 1 + block.config.index;
+      this.size = pages.length - 2;
+      this.mode = 0;
+      this.current = -1;
+      this.count = 0;
+      this.nPages = pages.slice().fill(0);
+      this.nGaps = gaps.slice().fill(0);
+      this.pFirst = -1;
+      this.pLast = -1;
+    };
+    PageRange.prototype = {
+      set: function(v){
+        var pages, gaps, first, last, mode, current, count, a, b, c, i$, len$;
+        pages = this.pages.slice().fill(0);
+        gaps = [0, 0];
+        first = -1;
+        last = -1;
+        if (v[1] === 0) {
+          mode = 0;
+          current = -1;
+          count = 0;
+          gaps[0] = 100;
+        } else if (v[1] <= pages.length) {
+          mode = 1;
+          current = v[0];
+          count = pages.length;
+          a = -1;
+          b = 0;
+          while (++a < v[1]) {
+            pages[a] = ++b;
+          }
+          first = 0;
+          last = a - 1;
+        } else {
+          console.log('dualgap');
+          mode = 2;
+          current = this.index;
+          count = pages.length;
+          if ((a = this.index - v[0] - 1) < 0) {
+            pages[0] = 1;
+            first = 0;
+            gaps[0] = -a - 1;
+            b = -a;
+            a = 0;
+          } else {
+            first = a + 1;
+            b = -a;
+          }
+          while (++a < this.index) {
+            pages[a] = a + b;
+          }
+          pages[current] = v[0] + 1;
+          b = v[0] + 1;
+          c = count - 1;
+          if ((a = v[1] - b - this.size + this.index - 1) >= 0) {
+            last = c;
+            pages[c] = v[1];
+            gaps[1] = a;
+          } else {
+            last = c + a;
+            c = last + 1;
+          }
+          a = this.index;
+          while (++a < c) {
+            pages[a] = ++b;
+          }
+          a = 100 * gaps[0] / (gaps[0] + gaps[1]);
+          if (a > 0 && a < 1) {
+            a = 1;
+          } else if (a > 99 && a < 100) {
+            a = 99;
+          } else {
+            a = Math.round(a);
+          }
+          gaps[0] = a;
+          gaps[1] = 100 - a;
+        }
+        if (mode !== this.mode) {
+          a = this.box.classList;
+          if (!this.mode) {
+            a.add('v');
+          }
+          if (mode === 1) {
+            a.add('nogap');
+          } else if (!mode) {
+            a.remove('v');
+          }
+          if (this.mode === 1) {
+            a.remove('nogap');
+          }
+          this.mode = mode;
+        }
+        if (count !== this.count) {
+          this.box.style.setProperty('--count', count);
+          this.count = count;
+          this.block.resize();
+        }
+        a = this.nPages;
+        for (i$ = 0, len$ = pages.length; i$ < len$; ++i$) {
+          b = i$;
+          c = pages[i$];
+          if (a[b] !== c) {
+            if (!a[b]) {
+              this.pages[b].classList.add('v');
+            }
+            if (!c) {
+              this.pages[b].classList.remove('v');
+            } else {
+              this.pages[b].firstChild.textContent = ~c ? c : '';
+            }
+            a[b] = c;
+          }
+        }
+        a = this.nGaps;
+        for (i$ = 0, len$ = gaps.length; i$ < len$; ++i$) {
+          b = i$;
+          c = gaps[i$];
+          if (a[b] !== c) {
+            if (!a[b]) {
+              this.gaps[b].classList.add('v');
+            }
+            if (!c) {
+              this.gaps[b].classList.remove('v');
+            }
+            this.gaps[b].style.flexGrow = a[b] = c;
+          }
+        }
+        if (this.current !== current) {
+          if (~this.current) {
+            this.pages[this.current].classList.remove('x');
+          }
+          if (~current) {
+            this.pages[current].classList.add('x');
+          }
+          this.current = current;
+        }
+        if ((a = this.pFirst) !== first) {
+          if (~a) {
+            this.pages[a].classList.remove('F');
+          }
+          if (~first) {
+            this.pages[first].classList.add('F');
+          }
+          this.pFirst = first;
+        }
+        if ((a = this.pLast) !== last) {
+          if (~a) {
+            this.pages[a].classList.remove('L');
+          }
+          if (~last) {
+            this.pages[last].classList.add('L');
+          }
+          this.pLast = last;
         }
       }
-      this.index = b;
-      this.current = a[b].firstChild;
-      this.size = this.first ? c + 2 : c;
-      this.nPages = Array(c).fill(0);
-      this.nGap1 = 0;
-      this.nGap2 = 0;
-      this.nFirst = 0;
-      this.nLast = 0;
-      this.nCount = 0;
     };
     Block = function(state, root){
-      var rootBox, a, b;
+      var rootBox;
       this.state = state;
       this.root = root;
       this.rootBox = rootBox = root.firstChild;
-      a = arrayFrom$(root.querySelectorAll('.goto.a'));
-      b = arrayFrom$(root.querySelectorAll('.goto.b'));
-      this.gotoF = (a.length && a[0]) || null;
-      this.gotoL = (a.length && a[1]) || null;
-      this.gotoP = (b.length && b[0]) || null;
-      this.gotoN = (b.length && b[1]) || null;
-      this.rangeBox = a = root.querySelector('.range');
-      this.range = (a && new BlockRange(a)) || null;
+      this.config = JSON.parse(rootBox.dataset.cfg);
+      this.range = new PageRange(this);
+      this.gotos = new PageGoto(this);
+      this.control = new Control(this);
       this.locked = -1;
-      this.flexy = rootBox.classList.contains('flexy');
-      this.mode = 0;
-      this.ctrl = new Control(this);
-      this.onResize = null;
+      this.current = [-1, -1];
     };
     Block.prototype = {
       group: 'page',
       level: 1,
       init: function(cfg){
+        var a;
+        a = this.rootBox.classList;
+        if (this.config.range === 2) {
+          a.add('flexy');
+        }
+        if (!this.gotos.sepFL) {
+          a.add('nosep');
+        }
         this.refresh();
-        this.ctrl.attach();
+        this.control.attach();
         return true;
       },
       lock: async function(level){
-        var R;
+        var a;
         if (level !== this.locked) {
           if (!level) {
             this.rootBox.classList.add('v');
           } else {
-            if (this.ctrl.lock) {
-              (await this.ctrl.lock.spin());
+            if (a = this.control.lock) {
+              (await a.spin());
             }
             this.rootBox.classList.remove('v');
-            if ((R = this.range) && R.current) {
-              R.current.parentNode.classList.remove('current');
-              R.current = null;
+            if (~(a = this.range.current)) {
+              this.range.pages[a].classList.remove('x');
+              this.range.current = -1;
             }
           }
         }
@@ -2387,175 +2540,27 @@ smBlocks = function(){
       },
       notify: function(){
         var a;
-        if ((a = this.ctrl.lock) && a.pending) {
+        if ((a = this.control.lock) && a.pending) {
           return false;
         }
         return true;
       },
       refresh: function(){
-        /***
-        case 'load'
-        	# check first
-        	for a in blocks
-        		# continue interactions..
-        		a.lock 0 if a.locked
-        		# in case of active block,
-        		# prevent self-refreshing..
-        		return true if a.ctrl.lock
-        	# update
-        	state.data.0 = data.pageIndex
-        	state.data.1 = data.pageCount
-        	for a in blocks
-        		a.refresh!
-        /***/
-        var R, index, count, nCount, nPages, nGap1, nGap2, nFirst, nLast, mode, current, i$, to$, a, b, c, d, len$;
-        if (!(R = this.range)) {
+        var a, b;
+        a = this.current;
+        b = this.state.data;
+        if (a[0] === b[0] && a[1] === b[1]) {
           return;
         }
-        index = this.state.data[0];
-        count = this.state.data[1];
-        nCount = 0;
-        nPages = R.nPages.slice().fill(0);
-        nGap1 = 0;
-        nGap2 = 0;
-        nFirst = 0;
-        nLast = 0;
-        if (!count) {
-          mode = 0;
-          current = null;
-          nCount = R.size;
-          for (i$ = R.index, to$ = nPages.length; i$ < to$; ++i$) {
-            a = i$;
-            nPages[a] = 1;
-          }
-          nGap2 = 100;
-          nLast = 1;
-        } else if (count > R.size) {
-          mode = 1;
-          current = R.buttons[R.index];
-          nCount = R.size;
-          if ((a = R.index - index) < 0) {
-            nFirst = 1;
-            nGap1 = 0 - a - 1;
-            a = 0;
-          }
-          b = nPages.length - R.index - 1;
-          c = count - index - 2;
-          if (b > c) {
-            b = R.index + c + 2;
-          } else {
-            nLast = count;
-            nGap2 = c - b;
-            b = nPages.length;
-          }
-          c = a - 1;
-          d = index - R.index + a;
-          while (++c < b) {
-            nPages[c] = ++d;
-          }
-          if (a = nGap1 + nGap2) {
-            a = 100 * nGap1 / a;
-            if (a > 0 && a < 1) {
-              a = 1;
-            } else if (a > 99 && a < 100) {
-              a = 99;
-            } else {
-              a = Math.round(a);
-            }
-            nGap1 = a;
-            nGap2 = 100 - a;
-          }
-        } else {
-          mode = 2;
-          nCount = count;
-          nFirst = a = (R.first && 1) || 0;
-          b = -1;
-          c = nPages.length;
-          while (++b < c && a < count) {
-            nPages[b] = ++a;
-          }
-          nLast = R.last && a < count ? count : 0;
-          a = index + 1;
-          current = a === nFirst
-            ? R.first.firstChild
-            : a === nLast
-              ? R.last.firstChild
-              : R.buttons[nPages.indexOf(a)];
+        if (this.range) {
+          this.range.set(b);
         }
-        if (mode !== this.mode) {
-          if (!this.mode) {
-            this.rootBox.classList.add('v');
-          }
-          if (!mode) {
-            this.rootBox.classList.remove('v');
-          } else if (mode === 1) {
-            this.rangeBox.classList.remove('nogap');
-          } else {
-            this.rangeBox.classList.add('nogap');
-          }
-          this.mode = mode;
-        }
-        if (R.nCount !== nCount) {
-          this.rangeBox.style.setProperty('--count', nCount);
-          R.nCount = nCount;
-          this.root.classList.remove('v');
-          this.ctrl.resize();
-          this.root.classList.add('v');
-        }
-        if (R.nFirst !== nFirst) {
-          if (!R.nFirst) {
-            R.first.classList.add('v');
-          } else if (!nFirst) {
-            R.first.classList.remove('v');
-          }
-          R.nFirst = nFirst;
-        }
-        if (R.nGap1 !== nGap1) {
-          if (!R.nGap1) {
-            R.gap1.classList.add('v');
-          } else if (!nGap1) {
-            R.gap1.classList.remove('v');
-          }
-          R.gap1.style.flexGrow = R.nGap1 = nGap1;
-        }
-        c = R.nPages;
-        for (i$ = 0, len$ = nPages.length; i$ < len$; ++i$) {
-          b = i$;
-          a = nPages[i$];
-          if (a !== c[b]) {
-            if (!c[b]) {
-              R.pages[b].classList.add('v');
-            } else if (!a) {
-              R.pages[b].classList.remove('v');
-            }
-            R.buttons[b].textContent = c[b] = a;
-          }
-        }
-        if (R.nGap2 !== nGap2) {
-          if (!R.nGap2) {
-            R.gap2.classList.add('v');
-          } else if (!nGap2) {
-            R.gap2.classList.remove('v');
-          }
-          R.gap2.style.flexGrow = R.nGap2 = nGap2;
-        }
-        if (R.nLast !== nLast) {
-          if (!R.nLast) {
-            R.last.classList.add('v');
-          } else if (!nLast) {
-            R.last.classList.remove('v');
-          }
-          R.last.firstChild.textContent = R.nLast = nLast;
-        }
-        if (R.current !== current) {
-          if (R.current) {
-            R.current.parentNode.classList.remove('current');
-          }
-          if (current) {
-            current.parentNode.classList.add('current');
-          }
-          R.current = current;
-        }
+        a[0] = b[0], a[1] = b[1];
+      },
+      resize: function(){
+        this.root.classList.remove('v');
+        this.control.resize();
+        this.root.classList.add('v');
       },
       focus: function(){
         var a;
@@ -2768,7 +2773,7 @@ smBlocks = function(){
       Loader = function(s){
         this['super'] = s;
         this.dirty = true;
-        this.level = 100;
+        this.level = 0;
         this.lock = null;
         this.fetch = null;
         this.state = null;

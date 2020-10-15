@@ -147,62 +147,22 @@ class StorefrontModernBlocks {
             'type'        => 'string',
             'default'     => 'custom',
           ],
-          ###
-          'modeFirstLast' => [
-            'type'        => 'string',
-            'default'     => 'inner',
-          ],
-          'modePrevNext'  => [
-            'type'        => 'string',
-            'default'     => 'standard',
-          ],
-          'range'         => [
+          'focusGreedy'   => [
             'type'        => 'boolean',
             'default'     => true,
           ],
+          ### controls
           'rangeMode'     => [
             'type'        => 'number',
-            'default'     => 2, # 0=none, 1=static, 2=flexy
+            'default'     => 2, # 0=none,1=static,2=flexy
           ],
-          'rangePlus'     => [
+          'rangeSize'     => [
+            'type'        => 'string',
+            'default'     => '1:2', # pages before:after current
+          ],
+          'gotoMode'      => [
             'type'        => 'number',
-            'default'     => 2,
-          ],
-          'rangeMinus'  => [
-            'type'        => 'number',
-            'default'     => 1,
-          ],
-          'separator'     => [
-            'type'        => 'boolean',
-            'default'     => true,
-          ],
-          'bFirst'        => [
-            'type'        => 'string',
-            'default'     => '',
-          ],
-          'bLast'         => [
-            'type'        => 'string',
-            'default'     => '',
-          ],
-          'bPrev'         => [
-            'type'        => 'string',
-            'default'     => '',
-          ],
-          'bNext'         => [
-            'type'        => 'string',
-            'default'     => '',
-          ],
-          'bGap'          => [
-            'type'        => 'string',
-            'default'     => '',
-          ],
-          'bSep1'         => [
-            'type'        => 'string',
-            'default'     => '',
-          ],
-          'bSep2'         => [
-            'type'        => 'string',
-            'default'     => '',
+            'default'     => 1|2|4, # 0=none|1=separators|2=prev/next|4=first/last
           ],
         ],
       ],
@@ -398,11 +358,36 @@ class StorefrontModernBlocks {
       'paginator' => [ # {{{
         'main' => '
         <div class="sm-blocks paginator {{custom}}">
-          <div class="{{class}}">{{content}}</div>
+          <div data-cfg=\'{{cfg}}\'>
+            {{gotoF}}{{gotoP}}{{sep1}}{{range}}{{sep2}}{{gotoN}}{{gotoL}}
+          </div>
           {{placeholder}}
         </div>
         ',
-        'first' => '
+        'range' => '
+        <div class="range">
+          {{page}}{{gap}}{{pages}}{{gap}}{{page}}
+        </div>
+        ',
+        'page' => '
+        <div class="page"><button type="button"></button></div>
+        ',
+        'sep1' => '
+        <div class="sep L">
+        <svg preserveAspectRatio="none" viewBox="0 0 16 16">
+          <path d="M3 .997h6v14H3zM10 1.997h3v12h-3z"/>
+        </svg>
+        </div>
+        ',
+        'sep2' => '
+        <div class="sep R">
+        <svg preserveAspectRatio="none" viewBox="0 0 16 16">
+          <path d="M7 .997h6v14H7zM3 1.997h3v12H3z"/>
+        </svg>
+        </div>
+        ',
+        'gotoF' => '
+        <div class="goto FL F"><button type="button">
         <svg preserveAspectRatio="none" viewBox="0 0 100 100">
           <path d="M58.644 27.26v8.294c0 .571-.305 1.1-.8 1.385L37.632 48.608a1.6 1.6 0 000 2.771l20.212 11.669c.495.286.8.814.8 1.385v8.294a1.6 1.6 0 01-2.399 1.385L16.869 51.379a1.6 1.6 0 010-2.771l39.375-22.733a1.6 1.6 0 012.4 1.385z"/>
           <path d="M57.844 63.048l-2.376-1.372c-.013.043-.023.09-.032.136l.409.236c.495.286.8.814.8 1.385v8.294c0 1.008-.894 1.693-1.803 1.575l1.404.81a1.6 1.6 0 002.399-1.385v-8.294a1.603 1.603 0 00-.801-1.385zM37.632 48.608l20.212-11.669a1.6 1.6 0 00.8-1.385V27.26c0-1.115-1.092-1.84-2.091-1.512.054.16.091.328.091.512v8.294c0 .571-.305 1.1-.8 1.385L35.632 47.608c-.078.052-.745.516-.8 1.385-.057.911.609 1.467.673 1.518l1.916 1.328a.747.747 0 01.019-.51.575.575 0 01.037-.07c-.895-.672-.852-2.069.155-2.651z"/>
@@ -411,8 +396,10 @@ class StorefrontModernBlocks {
           <path d="M85.258 63.048l-2.376-1.372c-.013.043-.023.09-.032.136l.409.236c.495.286.8.814.8 1.385v8.294c0 1.008-.894 1.693-1.803 1.575l1.404.81a1.6 1.6 0 002.399-1.385v-8.294a1.603 1.603 0 00-.801-1.385zM65.047 48.608l20.212-11.669a1.6 1.6 0 00.8-1.385V27.26c0-1.115-1.092-1.84-2.091-1.512.054.16.091.328.091.512v8.294c0 .571-.305 1.1-.8 1.385L63.047 47.608c-.078.052-.745.516-.8 1.385-.057.911.609 1.467.673 1.518l1.916 1.328a.747.747 0 01.019-.51.575.575 0 01.037-.07c-.896-.672-.853-2.069.155-2.651z"/>
           <path fill="none" stroke-miterlimit="10" d="M86.058 27.26v8.294c0 .571-.305 1.1-.8 1.385L65.047 48.608a1.6 1.6 0 000 2.771l20.212 11.669c.495.286.8.814.8 1.385v8.294a1.6 1.6 0 01-2.399 1.385L44.283 51.379a1.6 1.6 0 010-2.771l39.375-22.733a1.6 1.6 0 012.4 1.385z"/>
         </svg>
+        </button></div>
         ',
-        'last' => '
+        'gotoL' => '
+        <div class="goto FL L"><button type="button">
         <svg preserveAspectRatio="none" viewBox="0 0 100 100">
           <path d="M41.762 27.26v8.294c0 .571.305 1.1.8 1.385l20.212 11.669a1.6 1.6 0 010 2.771L42.562 63.048a1.6 1.6 0 00-.8 1.385v8.294a1.6 1.6 0 002.399 1.385l39.375-22.733a1.6 1.6 0 000-2.771L44.161 25.875a1.6 1.6 0 00-2.399 1.385z"/>
           <path d="M83.537 48.608L44.161 25.875a1.56 1.56 0 00-.597-.19l37.972 21.923a1.6 1.6 0 010 2.771L42.161 73.112c-.1.058-.205.092-.308.126.308.914 1.401 1.398 2.308.874l39.375-22.733a1.6 1.6 0 00.001-2.771z"/>
@@ -421,40 +408,40 @@ class StorefrontModernBlocks {
           <path d="M56.438 48.621L17.063 25.888a1.56 1.56 0 00-.597-.19l37.972 21.923a1.6 1.6 0 010 2.771L15.063 73.125c-.1.058-.205.092-.308.126.308.914 1.401 1.398 2.308.874l39.375-22.733a1.6 1.6 0 000-2.771z"/>
           <path fill="none" stroke-miterlimit="10" d="M14.664 27.273v8.294c0 .571.305 1.1.8 1.385l20.212 11.669a1.6 1.6 0 010 2.771L15.464 63.061a1.6 1.6 0 00-.8 1.385v8.294a1.6 1.6 0 002.399 1.385l39.375-22.733a1.6 1.6 0 000-2.771L17.063 25.888a1.6 1.6 0 00-2.399 1.385z"/>
         </svg>
+        </button></div>
         ',
-        'prev' => '
+        'gotoP' => '
+        <div class="goto PN P"><button type="button">
         <svg preserveAspectRatio="none" viewBox="0 0 100 100">
           <path d="M70.787 27.267v8.294c0 .571-.305 1.1-.8 1.385L49.776 48.615a1.6 1.6 0 000 2.771l20.212 11.669c.495.286.8.814.8 1.385v8.294a1.6 1.6 0 01-2.399 1.385L29.013 51.385a1.6 1.6 0 010-2.771l39.375-22.733a1.6 1.6 0 012.399 1.386z"/>
           <path d="M69.987 63.055l-2.376-1.372c-.013.043-.023.09-.032.136l.409.236c.495.286.8.814.8 1.385v8.294c0 1.008-.894 1.693-1.803 1.575l1.404.81a1.6 1.6 0 002.399-1.385V64.44a1.6 1.6 0 00-.801-1.385zM49.776 48.615l20.212-11.669a1.6 1.6 0 00.8-1.385v-8.294c0-1.115-1.092-1.84-2.091-1.512.054.16.091.328.091.512v8.294c0 .571-.305 1.1-.8 1.385L47.776 47.615c-.078.052-.745.516-.8 1.385-.057.911.609 1.467.673 1.518l1.916 1.328a.747.747 0 01.019-.51.575.575 0 01.037-.07c-.896-.673-.853-2.07.155-2.651z"/>
           <path fill="none" stroke-miterlimit="10" d="M70.787 27.267v8.294c0 .571-.305 1.1-.8 1.385L49.776 48.615a1.6 1.6 0 000 2.771l20.212 11.669c.495.286.8.814.8 1.385v8.294a1.6 1.6 0 01-2.399 1.385L29.013 51.385a1.6 1.6 0 010-2.771l39.375-22.733a1.6 1.6 0 012.399 1.386z"/>
         </svg>
+        </button></div>
         ',
-        'next' => '
+        'gotoN' => '
+        <div class="goto PN N"><button type="button">
         <svg preserveAspectRatio="none" viewBox="0 0 100 100">
           <path d="M28.213 27.267v8.294c0 .571.305 1.1.8 1.385l20.212 11.669a1.6 1.6 0 010 2.771L29.013 63.055a1.6 1.6 0 00-.8 1.385v8.294a1.6 1.6 0 002.399 1.385l39.375-22.733a1.6 1.6 0 000-2.771L30.612 25.881a1.6 1.6 0 00-2.399 1.386z"/>
           <path d="M69.987 48.615L30.612 25.881a1.56 1.56 0 00-.597-.19l37.972 21.923a1.6 1.6 0 010 2.771L28.612 73.119c-.1.058-.205.092-.308.126.308.914 1.401 1.398 2.308.874l39.375-22.733a1.6 1.6 0 000-2.771z"/>
           <path fill="none" stroke-miterlimit="10" d="M28.213 27.267v8.294c0 .571.305 1.1.8 1.385l20.212 11.669a1.6 1.6 0 010 2.771L29.013 63.055a1.6 1.6 0 00-.8 1.385v8.294a1.6 1.6 0 002.399 1.385l39.375-22.733a1.6 1.6 0 000-2.771L30.612 25.881a1.6 1.6 0 00-2.399 1.386z"/>
         </svg>
+        </button></div>
         ',
-        'gap' => '
+        ###
+        'gap-static' => '
+        <div class="gap">
         <svg preserveAspectRatio="none" viewBox="0 0 48 48">
           <path d="M1 41h14v6H1zM17 41h14v6H17zM33 41h14v6H33z"/>
         </svg>
+        </div>
         ',
-        'gapExp' => '
+        'gap-flexy' => '
+        <div class="gap">
         <svg preserveAspectRatio="none" viewBox="0 0 48 48">
           <rect y="4" width="48" height="40"/>
         </svg>
-        ',
-        'sep1' => '
-        <svg preserveAspectRatio="none" viewBox="0 0 16 16">
-          <path d="M3 .997h6v14H3zM10 1.997h3v12h-3z"/>
-        </svg>
-        ',
-        'sep2' => '
-        <svg preserveAspectRatio="none" viewBox="0 0 16 16">
-          <path d="M7 .997h6v14H7zM3 1.997h3v12H3z"/>
-        </svg>
+        </div>
         ',
       ],
       # }}}
@@ -800,150 +787,44 @@ class StorefrontModernBlocks {
   {
     # prepare
     $T = $this->templates['paginator'];
-    # create elements
-    # first/last {{{
-    if (($a = $attr['modeFirstLast']) !== 'none')
+    # refine parameters
+    $a = explode(':', $attr['rangeSize']);
+    $rangeIndex = intval($a[0]);
+    $rangeSize  = $rangeIndex + intval($a[1]) + 1;
+    $gotoFL  = !!($attr['gotoMode'] & 4);
+    $gotoPN  = !!($attr['gotoMode'] & 2);
+    $gotoSep = !!($attr['gotoMode'] & 1);
+    # determine gap
+    $gap = $attr['rangeMode'] === 2
+      ? $T['gap-flexy']
+      : $T['gap-static'];
+    # create range
+    $pages = '';
+    if ($attr['rangeMode'] > 0)
     {
-      # create inner buttons
-      if ($a === 'inner' || $a === 'both')
-      {
-        $iFirst = '<div class="page first"><button type="button">1</button></div>';
-        $iLast  = '<div class="page last"><button type="button">n</button></div>';
-      }
-      else {
-        $iFirst = $iLast = '';
-      }
-      # create outer buttons
-      if ($a === 'outer' || $a === 'both')
-      {
-        $oFirst = empty($attr['bFirst'])
-          ? $T['first']
-          : $attr['bFirst'];
-        $oLast  = empty($attr['bLast'])
-          ? $T['last']
-          : $attr['bLast'];
-        $oFirst = '<div class="goto a first"><button type="button">'.$oFirst.'</button></div>';
-        $oLast  = '<div class="goto a last"><button type="button">'.$oLast.'</button></div>';
-      }
-      else {
-        $oFirst = $oLast = '';
+      $a = -1;
+      while (++$a < $rangeSize) {
+        $pages .= $T['page'];
       }
     }
-    else {
-      $iFirst = $iLast = $oFirst = $oLast = '';
-    }
-    # }}}
-    # previous/next {{{
-    if (($a = $attr['modePrevNext']) !== 'none')
-    {
-      $prev = $a === 'standard' || empty($attr['bPrev'])
-        ? $T['prev']
-        : $attr['bPrev'];
-      $next = $a === 'standard' || empty($attr['bNext'])
-        ? $T['next']
-        : $attr['bNext'];
-      ###
-      $prev = '<div class="goto b prev"><button type="button">'.$prev.'</button></div>';
-      $next = '<div class="goto b next"><button type="button">'.$next.'</button></div>';
-    }
-    else {
-      $prev = $next = '';
-    }
-    # }}}
-    # gap/separator {{{
-    $gap = empty($attr['bGap'])
-      ? ($attr['rangeMode'] === 2
-        ? $T['gapExp']
-        : $T['gap'])
-      : $attr['bGap'];
-    $gapFirst = '<div class="gap first">'.$gap.'</div>';
-    $gapLast  = '<div class="gap last">'.$gap.'</div>';
-    ###
-    $sepFirst = $sepMid = $sepLast = '';
-    if ($attr['separator'])
-    {
-      $sepFirst = empty($attr['bSep1'])
-        ? $T['sep1']
-        : $attr['bSep1'];
-      $sepLast  = empty($attr['bSep2'])
-        ? $T['sep2']
-        : $attr['bSep2'];
-      $sepFirst = '<div class="sep first">'.$sepFirst.'</div>';
-      $sepMid   = '<div class="sep">'.$sepFirst.'</div>';
-      $sepLast  = '<div class="sep last">'.$sepLast.'</div>';
-    }
-    # }}}
-    # range {{{
-    if ($attr['rangeMode'])
-    {
-      # prepare
-      $rangeLeft = $rangeRight = '';
-      $b = $attr['rangeMinus'];
-      $c = $attr['rangePlus'];
-      # compose parts
-      $a = $b + 1;
-      while (--$a > 0)
-      {
-        $rangeLeft .= '
-        <div class="page x">
-          <button type="button">x-'.$a.'</button>
-        </div>
-        ';
-      }
-      while (++$a <= $c)
-      {
-        $rangeRight .= '
-        <div class="page x">
-          <button type="button">x-'.$a.'</button>
-        </div>
-        ';
-      }
-      # add gaps
-      if (!empty($rangeLeft)  ||
-          !empty($rangeRight) ||
-          !empty($iFirst))
-      {
-        $rangeLeft  = $gapFirst.$rangeLeft;
-        $rangeRight = $rangeRight.$gapLast;
-      }
-      # determine capacity
-      $a = empty($iFirst) ? 0 : 2;
-      $a = $a + $b + 1 + $c;
-      # compose
-      $content = <<<EOD
-      {$sepFirst}
-      <div class="range" style="--count:{$a}">
-        {$iFirst}
-        {$rangeLeft}
-        <div class="page x current"><button type="button">x</button></div>
-        {$rangeRight}
-        {$iLast}
-      </div>
-      {$sepLast}
-EOD;
-    }
-    else
-    {
-      # no range
-      $content = $sepMid;
-    }
-    # }}}
-    # class name {{{
-    $class = $attr['rangeMode'];
-    $class = $class === 2
-      ? 'flexy'
-      : ($class === 1
-        ? 'static'
-        : 'norange');
-    if (empty($sepFirst)) {
-      $class .= ' nosep';
-    }
-    # }}}
+    # create configuration
+    $cfg = json_encode([
+      'goto'  => $attr['gotoMode'],
+      'range' => $attr['rangeMode'],
+      'index' => $rangeIndex,
+    ]);
     # compose
     return $this->parseTemplate($T['main'], $T, [
-      'custom'  => $attr['customClass'],
-      'class'   => $class,
-      'content' => $oFirst.$prev.$content.$next.$oLast,
+      'custom' => $attr['customClass'],
+      'cfg'    => $cfg,
+      'gotoF'  => $gotoFL,
+      'gotoP'  => $gotoPN,
+      'sep1'   => $gotoSep,
+      'gap'    => $gap,
+      'pages'  => $pages,
+      'sep2'   => $gotoSep,
+      'gotoN'  => $gotoPN,
+      'gotoL'  => $gotoFL,
       'placeholder' => $this->templates['svg']['placeholder'],
     ]);
   }

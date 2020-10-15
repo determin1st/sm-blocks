@@ -730,9 +730,11 @@
   --width: calc(1.35 * var(--height));
   width: 100%;
   height: calc(8px + var(--height));
+  padding: 4px 0 4px 0;
   display: flex;
   flex-direction: row;
   justify-content: center;
+/**/
 }
 .sm-blocks.paginator > div {
   flex: 0 0 auto;
@@ -741,17 +743,12 @@
   display: flex;
   flex-direction: row;
   touch-action: none;
+/*===*/
+/*===*/
 }
 .sm-blocks.paginator > div > .goto {
   flex: 1 1 0;
   max-width: calc(2px + var(--width));
-  padding: 4px 0 4px 0;
-}
-.sm-blocks.paginator > div > .goto.prev {
-  padding-left: 2px;
-}
-.sm-blocks.paginator > div > .goto.next {
-  padding-right: 2px;
 }
 .sm-blocks.paginator > div > .goto > button {
   width: 100%;
@@ -771,30 +768,39 @@
   border-color: #2f4f4f;
   box-shadow: inset 0 0 0 1px #fff;
 }
-.sm-blocks.paginator > div > .goto.active {
+.sm-blocks.paginator > div > .goto.P {
+  padding-left: 2px;
+}
+.sm-blocks.paginator > div > .goto.N {
+  padding-right: 2px;
+}
+.sm-blocks.paginator > div > .goto.FN.active,
+.sm-blocks.paginator > div > .goto.PN.active {
   padding-top: 2px;
   padding-bottom: 2px;
 }
-.sm-blocks.paginator > div > .goto.active > button {
+.sm-blocks.paginator > div > .goto.FN.active > button,
+.sm-blocks.paginator > div > .goto.PN.active > button {
   background-color: #000;
   padding: 4px;
 }
-.sm-blocks.paginator > div > .goto.active > button > svg {
+.sm-blocks.paginator > div > .goto.FN.active > button > svg,
+.sm-blocks.paginator > div > .goto.PN.active > button > svg {
   fill: #fff;
 }
 .sm-blocks.paginator > div > .sep {
-  flex: 1 1 0;
-  max-width: 8px;
+  flex: 0 0 0;
+  min-width: 8px;
   padding: 2px 0 2px 0;
-}
-.sm-blocks.paginator > div > .sep.first {
-  padding-left: 0;
-}
-.sm-blocks.paginator > div > .sep.last {
-  padding-right: 0;
 }
 .sm-blocks.paginator > div > .sep > svg {
   fill: #c0c0c0;
+}
+.sm-blocks.paginator > div > .sep.L {
+  padding-left: 0;
+}
+.sm-blocks.paginator > div > .sep.R {
+  padding-right: 0;
 }
 .sm-blocks.paginator > div > .range {
   --count: 0;
@@ -806,17 +812,29 @@
   display: flex;
   flex-direction: row;
   justify-content: center;
+/*===*
+			&.nogap
+				// range without gaps
+				// reduced size
+				--max-width: calc(2px + var(--count) * var(--width))
+				// dragging is not possible
+				> .page.x > button
+					cursor: default
+			&.active.drag
+				// current page is being dragged
+				cursor: grabbing
+			/*===*/
 }
 .sm-blocks.paginator > div > .range > div {
   display: none;
 }
 .sm-blocks.paginator > div > .range > div.v {
-  display: flex;
+  display: block;
 }
 .sm-blocks.paginator > div > .range > .gap {
   flex: 0 100 0;
   min-width: calc(0.25 * var(--width));
-  padding: 4px 0 4px 0;
+  padding: 2px 0 2px 0;
 }
 .sm-blocks.paginator > div > .range > .gap > svg {
   fill: #c0c0c0;
@@ -824,7 +842,13 @@
 .sm-blocks.paginator > div > .range > .page {
   flex: 0 0 0;
   min-width: var(--page-size);
-  padding: 4px 1px 4px 1px;
+  padding: 2px 1px 2px 1px;
+}
+.sm-blocks.paginator > div > .range > .page.F {
+  padding-left: 0;
+}
+.sm-blocks.paginator > div > .range > .page.L {
+  padding-right: 0;
 }
 .sm-blocks.paginator > div > .range > .page > button {
   display: flex;
@@ -838,6 +862,7 @@
   border-radius: 2px;
   background-color: #dcdcdc;
   box-shadow: inset 0 0 10px 0 #c0c0c0;
+  text-decoration: none;
   touch-action: none;
 }
 .sm-blocks.paginator > div > .range > .page > button:hover {
@@ -853,32 +878,23 @@
   color: #708090;
   box-shadow: inset 0 0 0 1px #fff;
 }
-.sm-blocks.paginator > div > .range > .page.current {
+.sm-blocks.paginator > div > .range > .page.x {
   min-width: calc(2px + var(--page-size));
   padding-top: 2px;
   padding-bottom: 2px;
 }
-.sm-blocks.paginator > div > .range > .page.current > button {
+.sm-blocks.paginator > div > .range > .page.x > button {
   font-size: 1.4em;
   border-color: #000;
   background-color: #000;
   cursor: grab;
 }
-.sm-blocks.paginator > div > .range > .page.current > button:hover {
+.sm-blocks.paginator > div > .range > .page.x > button:hover {
   color: #789;
 }
-.sm-blocks.paginator > div > .range > .page.current > button:active,
-.sm-blocks.paginator > div > .range > .page.current > button:focus {
+.sm-blocks.paginator > div > .range > .page.x > button:active,
+.sm-blocks.paginator > div > .range > .page.x > button:focus {
   box-shadow: inset 0 0 1px 1px #fff;
-}
-.sm-blocks.paginator > div > .range.nogap {
-  --max-width: calc(2px + var(--count) * var(--width));
-}
-.sm-blocks.paginator > div > .range.nogap > .page.current > button {
-  cursor: default;
-}
-.sm-blocks.paginator > div > .range.active.drag {
-  cursor: grabbing;
 }
 .sm-blocks.paginator.v > div.flexy {
   width: 100%;
@@ -888,7 +904,7 @@
   max-width: 100%;
 }
 .sm-blocks.paginator.v > div.flexy > .range > .gap {
-  padding: 4px 1px 4px 1px;
+  padding: 2px 1px 2px 1px;
 }
 .sm-blocks.paginator.v > div.flexy > .range.active > .gap > svg {
   fill: #c0c0c0;
@@ -896,10 +912,10 @@
 .sm-blocks.paginator.v > div.flexy > .range.nogap > .page {
   flex-grow: 1;
 }
-.sm-blocks.paginator.v > div.nosep > .goto.prev {
+.sm-blocks.paginator.v > div.nosep > .goto.P {
   padding-right: 1px;
 }
-.sm-blocks.paginator.v > div.nosep > .goto.next {
+.sm-blocks.paginator.v > div.nosep > .goto.N {
   padding-left: 1px;
 }
 .sm-blocks.paginator.v > div.v > .goto > button > svg {
@@ -911,7 +927,7 @@
 .sm-blocks.paginator.v > div.v > .range > .page > button {
   color: #000;
 }
-.sm-blocks.paginator.v > div.v > .range > .page.current > button {
+.sm-blocks.paginator.v > div.v > .range > .page.x > button {
   color: #fff;
 }
 .sm-blocks.paginator.v > div.v.flexy > .range > .gap > svg {

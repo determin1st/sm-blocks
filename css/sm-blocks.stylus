@@ -813,29 +813,24 @@ WebSafeFontMono = Consolas, Courier, monospace
 .sm-blocks.paginator // {{{
 	// configuration
 	--width: calc(1.35 * var(--height))
-	////
+	// ===
 	width:  100%
 	height: calc(8px + var(--height))
+	padding: 4px 0 4px 0
 	display: flex
 	flex-direction:  row
 	justify-content: center
 	> div
-		flex:  0 0 auto
+		flex: 0 0 auto
 		width: auto
 		max-width: 10000px
 		display: flex
 		flex-direction: row
 		touch-action: none
+		/*===*/
 		> .goto // {{{
 			flex: 1 1 0
 			max-width: calc(2px + var(--width))
-			padding: 4px 0 4px 0
-			// variants
-			&.prev
-				padding-left: 2px
-			&.next
-				padding-right: 2px
-			////
 			> button
 				width:  100%
 				height: 100%
@@ -851,8 +846,13 @@ WebSafeFontMono = Consolas, Courier, monospace
 					background-color: silver
 					border-color: darkslategray
 					box-shadow: inset 0 0 0 1px white
-			// captured movement
-			&.active
+			////
+			&.P
+				padding-left: 2px
+			&.N
+				padding-right: 2px
+			&.FN.active,
+			&.PN.active
 				padding-top:    2px
 				padding-bottom: 2px
 				> button
@@ -862,20 +862,21 @@ WebSafeFontMono = Consolas, Courier, monospace
 						fill: white
 		// }}}
 		> .sep // {{{
-			flex: 1 1 0
-			max-width: 8px
-			padding:   2px 0 2px 0
-			&.first
-				padding-left:  0
-			&.last
-				padding-right: 0
+			flex: 0 0 0
+			min-width: 8px
+			padding: 2px 0 2px 0
 			> svg
 				fill: silver
+			////
+			&.L
+				padding-left:  0
+			&.R
+				padding-right: 0
 		// }}}
 		> .range // {{{
 			////
 			--count: 0
-			--max-width: calc(2px + (1 + var(--count)) * var(--width))
+			--max-width: calc(2px + (1+var(--count)) * var(--width))
 			--page-size: var(--width)
 			////
 			flex:  1 0 0
@@ -884,24 +885,27 @@ WebSafeFontMono = Consolas, Courier, monospace
 			display: flex
 			flex-direction:  row
 			justify-content: center
-			// content
-			> div // {{{
+			> div
 				display: none
-				&.v
-					display: flex
-			// }}}
-			> .gap // {{{
+			> div.v
+				display: block
+			////
+			> .gap
 				flex: 0 100 0
 				min-width: calc(0.25 * var(--width))
-				padding: 4px 0 4px 0
+				padding: 2px 0 2px 0
 				> svg
 					fill: silver
-			// }}}
-			> .page // {{{
+			////
+			> .page
 				flex: 0 0 0
 				min-width: var(--page-size)
-				padding: 4px 1px 4px 1px
-				// non-visible by default
+				padding: 2px 1px 2px 1px
+				&.F
+					padding-left: 0
+				&.L
+					padding-right: 0
+				////
 				> button
 					display: flex
 					align-items: center
@@ -914,6 +918,7 @@ WebSafeFontMono = Consolas, Courier, monospace
 					border-radius: 2px
 					background-color: gainsboro
 					box-shadow: inset 0 0 10px 0 silver
+					text-decoration: none
 					touch-action: none // pointer events only
 					&:hover
 						font-weight: bolder
@@ -927,7 +932,7 @@ WebSafeFontMono = Consolas, Courier, monospace
 						color: slategray
 						box-shadow: inset 0 0 0 1px white
 				// selected page
-				&.current
+				&.x
 					min-width: calc(2px + var(--page-size))
 					padding-top:    2px
 					padding-bottom: 2px
@@ -941,30 +946,29 @@ WebSafeFontMono = Consolas, Courier, monospace
 						&:active,
 						&:focus
 							box-shadow: inset 0 0 1px 1px white
-			// }}}
-			// states
-			// {{{
+			/*===*
 			&.nogap
 				// range without gaps
 				// reduced size
 				--max-width: calc(2px + var(--count) * var(--width))
 				// dragging is not possible
-				> .page.current > button
+				> .page.x > button
 					cursor: default
 			&.active.drag
 				// current page is being dragged
 				cursor: grabbing
-			// }}}
+			/*===*/
 		// }}}
-	////
+		/*===*/
 	&.v > div
+		/*===*/
 		&.flexy // {{{
 			width: 100%
 			> .range
 				width:     100%
 				max-width: 100%
 				> .gap
-					padding: 4px 1px 4px 1px
+					padding: 2px 1px 2px 1px
 				&.active > .gap > svg
 					fill: silver
 				&.nogap > .page
@@ -972,9 +976,9 @@ WebSafeFontMono = Consolas, Courier, monospace
 		// }}}
 		&.nosep // {{{
 			> .goto
-				&.prev
+				&.P
 					padding-right: 1px
-				&.next
+				&.N
 					padding-left: 1px
 		// }}}
 		&.v // {{{
@@ -986,7 +990,7 @@ WebSafeFontMono = Consolas, Courier, monospace
 				> .page
 					> button
 						color: black
-					&.current > button
+					&.x > button
 						color: white
 			&.flexy
 				> .range > .gap > svg
@@ -997,6 +1001,8 @@ WebSafeFontMono = Consolas, Courier, monospace
 				> .sep > svg
 					fill: slategray
 		// }}}
+		/*===*/
+	/**/
 // }}}
 .sm-blocks.orderer // {{{
 	// container

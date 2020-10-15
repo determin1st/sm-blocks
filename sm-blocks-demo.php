@@ -24,12 +24,6 @@ $og  = json_encode([ # products grid {{{
   "itemControls" => true,
 ]);
 # }}}
-$op  = json_encode([ # paginator {{{
-  "rangeMode" => 2,
-  #"rangePlus"  => 2,
-  #"rangeMinus" => 2,
-]);
-# }}}
 $oo  = json_encode([ # orderer {{{
   "switchMode" => 1,
 ]);
@@ -47,7 +41,7 @@ $ocf = json_encode([ # category filter {{{
 ]);
 # }}}
 # page title
-$o = substr(get_locale(), 0, 2) === 'en'
+$title = substr(get_locale(), 0, 2) === 'en'
   ? 'test version'
   : 'версия для тестирования';
 # generate markup
@@ -57,13 +51,15 @@ $o = <<<EOD
   <div class="a">
     <!-- wp:sm-blocks/price-filter {$opf} /-->
     <!-- wp:sm-blocks/category-filter {$ocf} /-->
-    <!-- wp:sm-blocks/category-filter {"baseCategory":"37"} /-->
+    <!-- :sm-blocks/category-filter {"baseCategory":"37"} /-->
   </div>
   <div class="b sm-blocks-resizer">
-    <h3>{$o}</h3>
+    <h3>{$title}</h3>
     <div class="c sm-blocks-resizer">
+      <!-- wp:sm-blocks/paginator {
+        "gotoMode":3
+      } /-->
       <!-- wp:sm-blocks/orderer {$oo} /-->
-      <!-- wp:sm-blocks/paginator {$op} /-->
     </div>
     <!-- wp:sm-blocks/grid {$og} /-->
   </div>

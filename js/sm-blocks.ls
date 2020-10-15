@@ -2,7 +2,9 @@
 smBlocks = do ->
 	# base
 	# TODO {{{
-	# - focus issue in the price-filter
+	# - NEW STRUCTURE REFACTORING!!!!!!!!!!!!!
+	# - determine optimal height for paginator/orderer (CSS)
+	# - lock -1/0/1
 	# - category count display (extra)
 	# - static paginator max-width auto-calc
 	# - grid's goto next page + scroll up (?)
@@ -79,6 +81,17 @@ smBlocks = do ->
 			then a.0
 			else null
 	# }}}
+	queryFirstChildren = (list) -> # {{{
+		# check
+		if not list or not list.length
+			return null
+		# collect
+		a = []
+		for b in list
+			a[*] = b.firstChild
+		# done
+		return a
+	# }}}
 	# }}}
 	# fetchers {{{
 	soFetch = httpFetch.create {
@@ -133,12 +146,13 @@ smBlocks = do ->
 						###
 						@hovered = true
 						@node.classList.add 'hovered'
-						# set extra hovered
+						# set extra hover
 						if not @config.extra
 							if e.currentTarget == @title
 								@arrow.classList.add 'h'
 							else
 								@title.classList.add 'h'
+						# autofocus
 						if not @block.focused
 							@block.onAutofocus @arrow
 			# }}}
@@ -1211,13 +1225,13 @@ smBlocks = do ->
 			@index   = index
 			@rootBox = rootBox = root.firstChild
 			# controls
-			@section = box = sMainSection root
-			@checks  = new Checkbox @, box.rootItem
+			@section = S = sMainSection root
+			@checks  = new Checkbox @, S.rootItem
 			# state
 			@locked  = -1
 			@focused = false
 			# handlers
-			box.onRefocus = (i1, i2, direction) ~> # {{{
+			S.onRefocus = (i1, i2, direction) ~> # {{{
 				# prepare
 				a = null
 				# check destination
@@ -1243,7 +1257,7 @@ smBlocks = do ->
 				# default
 				return !!a
 			# }}}
-			@onFocus = box.onFocus = do ~> # {{{
+			@onFocus = S.onFocus = do ~> # {{{
 				p = null
 				return (item) ~>>
 					# check
@@ -1259,9 +1273,9 @@ smBlocks = do ->
 					# done
 					return true
 			# }}}
-			@onAutofocus = box.onAutofocus = (node) !~> # {{{
+			@onAutofocus = S.onAutofocus = (node) !~> # {{{
 				if not @focused and \
-				   (a = box.rootItem).config.autofocus
+				   (a = S.rootItem).config.autofocus
 					###
 					if a.arrow
 						a.arrow.focus!
@@ -1556,28 +1570,21 @@ smBlocks = do ->
 				if not @block.focused
 					@block.onAutofocus o.input
 			# }}}
-			n0.onFocus = n1.onFocus = do ~> # {{{
-				p = newDelay 0
-				return (o) ~>>
-					# reset
-					p.cancel!
-					# set
-					v = o.focused
-					@box.classList.toggle 'f'+o.id, v
-					if @focused = v
-						# select current
-						o.select!
-					else
-						# checkout and submit
-						@check o.id
-						if @changed
-							@changed = 0
-							@block.submit!
-					# callback
-					if @onFocus and await (p := newDelay 60)
-						@onFocus @
-					# done
-					return true
+			n0.onFocus = n1.onFocus = (o) !~> # {{{
+				# set
+				v = o.focused
+				@box.classList.toggle 'f'+o.id, v
+				if @focused = v
+					# select current
+					o.select!
+				else
+					# checkout and submit
+					@check o.id
+					if @changed
+						@changed = 0
+						@block.submit!
+				# callback
+				o @ if o = @onFocus
 			# }}}
 			n0.onSubmit = n1.onSubmit = (o, strict) !~> # {{{
 				# check
@@ -1809,7 +1816,7 @@ smBlocks = do ->
 			@locked  = -1
 			@mode    = mode
 			@focused = false
-			@current = [false, -1, -1, -1, -1]
+			@current = [false,-1,-1,-1,-1]
 			@pending = false
 			# handlers
 			@onAutofocus = S.onAutofocus
@@ -1838,10 +1845,10 @@ smBlocks = do ->
 						p.resolve false
 					# set
 					if o.focused
-						@focused = true
+						@focused = @section.focused = true
 						@section.root.classList.add 'f'
 					else if await (p := newDelay 60)
-						@focused = false
+						@focused = @section.focused = false
 						@section.root.classList.remove 'f'
 					# done
 					return true
@@ -1878,6 +1885,7 @@ smBlocks = do ->
 			lock: (level) ->> # {{{
 				###
 				if level != @locked
+					console.log 'lock', @locked, level
 					if not level
 						# unlock
 						@section.lock 0
@@ -1947,13 +1955,13 @@ smBlocks = do ->
 	# }}}
 	mPaginator = do -> # {{{
 		Control = (block) !-> # {{{
-			# data {{{
+			# data
+			# {{{
 			@block     = block
 			@lock      = null
 			@lockType  = 0
 			@rootCS    = getComputedStyle block.root
 			@rootBoxCS = getComputedStyle block.rootBox
-			@rangeCS   = getComputedStyle block.rangeBox
 			@rootPads  = [0, 0, 0, 0]
 			@baseSz    = [ # initial sizes
 				0, 0, # 0/1: root-x, root-y
@@ -1965,6 +1973,7 @@ smBlocks = do ->
 				0, 0, # 2/3: current-page-x, page-x
 				0     #   4: optimal-page-x
 			]
+			@observer = null # resize observer
 			@dragbox   = []
 			@maxSpeed  = 10
 			@brake     = 15
@@ -1974,8 +1983,7 @@ smBlocks = do ->
 			@keyDown = (e) !~> # {{{
 				# check requirements
 				if @lock or @block.locked or \
-				   not @block.range or \
-				   not @block.mode
+				   not @block.range.mode
 					###
 					return
 				# check key-code
@@ -1983,18 +1991,14 @@ smBlocks = do ->
 				case <[ArrowLeft ArrowDown]>
 					# fast-backward
 					# get node
-					a = if @block.gotoP
-						then @block.gotoP.firstChild
-						else null
+					a = @block.gotos.btnPN.0
 					# start
 					@lockType = 1
 					@fast null, a, false
 				case <[ArrowRight ArrowUp]>
 					# fast-forward
 					# get node
-					a = if @block.gotoN
-						then @block.gotoN.firstChild
-						else null
+					a = @block.gotos.btnPN.1
 					# start
 					@lockType = 1
 					@fast null, a, true
@@ -2024,7 +2028,7 @@ smBlocks = do ->
 				e.preventDefault!
 				e.stopPropagation!
 				# check block state
-				if not @block.locked and @block.mode and \
+				if not @block.locked and @block.range.mode and \
 				   (e = e.currentTarget)
 					###
 					e.classList.add 'hovered'
@@ -2039,7 +2043,7 @@ smBlocks = do ->
 			# }}}
 			@wheel = (e) !~> # {{{
 				# check
-				if @lock or @block.locked or not @block.mode
+				if @lock or @block.locked or not @block.range.mode
 					return
 				# fulfil event
 				e.preventDefault!
@@ -2067,7 +2071,7 @@ smBlocks = do ->
 				e.preventDefault!
 				e.stopPropagation!
 				# check requirements
-				if @block.mode == 1 and \
+				if @block.range.mode == 2 and \
 				   not @lock and not @block.locked and \
 				   e.isPrimary and not e.button
 					###
@@ -2079,7 +2083,7 @@ smBlocks = do ->
 				e.preventDefault!
 				e.stopPropagation!
 				# check requirements
-				if @block.mode == 1 and \
+				if @block.range.mode == 2 and \
 				   not @lock and not @block.locked and \
 				   e.isPrimary and not e.button
 					###
@@ -2099,11 +2103,14 @@ smBlocks = do ->
 				e.preventDefault!
 				e.stopPropagation!
 				# check requirements
-				if @lock or @block.locked or @block.mode != 1 or \
+				if @lock or @block.locked or @block.range.mode != 2 or \
 				   not e.isPrimary or e.button or \
 				   typeof e.offsetX != 'number'
 					###
 					return true
+				# prepare
+				B = @block
+				R = B.range
 				# lock
 				@lock = newPromise!
 				@lockType = 2
@@ -2115,7 +2122,7 @@ smBlocks = do ->
 					@lock = null
 					return true
 				# set capture
-				node = @block.rangeBox
+				node = @block.range.box
 				node.classList.add 'active', 'drag'
 				if not node.hasPointerCapture e.pointerId
 					node.setPointerCapture e.pointerId
@@ -2123,13 +2130,12 @@ smBlocks = do ->
 				# calculate dragbox parameters
 				# {{{
 				# determine first-last page counts (excluding current)
-				a = @block.range
-				if (c = a.pages.length) > 1
-					b = a.index
-					c = c - a.index - 1
+				if (c = R.pages.length) > 1
+					b = R.index
+					c = c - R.index - 1
 				else
 					b = 0
-				if a.first
+				if R.first
 					b += 1
 					c += 1
 				# determine page-button sizes
@@ -2155,7 +2161,7 @@ smBlocks = do ->
 				e.3 = e.4 / (c + 1)
 				e.4 = e.4 - e.3
 				# middle
-				e.2 = parseFloat @rangeCS.getPropertyValue 'width'
+				e.2 = parseFloat R.cs.getPropertyValue 'width'
 				e.2 = e.2 - e.0 - e.4 # - e.1 - e.3
 				# determine first/last jump runways
 				if not @currentSz.4
@@ -2250,7 +2256,7 @@ smBlocks = do ->
 				e.preventDefault!
 				e.stopPropagation!
 				# check
-				if @lock or @block.locked or not @block.mode
+				if @lock or @block.locked or not @block.range.mode
 					return
 				# prepare
 				a = e.currentTarget.parentNode.className
@@ -2291,6 +2297,8 @@ smBlocks = do ->
 				return a
 			# }}}
 			@resize = (e) !~> # {{{
+				# prepare
+				R = @block.range
 				# dynamic axis {{{
 				# check operation mode and
 				# determine current
@@ -2307,7 +2315,7 @@ smBlocks = do ->
 						w = 0
 					# determine base
 					@baseSz.0 = parseFloat (@rootBoxCS.getPropertyValue 'width')
-					@baseSz.2 = parseFloat (@rangeCS.getPropertyValue 'width')
+					@baseSz.2 = parseFloat (R.cs.getPropertyValue 'width')
 				# update
 				@currentSz.0 = w
 				# }}}
@@ -2333,7 +2341,7 @@ smBlocks = do ->
 					@currentSz.3 = e * @baseSz.4
 				# check flexy dualgap mode and
 				# determine page-button size
-				if @block.flexy and @block.mode == 1
+				if @block.flexy and @block.range.mode == 2
 					###
 					# the drag problem:
 					# when paginator has plenty of space at dynamic axis,
@@ -2366,94 +2374,73 @@ smBlocks = do ->
 					@currentSz.4 = d
 					# update style only if required
 					if c and not d
-						@block.rangeBox.style.removeProperty '--page-size'
+						@block.range.box.style.removeProperty '--page-size'
 					else if d and (Math.abs (d - b)) > 0.1
-						@block.rangeBox.style.setProperty '--page-size', d+'px'
+						@block.range.box.style.setProperty '--page-size', d+'px'
 				# }}}
 			# }}}
 		###
 		Control.prototype = {
-			attach: !-> # {{{
+			init: !-> # {{{
 				# prepare
-				B = @block
-				R = B.range
-				# initialize data
-				# {{{
-				# determine root pads
+				R = @block.range
+				# determine container paddings
 				a = [
 					'padding-top'
 					'padding-right'
 					'padding-bottom'
 					'padding-left'
 				]
-				for b,c in a
-					@rootPads[c] = parseInt (@rootCS.getPropertyValue b)
-				# determine base sizes
+				b = -1
+				while ++b < a.length
+					@rootPads[b] = parseInt (@rootCS.getPropertyValue a[b])
+				# determine container sizes
 				@baseSz.0 = 0
 				@baseSz.1 = parseInt (@rootCS.getPropertyValue '--height')
-				@baseSz.2 = parseFloat (@rangeCS.getPropertyValue 'width')
-				# determine range and page-buttons
-				if R
-					a = getComputedStyle R.pages[R.index]
-					@baseSz.3 = parseFloat (a.getPropertyValue 'min-width')
-					@baseSz.4 = 0
-					if R.pages.length > 1
-						a = if R.index > 0
-							then 0
-							else R.index + 1
-						a = getComputedStyle R.pages[a]
-						@baseSz.4 = parseFloat (a.getPropertyValue 'min-width')
-				# }}}
-				# attach event handlers
-				# base
-				# keyboard controls
+				@baseSz.2 = parseFloat (R.cs.getPropertyValue 'width')
+				# determine page sizes
+				a = getComputedStyle R.pages.0
+				@baseSz.3 = parseFloat (a.getPropertyValue 'min-width')
+				a = 1 + @block.config.index
+				a = getComputedStyle R.pages[a]
+				@baseSz.4 = parseFloat (a.getPropertyValue 'min-width')
+			# }}}
+			attach: !-> # {{{
+				# prepare
+				B = @block
+				R = B.range
+				@init!
+				# operate
+				# set keyboard controls
 				B.root.addEventListener 'keydown', @keyDown, true
 				B.root.addEventListener 'keyup', @keyUp, true
-				# mouse controls
+				# set mouse controls
 				B.root.addEventListener 'click', @setFocus
 				B.rootBox.addEventListener 'wheel', @wheel, true
 				B.rootBox.addEventListener 'pointerenter', @hover
 				B.rootBox.addEventListener 'pointerleave', @unhover
-				# outer gotos
+				# set range
 				# first-last
-				if B.gotoF
-					a = B.gotoF.firstChild
-					a.addEventListener 'click', @goto
-					a = B.gotoL.firstChild
-					a.addEventListener 'click', @goto
-				# prev-next
-				if B.gotoP
-					a = B.gotoP.firstChild
-					a.addEventListener 'pointerdown', @fastBackward
-					a.addEventListener 'pointerup', @fastStop
-					a.addEventListener 'click', @goto
-					a = B.gotoN.firstChild
-					a.addEventListener 'pointerdown', @fastForward
-					a.addEventListener 'pointerup', @fastStop
-					a.addEventListener 'click', @goto
-				# range
-				if R
-					# first-last
-					if R.first
-						a = R.first.firstChild
-						a.addEventListener 'click', @goto
-						a = R.last.firstChild
-						a.addEventListener 'click', @goto
-					# range gotos
-					for a,b in R.buttons
-						a.addEventListener 'click', @rangeGoto[b]
-					# drag (current page & range box)
-					a = R.buttons[R.index]
-					a.addEventListener 'pointerdown', @dragStart
-					B.rangeBox.addEventListener 'pointermove', @drag
-					B.rangeBox.addEventListener 'pointerup', @dragStop
-					# resize observer
-					@observer = a = new ResizeObserver @resize
-					a.observe B.root
+				a = R.pages[0].firstChild
+				a.addEventListener 'click', @goto
+				a = R.pages.length - 1
+				a = R.pages[a].firstChild
+				a.addEventListener 'click', @goto
+				# gotos
+				for a,b in R.pages
+					a.firstChild.addEventListener 'click', @rangeGoto[b]
+				# drag (current page & range box)
+				a = R.pages[R.index].firstChild
+				a.addEventListener 'pointerdown', @dragStart
+				B.range.box.addEventListener 'pointermove', @drag
+				B.range.box.addEventListener 'pointerup', @dragStop
+				# set observer
+				@observer = a = new ResizeObserver @resize
+				a.observe B.root
 			# }}}
 			detach: !-> # {{{
-				if a = @observer
-					a.disconnect!
+				if @observer
+					@observer.disconnect!
 					@observer = null
 			# }}}
 			rangeGotoFunc: (i) -> (e) !~> # {{{
@@ -2461,10 +2448,10 @@ smBlocks = do ->
 				e.preventDefault!
 				e.stopPropagation!
 				# check
-				if @lock or @block.locked or not @block.mode
+				if @lock or @block.locked or not @block.range.mode
 					return
 				# determine page index
-				if @block.mode == 1
+				if @block.range.mode == 2
 					a = state.data.0 + i
 				else
 					a = if @block.range.first
@@ -2520,7 +2507,7 @@ smBlocks = do ->
 					return true
 				# set capture
 				@block.focus!
-				@block.rangeBox.classList.add 'active'
+				@block.range.box.classList.add 'active'
 				node.parentNode.classList.add 'active'
 				if id != null and not node.hasPointerCapture id
 					node.setPointerCapture id
@@ -2549,7 +2536,7 @@ smBlocks = do ->
 				if id != null and node.hasPointerCapture id
 					node.releasePointerCapture id if id != null
 				node.parentNode.classList.remove 'active'
-				@block.rangeBox.classList.remove 'active'
+				@block.range.box.classList.remove 'active'
 				# update global state
 				if not @block.locked
 					state.master.resolve state
@@ -2568,7 +2555,7 @@ smBlocks = do ->
 				# compose render sequence
 				requestAnimationFrame !->
 					b.refresh!
-					b.focus! if b.mode == 2
+					b.focus! if b.range.mode == 2
 					requestAnimationFrame !->
 						a.resolve!
 				# done
@@ -2576,65 +2563,236 @@ smBlocks = do ->
 			# }}}
 		}
 		# }}}
-		BlockRange = (box) !-> # {{{
-			# create object shape
-			# set nodes
-			@pages   = a = [...(box.querySelectorAll '.page.x')]
-			@buttons = a.map (a) -> a.firstChild
-			@gap1    = box.querySelector '.gap.first'
-			@gap2    = box.querySelector '.gap.last'
-			@first   = box.querySelector '.page.first'
-			@last    = box.querySelector '.page.last'
-			# determine projected page index
-			b = -1
-			c = a.length
-			while ++b < c
-				if a[b].classList.contains 'current'
-					break
-			# set parameters
-			@index   = b
-			@current = a[b].firstChild
-			@size    = if @first
-				then c + 2
-				else c
-			# set state holders
-			@nPages = (Array c).fill 0 # [0]*c
-			@nGap1  = 0
-			@nGap2  = 0
-			@nFirst = 0
-			@nLast  = 0
-			@nCount = 0
+		PageGoto = (block) !-> # {{{
+			###
+			@block = block
+			@boxFL = a = querySelectorChildren block.rootBox, '.goto.a'
+			@boxPN = b = querySelectorChildren block.rootBox, '.goto.b'
+			@btnFL = queryFirstChildren a
+			@btnPN = queryFirstChildren b
+			@sepFL = querySelectorChildren block.rootBox, '.sep'
+			###
+		###
+		PageGoto.prototype =
+			attach: !-> # {{{
+				# prepare
+				E = @block.ctrl
+				# first-last
+				if a = @btnFL
+					a.0.addEventListener 'click', E.goto
+					a.1.addEventListener 'click', E.goto
+				# prev-next
+				if a = @btnPN
+					a.0.addEventListener 'pointerdown', E.fastBackward
+					a.0.addEventListener 'pointerup', E.fastStop
+					a.0.addEventListener 'click', E.goto
+					a.1.addEventListener 'pointerdown', E.fastForward
+					a.1.addEventListener 'pointerup', E.fastStop
+					a.1.addEventListener 'click', E.goto
+			# }}}
+			detach: !-> # {{{
+				true
+			# }}}
+		# }}}
+		PageRange = (block) !-> # {{{
+			# controls
+			@block = block
+			@box   = box = querySelectorChild block.rootBox, '.range'
+			@cs    = getComputedStyle box
+			@pages = pages = querySelectorChildren box, '.page'
+			@gaps  = gaps = querySelectorChildren box, '.gap'
+			# constants
+			@index = i = 1 + block.config.index # range "center"
+			@size  = pages.length - 2 # rendered range size
+			# state
+			@mode    = 0  # current mode: 0=empty, 1=dualgap, 2=nogap
+			@current = -1 # current page index
+			@count   = 0  # current count of page buttons
+			@nPages  = pages.slice!fill 0
+			@nGaps   = gaps.slice!fill 0
+			@pFirst  = -1 # first page index
+			@pLast   = -1 # last page index
+		###
+		PageRange.prototype =
+			set: (v) !-> # {{{
+				# prepare defaults
+				pages = @pages.slice!fill 0
+				gaps  = [0,0]
+				first = -1
+				last  = -1
+				# determine current state
+				if v.1 == 0
+					# empty
+					# {{{
+					# no range/current, gap only
+					mode    = 0
+					current = -1
+					count   = 0
+					gaps.0  = 100
+					# }}}
+				else if v.1 <= pages.length
+					# nogap (pages only)
+					# {{{
+					mode    = 1
+					current = v.0
+					count   = pages.length # justify
+					# set page numbers
+					a = -1
+					b = 0
+					while ++a < v.1
+						pages[a] = ++b
+					# set edge pages
+					first = 0
+					last  = a - 1
+					# }}}
+				else
+					# dualgap
+					# {{{
+					console.log 'dualgap'
+					mode    = 2
+					current = @index
+					count   = pages.length
+					# determine left side parameters
+					if (a = @index - v.0 - 1) < 0
+						# set first page number and
+						# determine gap size
+						pages.0 = 1
+						first   = 0
+						gaps.0  = -a - 1
+						# positive gap, full range
+						b = -a
+						a = 0
+					else
+						# negative gap, reduced range
+						first = a + 1
+						b = -a
+					# set left range numbers
+					while ++a < @index
+						pages[a] = a + b
+					# set center
+					pages[current] = v.0 + 1
+					# determine right side parameters
+					b = v.0 + 1
+					c = count - 1
+					if (a = v.1 - b - @size + @index - 1) >= 0
+						# full range,
+						# set last page number and gap size
+						last     = c
+						pages[c] = v.1
+						gaps.1   = a
+					else
+						# reduced range
+						last = c + a
+						c    = last + 1
+					# set right range numbers
+					a = @index
+					while ++a < c
+						pages[a] = ++b
+					# determine relative gap sizes
+					a = 100 * gaps.0 / (gaps.0 + gaps.1)
+					# fix edge cases
+					if a > 0 and a < 1
+						a = 1
+					else if a > 99 and a < 100
+						a = 99
+					else
+						a = Math.round a
+					# done
+					gaps.0 = a
+					gaps.1 = 100 - a
+					# }}}
+				###
+				# apply changes
+				# range mode
+				if mode != @mode
+					a = @box.classList
+					if not @mode
+						a.add 'v'
+					if mode == 1
+						a.add 'nogap'
+					else if not mode
+						a.remove 'v'
+					if @mode == 1
+						a.remove 'nogap'
+					@mode = mode
+				# range capacity (page buttons count)
+				if count != @count
+					@box.style.setProperty '--count', count
+					@count = count
+					# re-calculate block size
+					@block.resize!
+				# pages
+				a = @nPages
+				for c,b in pages when a[b] != c
+					if not a[b]
+						@pages[b].classList.add 'v'
+					if not c
+						@pages[b].classList.remove 'v'
+					else
+						@pages[b].firstChild.textContent = if ~c
+							then c
+							else ''
+					a[b] = c
+				# gaps
+				a = @nGaps
+				for c,b in gaps when a[b] != c
+					if not a[b]
+						@gaps[b].classList.add 'v'
+					if not c
+						@gaps[b].classList.remove 'v'
+					@gaps[b].style.flexGrow = a[b] = c
+				# current page
+				if @current != current
+					if ~@current
+						@pages[@current].classList.remove 'x'
+					if ~current
+						@pages[current].classList.add 'x'
+					@current = current
+				# range edges
+				if (a = @pFirst) != first
+					if ~a
+						@pages[a].classList.remove 'F'
+					if ~first
+						@pages[first].classList.add 'F'
+					@pFirst = first
+				if (a = @pLast) != last
+					if ~a
+						@pages[a].classList.remove 'L'
+					if ~last
+						@pages[last].classList.add 'L'
+					@pLast = last
+				# done
+			# }}}
 		# }}}
 		Block = (state, root) !-> # {{{
 			# base
 			@state   = state
 			@root    = root
 			@rootBox = rootBox = root.firstChild
-			# outer gotos
-			a = [...(root.querySelectorAll '.goto.a')]
-			b = [...(root.querySelectorAll '.goto.b')]
-			@gotoF = (a.length and a.0) or null
-			@gotoL = (a.length and a.1) or null
-			@gotoP = (b.length and b.0) or null
-			@gotoN = (b.length and b.1) or null
-			# range
-			@rangeBox = a = root.querySelector '.range'
-			@range    = (a and new BlockRange a) or null
+			@config  = JSON.parse rootBox.dataset.cfg
+			# controls
+			@range   = new PageRange @
+			@gotos   = new PageGoto @
+			@control = new Control @
 			# state
-			@locked = -1
-			@flexy  = rootBox.classList.contains 'flexy'
-			@mode   = 0
-			@ctrl   = new Control @
+			@locked  = -1
+			@current = [-1,-1] # page index, count
 			# handlers
-			@onResize = null
+			# ...
 		###
 		Block.prototype =
 			group: 'page'
 			level: 1
 			init: (cfg) -> # {{{
-				# complete
+				# set classes
+				a = @rootBox.classList
+				if @config.range == 2
+					a.add 'flexy'
+				if not @gotos.sepFL
+					a.add 'nosep'
+				###
 				@refresh!
-				@ctrl.attach!
+				@control.attach!
 				return true
 			# }}}
 			lock: (level) ->> # {{{
@@ -2644,14 +2802,14 @@ smBlocks = do ->
 						# unlock
 						@rootBox.classList.add 'v'
 					else
-						# terminate activity
-						if @ctrl.lock
-							await @ctrl.lock.spin!
+						# deactivate
+						if a = @control.lock
+							await a.spin!
 						# lock
 						@rootBox.classList.remove 'v'
-						if (R = @range) and R.current
-							R.current.parentNode.classList.remove 'current'
-							R.current = null
+						if ~(a = @range.current)
+							@range.pages[a].classList.remove 'x'
+							@range.current = -1
 						###
 				###
 				@locked = level
@@ -2659,187 +2817,27 @@ smBlocks = do ->
 			# }}}
 			notify: -> # {{{
 				# check active
-				if (a = @ctrl.lock) and a.pending
+				if (a = @control.lock) and a.pending
 					return false
 				# done
 				return true
 			# }}}
 			refresh: !-> # {{{
-				/***
-				case 'load'
-					# check first
-					for a in blocks
-						# continue interactions..
-						a.lock 0 if a.locked
-						# in case of active block,
-						# prevent self-refreshing..
-						return true if a.ctrl.lock
-					# update
-					state.data.0 = data.pageIndex
-					state.data.1 = data.pageCount
-					for a in blocks
-						a.refresh!
-				/***/
-				# check range doesn't exist
-				if not (R = @range)
-					return
-				# determine current state
-				# {{{
 				# prepare
-				index  = @state.data.0
-				count  = @state.data.1
-				nCount = 0
-				nPages = R.nPages.slice!fill 0
-				nGap1  = 0
-				nGap2  = 0
-				nFirst = 0
-				nLast  = 0
+				a = @current
+				b = @state.data
 				# check
-				if not count
-					# empty
-					mode    = 0
-					current = null
-					nCount  = R.size
-					for a from R.index til nPages.length
-						nPages[a] = 1
-					nGap2 = 100
-					nLast = 1
-				else if count > R.size
-					# dualgap
-					mode    = 1
-					current = R.buttons[R.index]
-					nCount  = R.size
-					# determine start position
-					if (a = R.index - index) < 0
-						# first page is visible,
-						# calculate gap size
-						nFirst = 1
-						nGap1  = 0 - a - 1
-						# full backward range
-						a = 0
-					# determine end position
-					b = nPages.length - R.index - 1
-					c = count - index - 2
-					if b > c
-						# forward range is bigger than required,
-						# both last page and gap are hidden..
-						# truncate range size
-						b = R.index + c + 2
-					else
-						# last page is visible,
-						# calculate gap size
-						nLast = count
-						nGap2 = c - b
-						# full forward range
-						b = nPages.length
-					# set range numbers
-					c = a - 1
-					d = index - R.index + a
-					while ++c < b
-						nPages[c] = ++d
-					# determine total gap
-					if a = nGap1 + nGap2
-						# calculate relative gap size (%)
-						a = 100 * nGap1 / a
-						# prevent edge case fails
-						if a > 0 and a < 1
-							a = 1
-						else if a > 99 and a < 100
-							a = 99
-						else
-							a = Math.round a
-						# set
-						nGap1 = a
-						nGap2 = 100 - a
-				else
-					# nogap
-					mode   = 2
-					nCount = count
-					# set first
-					nFirst = a = (R.first and 1) or 0
-					# set range numbers
-					b = -1
-					c = nPages.length
-					while ++b < c and a < count
-						nPages[b] = ++a
-					# set last
-					nLast = if R.last and a < count
-						then count
-						else 0
-					# set current
-					a = index + 1
-					current = if a == nFirst
-						then R.first.firstChild
-						else if a == nLast
-							then R.last.firstChild
-							else R.buttons[(nPages.indexOf a)]
-				# }}}
-				# apply changes
-				# {{{
-				# operation mode
-				if mode != @mode
-					if not @mode
-						@rootBox.classList.add 'v'
-					if not mode
-						@rootBox.classList.remove 'v'
-					else if mode == 1
-						@rangeBox.classList.remove 'nogap'
-					else
-						@rangeBox.classList.add 'nogap'
-					@mode = mode
-				# range capacity
-				if R.nCount != nCount
-					@rangeBox.style.setProperty '--count', nCount
-					R.nCount = nCount
-					# determine new size of the widget
-					@root.classList.remove 'v'
-					@ctrl.resize!
-					@root.classList.add 'v'
-				# first page
-				if R.nFirst != nFirst
-					if not R.nFirst
-						R.first.classList.add 'v'
-					else if not nFirst
-						R.first.classList.remove 'v'
-					R.nFirst = nFirst
-				# first gap
-				if R.nGap1 != nGap1
-					if not R.nGap1
-						R.gap1.classList.add 'v'
-					else if not nGap1
-						R.gap1.classList.remove 'v'
-					R.gap1.style.flexGrow = R.nGap1 = nGap1
-				# pages
-				c = R.nPages
-				for a,b in nPages when a != c[b]
-					if not c[b]
-						R.pages[b].classList.add 'v'
-					else if not a
-						R.pages[b].classList.remove 'v'
-					R.buttons[b].textContent = c[b] = a
-				# last gap
-				if R.nGap2 != nGap2
-					if not R.nGap2
-						R.gap2.classList.add 'v'
-					else if not nGap2
-						R.gap2.classList.remove 'v'
-					R.gap2.style.flexGrow = R.nGap2 = nGap2
-				# last page
-				if R.nLast != nLast
-					if not R.nLast
-						R.last.classList.add 'v'
-					else if not nLast
-						R.last.classList.remove 'v'
-					R.last.firstChild.textContent = R.nLast = nLast
-				# current page
-				if R.current != current
-					if R.current
-						R.current.parentNode.classList.remove 'current'
-					if current
-						current.parentNode.classList.add 'current'
-					R.current = current
-				# }}}
-				# done
+				if a.0 == b.0 and a.1 == b.1
+					return
+				# set
+				@range.set b if @range
+				# sync
+				a[0 to 1] = b
+			# }}}
+			resize: !-> # {{{
+				@root.classList.remove 'v'
+				@control.resize!
+				@root.classList.add 'v'
 			# }}}
 			focus: !-> # {{{
 				# set focus to the current node
@@ -3072,7 +3070,7 @@ smBlocks = do ->
 			Loader = (s) !-> # {{{
 				@super = s     # s-supervisor
 				@dirty = true  # resolved-in-process flag
-				@level = 100   # current priority (highest for the first)
+				@level = 0     # current priority (lowest for the first)
 				@lock  = null  # current load promise
 				@fetch = null  # request promise
 				@state = null
