@@ -55,7 +55,7 @@ $o = <<<EOD
   </div>
   <div class="b sm-blocks-resizer">
     <h3>{$title}</h3>
-    <div class="c sm-blocks-resizer">
+    <div class="c">
       <!-- wp:sm-blocks/paginator {
         "gotoMode":3
       } /-->

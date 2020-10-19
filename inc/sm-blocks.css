@@ -1,8 +1,11 @@
 /**
 * storefront modern blocks
 */
+:root {
+  --sm-blocks-size-factor: 1;
+}
 .sm-blocks {
-  --height: 48px;
+  --height: calc(48px * var(--sm-blocks-size-factor));
   --font-size: calc(0.35 * var(--height));
   position: relative;
   box-sizing: border-box;
@@ -499,7 +502,6 @@
 .sm-blocks.paginator > div {
   flex: 0 0 auto;
   width: auto;
-  max-width: 10000px;
   display: flex;
   flex-direction: row;
   touch-action: none;
@@ -549,8 +551,8 @@
   fill: #fff;
 }
 .sm-blocks.paginator > div > .sep {
-  flex: 0 0 0;
-  min-width: 8px;
+  flex: 1 0 0;
+  max-width: 8px;
   padding: 2px 0 2px 0;
 }
 .sm-blocks.paginator > div > .sep > svg {

@@ -488,6 +488,9 @@ smBlocks = do ->
 	sCard = do -> # {{{
 		return null
 	# }}}
+	sResizer = do -> # {{{
+		return null
+	# }}}
 	# masters
 	mProducts = do -> # SINGLETON {{{
 		mCart = do -> # {{{
@@ -1884,28 +1887,28 @@ smBlocks = do ->
 			# }}}
 			lock: (level) ->> # {{{
 				###
+				c0 = @root.classList
+				c1 = @rootBox.classList
+				###
 				if level != @locked
-					console.log 'price-filter.lock', @locked, level
-					if not level
-						# unlock
-						@section.lock 0
-						@rootBox.classList.add 'v'
-						@inputs.lock 0
-						###
-					else if ~level
-						# full
-						true
-						###
-					else if level == 1
-						# loader
-						@inputs.lock 1
-						@rootBox.classList.remove 'v'
-						@section.lock 1
-						###
+					if ~level
+						if level
+							# lock
+							if not ~@locked
+								c1.add 'v'
+								c0.add 'v'
+							@inputs.lock 1
+							@section.lock 1
+						else
+							# unlock
+							@section.lock 0
+							@inputs.lock 0
 					else
-						# partial
-						@inputs.lock 1
-						###
+						# initial lock
+						c1.remove 'v'
+						c0.remove 'v'
+						@section.lock -1
+					###
 				###
 				@locked = level
 				return true
@@ -1956,29 +1959,12 @@ smBlocks = do ->
 	mPaginator = do -> # {{{
 		Control = (block) !-> # {{{
 			# data
-			# {{{
 			@block     = block
-			@lock      = null
-			@lockType  = 0
-			@rootCS    = getComputedStyle block.root
-			@rootBoxCS = getComputedStyle block.rootBox
-			@rootPads  = [0, 0, 0, 0]
-			@baseSz    = [ # initial sizes
-				0, 0, # 0/1: root-x, root-y
-				0,    #   2: range-x
-				0, 0  # 3/4: current-page-x, page-x
-			]
-			@currentSz = [ # calculated sizes
-				0, 0, # 0/1: root-x, root-y
-				0, 0, # 2/3: current-page-x, page-x
-				0     #   4: optimal-page-x
-			]
-			@observer = null # resize observer
+			@lock      = null # promise
+			@lockType  = 0    # lock source
 			@dragbox   = []
-			@maxSpeed  = 10
-			@brake     = 15
-			@observer  = null # resize observer
-			# }}}
+			@maxSpeed  = 10   # pages per second
+			@brake     = 15   # pages left before slowdown
 			# handlers
 			@keyDown = (e) !~> # {{{
 				# check requirements
@@ -2252,200 +2238,93 @@ smBlocks = do ->
 					@lock.resolve!
 			# }}}
 			@goto = (e) !~> # {{{
+				# prepare
+				B = @block
+				S = B.state
+				R = B.range
 				# fulfil event
 				e.preventDefault!
 				e.stopPropagation!
 				# check
-				if @lock or @block.locked or not @block.range.mode
+				if @lock or B.locked or not R.mode
 					return
-				# prepare
-				a = e.currentTarget.parentNode.className
-				b = state.data.0
-				c = state.data.1 - 1
-				# determine new index
-				if (a.indexOf 'first') != -1
-					a = 0
-				else if (a.indexOf 'last') != -1
-					a = c
-				else if (a.indexOf 'prev') != -1
-					if (a = b - 1) < 0
-						a = c
-				else if (a.indexOf 'next') != -1
-					if (a = b + 1) > c
+				# determine goto variant
+				a = e.currentTarget.parentNode
+				b = a.classList
+				if b.contains 'page'
+					# absolute page number
+					a = R.nPages[R.pages.indexOf a] - 1
+					###
+				else if b.contains 'FL'
+					# absolute
+					if b.contains 'F'
+						# first
 						a = 0
-				# check same
-				if a == b
-					return
-				# update state
-				state.data.0 = a
-				state.master.resolve state
-				blocks.forEach (b) -> b.refresh!
-				# done
-				@block.focus!
-			# }}}
-			@rangeGoto = do ~> # {{{
-				# get range
-				if not (R = @block.range)
-					return null
-				# create page goto handlers
-				a = []
-				b = -1
-				c = R.pages.length
-				while ++b < c
-					a[b] = @rangeGotoFunc (b - R.index)
-				# done
-				return a
-			# }}}
-			@resize = (e) !~> # {{{
-				# prepare
-				R = @block.range
-				debugger
-				###
-				# dynamic axis
-				# check operation mode and
-				# determine current
-				if e
-					# observed
-					# get current
-					w = e.0.contentRect.width
-				else
-					# forced
-					# determine current
-					a = @rootPads
-					a = a.1 + a.3
-					if (w = @block.root.clientWidth - a) < 0
-						w = 0
-					# determine base
-					@baseSz.0 = parseFloat (@rootBoxCS.getPropertyValue 'width')
-					@baseSz.2 = parseFloat (R.cs.getPropertyValue 'width')
-				# update
-				@currentSz.0 = w
-				###
-				# static axis
-				# determine deviation from the base
-				e = w / @baseSz.0
-				# calculate current size
-				a = @baseSz.1
-				b = @currentSz.1
-				@currentSz.1 = c = if e > 0.999
-					then 0
-					else e * a
-				# update style only if required
-				# also, to avoid layout reflows (by accessing min-width),
-				# re-calculate page-button sizes using base multiplier
-				if b and not c
-					@block.root.style.removeProperty '--height'
-					@currentSz.2 = 0
-					@currentSz.3 = 0
-				else if c and (Math.abs (c - b)) > 0.1
-					@block.root.style.setProperty '--height', c+'px'
-					@currentSz.2 = e * @baseSz.3
-					@currentSz.3 = e * @baseSz.4
-				# check flexy dualgap mode and
-				# determine page-button size
-				if @block.flexy and @block.range.mode == 2
-					###
-					# the drag problem:
-					# when paginator has plenty of space at dynamic axis,
-					# the middle area (gaps) may fit all pages,
-					# especially when the count is low,
-					# which makes button's drag area bigger
-					# than the button size and it makes drag "jump",
-					# which looks and feels unnatural.
-					# that's why size of page-buttons must be controlled.
-					###
-					# determine current range size
-					# (it's proportional, because it may be
-					#  modified to preserve aspect ratio)
-					a = @baseSz.0 - @baseSz.2
-					a = if e > 0.999
-						then w - a
-						else w - e * a
-					# determine current, optimal page-button size
-					if (c = @currentSz).2
-						b = if c.3
-							then (c.3 + c.2) / 2
-							else c.2
-						c = c.4
 					else
-						b = @baseSz.3
-						c = c.4
-					# update value
-					if (d = a / @block.state.data.1) <= b
-						d = 0
-					@currentSz.4 = d
-					# update style only if required
-					if c and not d
-						@block.range.box.style.removeProperty '--page-size'
-					else if d and (Math.abs (d - b)) > 0.1
-						@block.range.box.style.setProperty '--page-size', d+'px'
+						# last
+						a = S.data.1 - 1
+					###
+				else if b.contains 'P'
+					# relative, previous
+					if (a = S.data.0 - 1) < 0
+						a = S.data.1 - 1
+				else
+					# relative, next
+					if (a = S.data.0 + 1) >= S.data.1
+						a = 0
+				# check
+				if a == S.data.0
+					return
+				# update
+				S.data.0 = a
+				S.change!
 				# done
+				B.refresh!
+				B.focus!
 			# }}}
 		###
 		Control.prototype = {
-			init: !-> # {{{
-				# prepare
-				R = @block.range
-				# determine container paddings
-				a = [
-					'padding-top'
-					'padding-right'
-					'padding-bottom'
-					'padding-left'
-				]
-				b = -1
-				while ++b < a.length
-					@rootPads[b] = parseInt (@rootCS.getPropertyValue a[b])
-				# determine container sizes
-				@baseSz.0 = 0
-				@baseSz.1 = parseInt (@rootCS.getPropertyValue '--height')
-				@baseSz.2 = parseFloat (R.cs.getPropertyValue 'width')
-				# determine page sizes
-				a = getComputedStyle R.pages.0
-				@baseSz.3 = parseFloat (a.getPropertyValue 'min-width')
-				a = 1 + @block.config.index
-				a = getComputedStyle R.pages[a]
-				@baseSz.4 = parseFloat (a.getPropertyValue 'min-width')
-			# }}}
 			attach: !-> # {{{
 				# prepare
 				B = @block
 				R = B.range
-				@init!
 				# operate
-				# set keyboard controls
+				# keyboard controls
 				B.root.addEventListener 'keydown', @keyDown, true
 				B.root.addEventListener 'keyup', @keyUp, true
-				# set mouse controls
+				# mouse controls
 				B.root.addEventListener 'click', @setFocus
 				B.rootBox.addEventListener 'wheel', @wheel, true
 				B.rootBox.addEventListener 'pointerenter', @hover
 				B.rootBox.addEventListener 'pointerleave', @unhover
-				# set range
-				# first-last
-				a = R.pages[0].firstChild
-				a.addEventListener 'click', @goto
-				a = R.pages.length - 1
-				a = R.pages[a].firstChild
-				a.addEventListener 'click', @goto
+				###
 				# gotos
+				# first-last
+				if a = B.gotos.btnFL
+					a.0.addEventListener 'click', @goto
+					a.1.addEventListener 'click', @goto
+				# prev-next
+				if a = B.gotos.btnPN
+					#a.0.addEventListener 'pointerdown', @fastBackward
+					#a.0.addEventListener 'pointerup', @fastStop
+					a.0.addEventListener 'click', @goto
+					#a.1.addEventListener 'pointerdown', @fastForward
+					#a.1.addEventListener 'pointerup', @fastStop
+					a.1.addEventListener 'click', @goto
+				# range
 				for a,b in R.pages
-					a.firstChild.addEventListener 'click', @rangeGoto[b]
-				# drag (current page & range box)
-				a = R.pages[R.index].firstChild
-				a.addEventListener 'pointerdown', @dragStart
-				B.range.box.addEventListener 'pointermove', @drag
-				B.range.box.addEventListener 'pointerup', @dragStop
-				# set observer
-				@observer = a = new ResizeObserver @resize
-				a.observe B.root
+					a.firstChild.addEventListener 'click', @goto
+				###
+				# drag
+				#a = R.pages[R.index].firstChild
+				#a.addEventListener 'pointerdown', @dragStart
+				#B.range.box.addEventListener 'pointermove', @drag
+				#B.range.box.addEventListener 'pointerup', @dragStop
 			# }}}
 			detach: !-> # {{{
-				if @observer
-					@observer.disconnect!
-					@observer = null
+				true
 			# }}}
-			rangeGotoFunc: (i) -> (e) !~> # {{{
+			rangeGotoFunc: (e) !~> # {{{
 				# fulfil event
 				e.preventDefault!
 				e.stopPropagation!
@@ -2565,36 +2444,180 @@ smBlocks = do ->
 			# }}}
 		}
 		# }}}
+		Resizer = (block) !-> # {{{
+			# create object shape
+			@block     = block
+			@rootCS    = getComputedStyle block.root
+			@rootBoxCS = getComputedStyle block.rootBox
+			@rootPads  = [0, 0, 0, 0]
+			@baseSz    = [ # initial
+				0, 0, # 0/1: root-x, root-y
+				0,    #   2: range-x
+				0, 0  # 3/4: current-page-x, page-x
+			]
+			@currentSz = [ # calculated
+				0, 0, # 0/1: root-x, root-y
+				0, 0, # 2/3: current-page-x, page-x
+				0     #   4: optimal-page-x
+			]
+			@observer  = null # resize observer
+			@resize    = @resizeFunc!
+			@ready     = false
+			@onChange  = null
+		###
+		Resizer.prototype = {
+			init: !-> # {{{
+				# prepare
+				R = @block.range
+				# determine container paddings
+				a = [
+					'padding-top'
+					'padding-right'
+					'padding-bottom'
+					'padding-left'
+				]
+				b = -1
+				while ++b < a.length
+					@rootPads[b] = parseInt (@rootCS.getPropertyValue a[b])
+				# determine container sizes
+				@baseSz.0 = parseFloat (@rootBoxCS.getPropertyValue 'width')
+				@baseSz.1 = parseFloat (@rootCS.getPropertyValue '--height')
+				@baseSz.2 = parseFloat (R.cs.getPropertyValue 'width')
+				# determine page sizes
+				c = 'min-width'
+				if ~R.current
+					# current and standard
+					a = getComputedStyle R.pages[R.current]
+					b = getComputedStyle if R.current
+						then R.pages.0
+						else R.pages.1
+					a = parseFloat (a.getPropertyValue c)
+					b = parseFloat (b.getPropertyValue c)
+				else
+					# standard only
+					a = getComputedStyle R.pages.0
+					a = b = parseFloat (a.getPropertyValue c)
+				# store
+				@baseSz.3 = a
+				@baseSz.4 = b
+				# done
+				@ready = true
+			# }}}
+			attach: !-> # {{{
+				@detatch! if @observer
+				@observer = o = new ResizeObserver @resize
+				o.observe @block.root
+			# }}}
+			detach: !-> # {{{
+				if @observer
+					@observer.disconnect!
+					@observer = null
+			# }}}
+			resizeFunc: -> (e) !~> # {{{
+				# check
+				if not @ready
+					return
+				# prepare
+				B = @block
+				R = @block.range
+				###
+				# dynamic axis
+				# determine current container size
+				if e
+					# observed
+					w = e.0.contentRect.width
+				else
+					# forced
+					# get total axis padding
+					a = @rootPads
+					a = a.1 + a.3
+					# read style and calculate effective size
+					if (w = B.root.clientWidth - a) < 0
+						w = 0
+				# update
+				@currentSz.0 = w
+				###
+				# static axis
+				# determine deviation from the base
+				e = w / @baseSz.0
+				# callback master
+				e = @onChange e if @onChange
+				# update currents
+				a = @baseSz.1
+				b = @currentSz.1
+				@currentSz.1 = c = if e > 0.999
+					then 0
+					else e * a
+				# check
+				a = 0
+				if b and not c
+					# get back to normal
+					a = -1
+					@currentSz.2 = 0
+					@currentSz.3 = 0
+				else if c and (Math.abs (c - b)) > 0.1
+					# switch to calculated (reduced)
+					# to avoid layout reflows (by reading min-width),
+					# set sizes using base multiplier
+					a = 1
+					@currentSz.2 = e * @baseSz.3
+					@currentSz.3 = e * @baseSz.4
+				# set style only if required
+				if a and not @onChange
+					b = B.root.style
+					c = '--sm-blocks-size-factor'
+					if ~a
+						b.setProperty c, e
+					else
+						b.removeProperty c
+				# check flexy dualgap mode and
+				# determine page-button size
+				if B.config.range == 2 and R.mode == 2
+					###
+					# the drag problem:
+					# when paginator has plenty of space at dynamic axis,
+					# the middle area (gaps) may fit all pages,
+					# especially when the count is low,
+					# which makes button's drag area bigger
+					# than the button size and it makes drag "jump",
+					# which looks and feels unnatural.
+					# that's why size of page-buttons must be controlled.
+					###
+					# determine current range size
+					# (it's proportional, because it may be
+					#  modified to preserve aspect ratio)
+					a = @baseSz.0 - @baseSz.2
+					a = if e > 0.999
+						then w - a
+						else w - e * a
+					# determine current, optimal page-button size
+					if (c = @currentSz).2
+						b = if c.3
+							then (c.3 + c.2) / 2
+							else c.2
+						c = c.4
+					else
+						b = @baseSz.3
+						c = c.4
+					# update value
+					if (d = a / B.current.1) <= b
+						d = 0
+					@currentSz.4 = d
+					# update style only if required
+					if c and not d
+						R.box.style.removeProperty '--page-size'
+					else if d and (Math.abs (d - b)) > 0.1
+						R.box.style.setProperty '--page-size', d+'px'
+				# done
+			# }}}
+		}
+		# }}}
 		PageGoto = (block) !-> # {{{
-			###
-			@block = block
-			@boxFL = a = querySelectorChildren block.rootBox, '.goto.a'
-			@boxPN = b = querySelectorChildren block.rootBox, '.goto.b'
+			@boxFL = a = querySelectorChildren block.rootBox, '.goto.FL'
+			@boxPN = b = querySelectorChildren block.rootBox, '.goto.PN'
 			@btnFL = queryFirstChildren a
 			@btnPN = queryFirstChildren b
 			@sepFL = querySelectorChildren block.rootBox, '.sep'
-			###
-		###
-		PageGoto.prototype =
-			attach: !-> # {{{
-				# prepare
-				E = @block.ctrl
-				# first-last
-				if a = @btnFL
-					a.0.addEventListener 'click', E.goto
-					a.1.addEventListener 'click', E.goto
-				# prev-next
-				if a = @btnPN
-					a.0.addEventListener 'pointerdown', E.fastBackward
-					a.0.addEventListener 'pointerup', E.fastStop
-					a.0.addEventListener 'click', E.goto
-					a.1.addEventListener 'pointerdown', E.fastForward
-					a.1.addEventListener 'pointerup', E.fastStop
-					a.1.addEventListener 'click', E.goto
-			# }}}
-			detach: !-> # {{{
-				true
-			# }}}
 		# }}}
 		PageRange = (block) !-> # {{{
 			# controls
@@ -2624,8 +2647,7 @@ smBlocks = do ->
 				last  = -1
 				# determine current state
 				if v.1 == 0
-					# empty
-					# {{{
+					# empty {{{
 					# no range/current, gap only
 					mode    = 0
 					current = -1
@@ -2633,8 +2655,7 @@ smBlocks = do ->
 					gaps.0  = 100
 					# }}}
 				else if v.1 <= pages.length
-					# nogap (pages only)
-					# {{{
+					# nogap (pages only) {{{
 					mode    = 1
 					current = v.0
 					count   = pages.length # justify
@@ -2648,8 +2669,7 @@ smBlocks = do ->
 					last  = a - 1
 					# }}}
 				else
-					# dualgap
-					# {{{
+					# dualgap {{{
 					mode    = 2
 					current = @index
 					count   = pages.length
@@ -2744,10 +2764,11 @@ smBlocks = do ->
 					@gaps[b].style.flexGrow = a[b] = c
 				# current page
 				if @current != current
-					if ~@current
-						@pages[@current].classList.remove 'x'
-					if ~current
-						@pages[current].classList.add 'x'
+					if not @block.locked
+						if ~@current
+							@pages[@current].classList.remove 'x'
+						if ~current
+							@pages[current].classList.add 'x'
 					@current = current
 				# range edges
 				if (a = @pFirst) != first
@@ -2775,11 +2796,10 @@ smBlocks = do ->
 			@range   = new PageRange @
 			@gotos   = new PageGoto @
 			@control = new Control @
+			@resizer = new Resizer @
 			# state
 			@locked  = -1
 			@current = [-1,-1] # page index, count
-			# handlers
-			# ...
 		###
 		Block.prototype =
 			group: 'page'
@@ -2794,34 +2814,46 @@ smBlocks = do ->
 				###
 				@refresh!
 				@control.attach!
+				@resizer.attach!
 				return true
 			# }}}
 			lock: (level) ->> # {{{
 				###
+				c0 = @root.classList
+				c1 = @rootBox.classList
+				###
 				if level != @locked
-					if not level
-						# unlock
-						@rootBox.classList.add 'v'
+					if ~level
+						if level
+							# lock
+							if not @locked
+								# terminate activity
+								await a.spin! if a = @control.lock
+								# remove styles
+								c1.remove 'v'
+								if ~(a = @range.current)
+									@range.pages[a].classList.remove 'x'
+						else
+							# unlock
+							c1.add 'v'
+							if ~(a = @range.current)
+								@range.pages[a].classList.add 'x'
 					else
-						# deactivate
-						if a = @control.lock
-							await a.spin!
-						# lock
-						@rootBox.classList.remove 'v'
-						if ~(a = @range.current)
-							@range.pages[a].classList.remove 'x'
-							@range.current = -1
-						###
+						# initial lock
+						c1.remove 'v' if not @lock
+						c0.remove 'v'
+					###
 				###
 				@locked = level
 				return true
 			# }}}
 			notify: -> # {{{
-				# check active
-				if (a = @control.lock) and a.pending
-					return false
-				# done
-				return true
+				# refresh early
+				@refresh! if @state.pending
+				# prevent active
+				return if (a = @control.lock) and a.pending
+					then false
+					else true
 			# }}}
 			refresh: !-> # {{{
 				# prepare
@@ -2837,14 +2869,14 @@ smBlocks = do ->
 			# }}}
 			resize: !-> # {{{
 				@root.classList.remove 'v'
-				@control.resize!
+				@resizer.init!
+				@resizer.resize!
 				@root.classList.add 'v'
 			# }}}
 			focus: !-> # {{{
-				# set focus to the current node
-				if not @locked and \
-				   @range and (a = @range.current) and \
-				   document.activeElement != a
+				# set focus to current
+				if not @locked and (a = @range) and ~a.current and \
+				   (a = a.pages[a.current].firstChild) != document.activeElement
 					###
 					a.focus!
 			# }}}
@@ -2991,15 +3023,25 @@ smBlocks = do ->
 			# }}}
 			lock: (level) ->> # {{{
 				###
+				c0 = @root.classList
+				c1 = @rootBox.classList
+				###
 				if level != @locked
-					if not level
-						# unlock
-						true
-						###
+					if ~level
+						if level
+							# lock
+							if not @locked
+								c1.remove 'v'
+							else
+								c0.add 'v'
+						else
+							# unlock
+							c1.add 'v'
 					else
-						# lock
-						true
-						###
+						# initial lock
+						c1.remove 'v' if not @locked
+						c0.remove 'v'
+					###
 				###
 				@locked = level
 				return true
@@ -3070,8 +3112,8 @@ smBlocks = do ->
 			# }}}
 			Loader = (s) !-> # {{{
 				@super = s     # s-supervisor
-				@dirty = true  # resolved-in-process flag
-				@level = 0     # current priority (lowest for the first)
+				@dirty = -1    # resolved-in-process flag
+				@level = -1    # current priority (highest for the first)
 				@lock  = null  # current load promise
 				@fetch = null  # request promise
 				@state = null
@@ -3117,27 +3159,19 @@ smBlocks = do ->
 							a.state.data = S[a.name]
 					###
 					# initialize blocks
-					# execute standard method
 					a = []
 					for b in B
 						a[*] = if b.init
 							then b.init cfg
 							else true
 					# wait for completion and iterate results
-					c = []
 					for a,b in (await Promise.all a)
 						# check
 						if not a
-							consoleError 'Failed to initialize a block'
+							consoleError 'Failed to initialize a '+B[b].group+' block'
 							return false
-						# unlock
-						c[*] = B[b].lock 0
-					# gracefully await unlock completion
-					await Promise.all c
-					# set constructed & functional class
-					for a in B
-						a.root.classList.add 'v'
-						a.rootBox.classList.add 'v'
+						# lock constructed
+						B[b].lock 1
 					# done
 					@state = S
 					@data  = D
@@ -3150,7 +3184,7 @@ smBlocks = do ->
 					@lock.resolve! if @lock
 					@fetch.cancel! if @fetch
 					# restore defaults
-					@dirty = false
+					@dirty = -1
 					@level = 100
 					# cleanup
 					@lock = @fetch = @state = @data = null
@@ -3162,8 +3196,8 @@ smBlocks = do ->
 						# to guard against excessive fetch requests,
 						# resulted by fast, multiple user actions,
 						# actions are throttled here:
-						@lock  = p = newDelay 400
-						@dirty = false
+						@lock  = p = newDelay (~@dirty and 400)
+						@dirty = 0
 					else
 						# charge the trigger
 						# create custom promise
@@ -3216,21 +3250,13 @@ smBlocks = do ->
 						if p.pending
 							# clean
 							p.pending = false
-							r!
-						else if not @dirty
+							r true
+						else if not loader.dirty
 							# dirty
-							@dirty = true
-							@fetch.cancel! if @fetch
+							loader.dirty = 1
+							loader.fetch.cancel! if loader.fetch
 						# done
 						return true
-				# }}}
-				reset: !-> # {{{
-					if (a = @state.records).length
-						# clear product cards in the reverse order
-						#while --c >= 0
-						#	gridList[c].cls!
-						# cleanup
-						a.length = 0
 				# }}}
 				operate: ->> # {{{
 					###
@@ -3244,8 +3270,7 @@ smBlocks = do ->
 					while ~--a
 						if (b = B[a]).level < @level
 							# lock lower levels (dont wait)
-							if not b.locked
-								b.lock 1, @level
+							b.lock 1, @level
 						else
 							# notify higher levels (allow restart)
 							if not b.notify!
@@ -3305,50 +3330,69 @@ smBlocks = do ->
 			return (s) -> new Loader s
 		# }}}
 		newResizer = do -> # {{{
-			Resizer = (node, parent) !->
+			ResizeSlave = (master, node) !->
+				@parent   = master
 				@node     = node
-				@parent   = parent
-				@children = null
 				@blocks   = null
+				@state    = [1,null] # current,emitter block
+				@handler  = null
 			###
-			Resizer.prototype =
-				init: (blocks) !-> # {{{
-					# collect child nodes
-					n = [...(@node.querySelectorAll '.sm-blocks-resizer')]
-					# determine children
-					c = []
-					for a in n
-						# lookup node parents
-						b = a.parentNode
-						while b != @node and (n.indexOf b) == -1
-							b = b.parentNode
-						# create new child
-						if b == @node
-							c[*] = b = new Resizer a, @
-							b.init blocks
-					# store
-					@children = c if c.length
-					# determine own blocks
-					c = []
-					for a in blocks
-						# lookup block parent nodes
-						b = a.root
-						while b and b != @node and (n.indexOf b) == -1
-							b = b.parentNode
-						# add block
-						if b == @node
-							c[*] = a
-					# store
-					@blocks = c if c.length
+			ResizeMaster = (selector, blocks) !->
+				# {{{
+				@slaves = s = []
+				# initialize
+				# locate slave nodes
+				n = [...(document.querySelectorAll selector)]
+				# iterate
+				for a in n
+					# create a slave
+					s[*] = b = new ResizeSlave @, a
+					# set blocks
+					b.blocks = c = []
+					for d in blocks
+						# lookup block parents
+						e = d.root
+						while e and e != a and (n.indexOf e) == -1
+							e = e.parentNode
+						# add
+						c[*] = d if e == a
+					# set handlers
+					b.handler = e = @handler b
+					for d in c when d.resizer
+						d.resizer.onChange = e
+				# }}}
+			ResizeMaster.prototype =
+				handler: (s) -> (e) -> # {{{
+					# get current state
+					if not (c = s.state)
+						return e
+					# check
+					if c.0 > e or c.1 == @block
+						# lower factor or higher self,
+						# change the current
+						c.1 = @block
+						c.0 = e = if e < 0.01
+							then 0
+							else if e > 0.99
+								then 1
+								else e
+						# update style
+						c = '--sm-blocks-size-factor'
+						if e == 1
+							s.node.style.removeProperty c
+						else
+							s.node.style.setProperty c, e
+						###
+					else
+						# higher another,
+						# no change
+						e = c.0
 					# done
+					return e
 				# }}}
 			###
-			return (s) ->
-				# create root and construct a tree
-				R = new Resizer s.root, null
-				R.init s.blocks
-				# done
-				return R
+			return (selector, blocks) ->
+				return new ResizeMaster selector, blocks
 		# }}}
 		# constructors
 		GroupState = (group) !-> # {{{
@@ -3356,8 +3400,9 @@ smBlocks = do ->
 			@config  = null
 			@data    = null
 			@pending = false
-			@change  = !->
+			@change  = (data) !->
 				# group resolution api
+				@data = data if arguments.length
 				@pending = true
 				group.resolve!
 		# }}}
@@ -3434,7 +3479,7 @@ smBlocks = do ->
 				# initialize controllers
 				@root    = root
 				@loader  = loader = newLoader @
-				@resizer = newResizer @
+				@resizer = newResizer '.sm-blocks-resizer', blocks
 				@counter = 0
 				###
 				# start
@@ -3463,7 +3508,8 @@ smBlocks = do ->
 	# factory
 	return (m) -> new SUPERVISOR m
 ###
-# DELETE (later) {{{
+# index/launcher (DELETE) {{{
+#smBlocks = smBlocks [/* custom module list */]
 smBlocks = smBlocks!
 smBlocks.attach document
 # }}}

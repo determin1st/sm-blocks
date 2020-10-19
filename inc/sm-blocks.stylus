@@ -5,10 +5,13 @@
 WebSafeFontSans = Verdana, Arial, sans-serif
 WebSafeFontMono = Consolas, Courier, monospace
 // }}}
+:root // {{{
+	--sm-blocks-size-factor: 1 // constant
+// }}}
 // ===
 .sm-blocks // {{{
 	// common config
-	--height:    48px // fixed axis size (vertical by default)
+	--height:    calc(48px * var(--sm-blocks-size-factor))
 	--font-size: calc(0.35 * var(--height))
 	// root
 	position:   relative
@@ -591,7 +594,7 @@ WebSafeFontMono = Consolas, Courier, monospace
 	> div
 		flex: 0 0 auto
 		width: auto
-		max-width: 10000px
+		//max-width: 10000px
 		display: flex
 		flex-direction: row
 		touch-action: none
@@ -630,8 +633,8 @@ WebSafeFontMono = Consolas, Courier, monospace
 						fill: white
 		// }}}
 		> .sep // {{{
-			flex: 0 0 0
-			min-width: 8px
+			flex: 1 0 0
+			max-width: 8px
 			padding: 2px 0 2px 0
 			> svg
 				fill: silver
