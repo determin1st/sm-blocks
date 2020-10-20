@@ -17,6 +17,7 @@
   margin: 0;
   padding: 1px 0 2px 4px;
   color: #2f4f4f;
+  font-size: calc(40px * var(--sm-blocks-size-factor));
 }
 #sm-demo > .b > .c {
   display: flex;
@@ -29,3 +30,4 @@
   flex: 3 1 0;
   justify-content: flex-end;
 }
+/***/

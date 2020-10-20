@@ -11,7 +11,8 @@ WebSafeFontMono = Consolas, Courier, monospace
 // ===
 .sm-blocks // {{{
 	// common config
-	--height:    calc(48px * var(--sm-blocks-size-factor))
+	--height-px: 48px
+	--height:    calc(var(--height-px) * var(--sm-blocks-size-factor))
 	--font-size: calc(0.35 * var(--height))
 	// root
 	position:   relative

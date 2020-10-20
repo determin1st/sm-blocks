@@ -5,7 +5,8 @@
   --sm-blocks-size-factor: 1;
 }
 .sm-blocks {
-  --height: calc(48px * var(--sm-blocks-size-factor));
+  --height-px: 48px;
+  --height: calc(var(--height-px) * var(--sm-blocks-size-factor));
   --font-size: calc(0.35 * var(--height));
   position: relative;
   box-sizing: border-box;
