@@ -2,7 +2,7 @@
 "use strict";
 var smBlocks, slice$ = [].slice, arrayFrom$ = Array.from || function(x){return slice$.call(x);};
 smBlocks = function(){
-  var consoleError, consoleInfo, newPromise, newDelay, querySelectorChildren, querySelectorChild, queryFirstChildren, soFetch, oFetch, S, M, newLoader, newResizer, newGroup, SUPERVISOR;
+  var consoleError, consoleInfo, newPromise, newDelay, querySelectorChildren, querySelectorChild, queryFirstChildren, parseTemplate, soFetch, oFetch, S, M, newLoader, newResizer, newGroup, SUPERVISOR;
   consoleError = function(msg){
     var a;
     a = '%csm-blocks: %c' + msg;
@@ -80,6 +80,14 @@ smBlocks = function(){
       a[a.length] = b.firstChild;
     }
     return a;
+  };
+  parseTemplate = function(f){
+    var a, b;
+    f = f.toString();
+    a = f.indexOf('/*') + 2;
+    b = f.lastIndexOf('*/') - 1;
+    f = f.substring(a, b).trim().replace(/>\s+</g, '><');
+    return f;
   };
   soFetch = httpFetch.create({
     baseUrl: '/?rest_route=/sm-blocks/kiss',
@@ -452,83 +460,19 @@ smBlocks = function(){
         return new Block(node, state);
       };
     }(),
-    card: function(){
-      var mCart, Box, Data, newImageBlock, newTitleBlock, newPriceBlock, newControlBlock, newItem, Block;
-      mCart = function(){
-        var data;
-        data = null;
-        return {
-          add: async function(id){
-            var a;
-            a = (await soFetch({
-              func: 'cart',
-              op: 'set',
-              id: id
-            }));
-            if (a instanceof Error) {
-              return false;
-            }
-            a = wc_add_to_cart_params.wc_ajax_url.replace('%%endpoint%%', 'get_refreshed_fragments');
-            a = (await httpFetch({
-              url: a,
-              notNull: true
-            }));
-            if (a instanceof Error) {
-              return true;
-            }
-            jQuery(document.body).trigger('added_to_cart', [a.fragments, a.cart_hash, null]);
-            return true;
-          },
-          get: function(id){
-            var a, ref$, b;
-            if (!data) {
-              return null;
-            }
-            for (a in ref$ = data) {
-              b = ref$[a];
-              if (b.product_id === id) {
-                return b;
-              }
-            }
-            return null;
-          },
-          load: async function(){
-            var a;
-            a = (await soFetch({
-              func: 'cart',
-              op: 'get'
-            }));
-            if (a instanceof Error) {
-              return null;
-            }
-            return data = a;
-          }
-        };
-      }();
-      Box = function(node){
-        this.box = node;
-        this.data = null;
-        this.set = null;
-        this.cls = null;
+    productCard: function(){
+      var Image, Title, Price, Actions, template, Block;
+      Image = function(block){
+        var a, b;
+        this.block = block;
+        this.box = a = document.createElement('div');
+        this.img = b = document.createElement('img');
+        b.alt = 'product';
+        b.addEventListener('load', this.loaded());
+        a.appendChild(b);
       };
-      Data = function(box, value){
-        this.box = box;
-        this.container = box.children[0];
-        this.placeholder = box.children[1];
-        this.value = value;
-        this.config = null;
-      };
-      Data.prototype = {
+      Image.prototype = {
         loaded: function(){
-          this.box.classList.add('loaded');
-        },
-        unloaded: function(){
-          this.box.classList.remove('loaded');
-        }
-      };
-      newImageBlock = function(){
-        var loaded, set, cls;
-        loaded = function(block){
           return function(){
             var img;
             img = block.data.value;
@@ -536,8 +480,8 @@ smBlocks = function(){
               block.data.loaded();
             }
           };
-        };
-        set = function(data){
+        },
+        set: function(data){
           var img, a, b;
           if (data = data.image) {
             img = this.data.value;
@@ -546,46 +490,30 @@ smBlocks = function(){
               img[a] = b;
             }
           }
-        };
-        cls = function(){
+        },
+        clear: function(){
           var a;
           a = this.data.value;
           a.srcset = a.src = '';
           this.data.unloaded();
-        };
-        return function(node){
-          var a, img;
-          a = new Box(node);
-          img = node.querySelector('img');
-          img.addEventListener('load', loaded(a));
-          a.data = new Data(node, img);
-          a.set = set;
-          a.cls = cls;
-          return a;
-        };
-      }();
-      newTitleBlock = function(){
-        var set, cls;
-        set = function(data){
+        }
+      };
+      Title = function(block){
+        this.block = block;
+      };
+      Title.prototype = {
+        set: function(data){
           var a;
           a = data.name.replace(/\s+([\\\|/.]){1}\s+/, "\n");
           this.data.container.innerText = a;
           this.data.loaded();
-        };
-        cls = function(){
+        },
+        clear: function(){
           this.data.container.innerText = '';
           this.data.unloaded();
-        };
-        return function(node){
-          var a;
-          a = new Box(node);
-          a.data = new Data(node, null);
-          a.set = set;
-          a.cls = cls;
-          return a;
-        };
-      }();
-      newPriceBlock = function(){
+        }
+      };
+      Price = function(){
         var map, expThousandSplit, expValueSplit, set, cls;
         map = ['.currency', '.dot', '.r0', '.r1', '.c0', '.c1'];
         expThousandSplit = /\B(?=(\d{3})+(?!\d))/;
@@ -663,7 +591,7 @@ smBlocks = function(){
           return a;
         };
       }();
-      newControlBlock = function(){
+      Actions = function(){
         var map, set, cls;
         map = ['.link', '.cart'];
         set = function(data){
@@ -731,66 +659,102 @@ smBlocks = function(){
           return a;
         };
       }();
-      newItem = function(){
-        var map, Item;
-        map = {
-          name: ['.title', newTitleBlock],
-          image: ['.head', newImageBlock],
-          price: ['.price', newPriceBlock],
-          controls: ['.controls', newControlBlock]
-        };
-        Item = function(node){
-          this.node = node;
-          this.id = 0;
-          this.name = null;
-          this.image = null;
-          this.icon = null;
-          this.features = null;
-          this.price = null;
-          this.controls = null;
-        };
-        Item.prototype = {
-          set: function(data){
-            var a;
-            this.id = data.id;
-            for (a in map) {
-              if (this[a]) {
-                this[a].set(data);
-              }
-            }
-            this.node.classList.remove('empty');
-          },
-          cls: function(){
-            var a;
-            for (a in map) {
-              if (this[a]) {
-                this[a].cls();
-              }
-            }
-            this.node.classList.add('empty');
+      Actions.prototype = {
+        add: async function(id){
+          var a;
+          a = (await soFetch({
+            func: 'cart',
+            op: 'set',
+            id: id
+          }));
+          if (a instanceof Error) {
+            return false;
           }
-        };
-        return function(node){
-          var a, b, ref$, c, d;
-          a = new Item(node);
-          for (b in ref$ = map) {
-            c = ref$[b];
-            if (d = node.querySelector(c[0])) {
-              a[b] = c[1](d);
+          a = wc_add_to_cart_params.wc_ajax_url.replace('%%endpoint%%', 'get_refreshed_fragments');
+          a = (await httpFetch({
+            url: a,
+            notNull: true
+          }));
+          if (a instanceof Error) {
+            return true;
+          }
+          jQuery(document.body).trigger('added_to_cart', [a.fragments, a.cart_hash, null]);
+          return true;
+        },
+        get: function(id){
+          var a, ref$, b;
+          if (!data) {
+            return null;
+          }
+          for (a in ref$ = data) {
+            b = ref$[a];
+            if (b.product_id === id) {
+              return b;
             }
           }
-          return a;
-        };
-      }();
-      Block = function(root){
-        var box;
-        this.state = state;
-        this.root = root;
-        this.rootBox = box = root.firstChild;
-        this.config = JSON.parse(box.dataset.cfg);
-        this.items = arrayFrom$(box.children);
-        this.resizer = null;
-        this.locked = -1;
+          return null;
+        },
+        load: async function(){
+          var a, data;
+          a = (await soFetch({
+            func: 'cart',
+            op: 'get'
+          }));
+          if (a instanceof Error) {
+            return null;
+          }
+          return data = a;
+        }
+      };
+      template = function(){
+        /*
+        <div>
+        	<div class="section a">
+        		<div class="image">
+        			<img alt="product">
+        			<svg preserveAspectRatio="none" fill-rule="evenodd" clip-rule="evenodd" shape-rendering="geometricPrecision" viewBox="0 0 270.92 270.92">
+        				<path fill-rule="nonzero" d="M135.46 245.27c-28.39 0-54.21-10.93-73.72-28.67L216.6 61.74c17.74 19.51 28.67 45.33 28.67 73.72 0 60.55-49.26 109.81-109.81 109.81zm0-219.62c29.24 0 55.78 11.56 75.47 30.25L55.91 210.93c-18.7-19.7-30.25-46.23-30.25-75.47 0-60.55 49.26-109.81 109.8-109.81zm84.55 27.76c-.12-.16-.18-.35-.33-.5-.1-.09-.22-.12-.32-.2-21.4-21.7-51.09-35.19-83.9-35.19-65.03 0-117.94 52.91-117.94 117.94 0 32.81 13.5 62.52 35.2 83.91.08.09.11.22.2.31.14.14.33.2.49.32 21.24 20.63 50.17 33.4 82.05 33.4 65.03 0 117.94-52.91 117.94-117.94 0-31.88-12.77-60.8-33.39-82.05z"/>
+        			</svg>
+        		</div>
+        	</div>
+        	<div class="section b">
+        		<div class="title"><div></div></div>
+        	</div>
+        	<div class="section c">
+        		<div class="price">
+        			<div class="previous">
+        				<span class="r0"></span>
+        				<span class="dot"></span>
+        				<span class="r1"></span>
+        			</div>
+        			<div class="current">
+        				<div class="currency"></div>
+        				<div class="value c0">0</div>
+        				<div class="mantissa">
+        					<span class="dot"></span>
+        					<span class="c1">00</span>
+        				</div>
+        			</div>
+        		</div>
+        		<div class="actions">
+        			<button type="button" class="add-to-cart">
+        				<svg preserveAspectRatio="none" viewBox="0 0 446.843 446.843">
+        					<path d="M444.09 93.103a14.343 14.343 0 00-11.584-5.888H109.92c-.625 0-1.249.038-1.85.119l-13.276-38.27a14.352 14.352 0 00-8.3-8.646L19.586 14.134c-7.374-2.887-15.695.735-18.591 8.1-2.891 7.369.73 15.695 8.1 18.591l60.768 23.872 74.381 214.399c-3.283 1.144-6.065 3.663-7.332 7.187l-21.506 59.739a11.928 11.928 0 001.468 10.916 11.95 11.95 0 009.773 5.078h11.044c-6.844 7.616-11.044 17.646-11.044 28.675 0 23.718 19.298 43.012 43.012 43.012s43.012-19.294 43.012-43.012c0-11.029-4.2-21.059-11.044-28.675h93.776c-6.847 7.616-11.048 17.646-11.048 28.675 0 23.718 19.294 43.012 43.013 43.012 23.718 0 43.012-19.294 43.012-43.012 0-11.029-4.2-21.059-11.043-28.675h13.433c6.599 0 11.947-5.349 11.947-11.948s-5.349-11.947-11.947-11.947H143.647l13.319-36.996c1.72.724 3.578 1.152 5.523 1.152h210.278a14.33 14.33 0 0013.65-9.959l59.739-186.387a14.33 14.33 0 00-2.066-12.828zM169.659 409.807c-10.543 0-19.116-8.573-19.116-19.116s8.573-19.117 19.116-19.117 19.116 8.574 19.116 19.117-8.573 19.116-19.116 19.116zm157.708 0c-10.543 0-19.117-8.573-19.117-19.116s8.574-19.117 19.117-19.117c10.542 0 19.116 8.574 19.116 19.117s-8.574 19.116-19.116 19.116zm75.153-261.658h-73.161V115.89h83.499l-10.338 32.259zm-21.067 65.712h-52.094v-37.038h63.967l-11.873 37.038zm-146.882 0v-37.038h66.113v37.038h-66.113zm66.113 28.677v31.064h-66.113v-31.064h66.113zm-161.569-65.715h66.784v37.038h-53.933l-12.851-37.038zm95.456-28.674V115.89h66.113v32.259h-66.113zm-28.673-32.259v32.259h-76.734l-11.191-32.259h87.925zm-43.982 126.648h43.982v31.064h-33.206l-10.776-31.064zm167.443 31.065v-31.064h42.909l-9.955 31.064h-32.954z"/>
+        				</svg>
+        			</button>
+        			<button type="button" class="go-to-product"></button>
+        		</div>
+        	</div>
+        </div>
+        */
+      };
+      Block = function(master){
+        var R;
+        this.master = master;
+        this.root = R = document.createElement('div');
+        R.className = 'sm-blocks-product-card';
+        R.innerHTML = template;
+        debugger;
       };
       Block.prototype = {
         init: function(){
@@ -801,9 +765,31 @@ smBlocks = function(){
         },
         refresh: function(){
           true;
+        },
+        set: function(data){
+          var a;
+          this.id = data.id;
+          for (a in map) {
+            if (this[a]) {
+              this[a].set(data);
+            }
+          }
+          this.node.classList.remove('empty');
+        },
+        clear: function(){
+          var a;
+          for (a in map) {
+            if (this[a]) {
+              this[a].cls();
+            }
+          }
+          this.node.classList.add('empty');
         }
       };
       return function(root){
+        if (typeof template === 'function') {
+          template = parseTemplate(template);
+        }
         return new Block(root);
       };
     }()
@@ -893,7 +879,7 @@ smBlocks = function(){
         this.root = root;
         this.rootBox = box = root.firstChild;
         this.config = JSON.parse(box.dataset.cfg);
-        this.items = arrayFrom$(box.children);
+        this.items = [];
         this.resizer = null;
         this.locked = -1;
       };
@@ -907,6 +893,18 @@ smBlocks = function(){
           o.order = this.config.orderTag;
         },
         init: function(cfg){
+          var a, b, c;
+          a = this.config.columns;
+          b = this.rootBox.style;
+          b.setProperty('--columns', a[0]);
+          b.setProperty('--rows', a[1]);
+          debugger;
+          a = a[0] * a[1];
+          b = -1;
+          c = this.items;
+          while (++b < a) {
+            c[c.length] = this.state.f.productCard(this);
+          }
           return true;
         },
         lock: async function(level){
@@ -940,7 +938,7 @@ smBlocks = function(){
         refresh: function(){
           true;
         },
-        eat: function(record){
+        load: function(record, index){
           return true;
         }
       };
@@ -1176,7 +1174,7 @@ smBlocks = function(){
         this.root = root;
         this.index = index;
         this.rootBox = rootBox = root.firstChild;
-        this.section = S = state.factory.section(root);
+        this.section = S = state.f.section(root);
         this.checks = new Checkbox(this, S.rootItem);
         this.locked = -1;
         this.focused = false;
@@ -1707,7 +1705,7 @@ smBlocks = function(){
         this.config = JSON.parse(root.dataset.cfg);
         mode = box.classList.contains('text') ? 0 : 1;
         this.inputs = I = new TextInputs(this, box);
-        this.section = S = state.factory.section(root.parentNode.parentNode.parentNode);
+        this.section = S = state.f.section(root.parentNode.parentNode.parentNode);
         this.locked = -1;
         this.mode = mode;
         this.focused = false;
@@ -2876,7 +2874,6 @@ smBlocks = function(){
       this.data = null;
     };
     Loader.prototype = {
-      name: 'loader',
       init: async function(){
         var T, S, D, B, i$, len$, a, cfg, ref$, b;
         T = window.performance.now();
@@ -2890,8 +2887,9 @@ smBlocks = function(){
             import$(S.config, a.config);
           }
         }
+        debugger;
         if ((cfg = (await soFetch(D))) instanceof Error) {
-          consoleError(c.message);
+          consoleError(cfg.message);
           return false;
         }
         for (a in cfg) {
@@ -2922,7 +2920,7 @@ smBlocks = function(){
           b = i$;
           a = ref$[i$];
           if (!a) {
-            consoleError('Failed to initialize a ' + B[b].group + ' block');
+            consoleError('failed to initialize a ' + B[b].group + ' block');
             return false;
           }
           B[b].lock(1);
@@ -2999,8 +2997,8 @@ smBlocks = function(){
           return true;
         };
       },
-      operate: async function(){
-        var B, a, b, R, i$, len$, ref$, c;
+      cycle: async function(){
+        var B, a, b, R, c, d;
         if (!(await this.charge())) {
           return true;
         }
@@ -3008,9 +3006,9 @@ smBlocks = function(){
         a = B.length;
         while (~--a) {
           if ((b = B[a]).level < this.level) {
-            b.lock(1, this.level);
+            b.lock(1);
           } else {
-            if (!b.notify()) {
+            if (!b.notify(this.level)) {
               return true;
             }
           }
@@ -3029,35 +3027,33 @@ smBlocks = function(){
         }
         this.state.total = a;
         this.state.page[1] = Math.ceil(a / this.data.limit);
-        for (i$ = 0, len$ = B.length; i$ < len$; ++i$) {
-          a = B[i$];
-          if (a.locked) {
-            a.lock(0, this.level);
+        a = -1;
+        while (++a < B.length) {
+          if ((b = B[a]).locked) {
+            b.lock(0);
           }
-          a.refresh();
+          b.refresh(this.level);
         }
-        for (i$ = 0, len$ = (ref$ = this['super'].groups).length; i$ < len$; ++i$) {
-          a = ref$[i$];
-          if (a.state.pending) {
-            a.state.pending = false;
+        B = this['super'].groups;
+        a = -1;
+        while (++a < B.length) {
+          if ((b = B[a]).state.pending) {
+            b.state.pending = false;
           }
         }
         this.level = 0;
-        if ((B = this['super'].eaters).length) {
-          a = this.data.limit;
-          while (~--a && !this.dirty) {
-            if ((b = (await R.readJSON())) === null) {
+        if ((B = this['super'].holders).length) {
+          a = -1;
+          b = this.data.limit;
+          while (++a < b && !this.dirty) {
+            if ((c = (await R.readJSON())) === null) {
               R.cancel();
               return false;
             }
-            for (i$ = 0, len$ = B.length; i$ < len$; ++i$) {
-              c = B[i$];
-              c.eat(b);
+            d = -1;
+            while (++d < B.length) {
+              B[d].load(c, d);
             }
-          }
-          for (i$ = 0, len$ = B.length; i$ < len$; ++i$) {
-            c = B[i$];
-            c.eat(null);
           }
           (await R.read());
         }
@@ -3137,7 +3133,7 @@ smBlocks = function(){
   newGroup = function(){
     var State, Group;
     State = function(slaves){
-      this.factory = slaves;
+      this.f = slaves;
       this.config = null;
       this.data = null;
       this.pending = false;
@@ -3179,13 +3175,13 @@ smBlocks = function(){
     this.counter = 0;
     this.groups = [];
     this.blocks = [];
-    this.eaters = [];
-    m = (m && 'custom ') || '';
-    consoleInfo('new ' + m + 'supervisor');
+    this.holders = [];
+    s = (m !== M && 'custom ') || '';
+    consoleInfo('new ' + s + 'supervisor');
   };
   SUPERVISOR.prototype = {
     attach: async function(root, base){
-      var groups, blocks, eaters, a, ref$, b, i$, len$, loader;
+      var groups, blocks, a, ref$, b, i$, len$, loader;
       base == null && (base = '.sm-blocks');
       if (!root) {
         return false;
@@ -3199,7 +3195,6 @@ smBlocks = function(){
       }
       groups = this.groups;
       blocks = this.blocks;
-      eaters = this.eaters;
       for (a in ref$ = this.masters) {
         b = ref$[a];
         if ((a = arrayFrom$(root.querySelectorAll(base + '.' + a))).length) {
@@ -3213,10 +3208,11 @@ smBlocks = function(){
         a = groups[i$];
         blocks.push.apply(blocks, a.blocks);
       }
+      b = this.holders;
       for (i$ = 0, len$ = blocks.length; i$ < len$; ++i$) {
         a = blocks[i$];
-        if (a.eat) {
-          eaters[eaters.length] = a;
+        if (a.load) {
+          b[b.length] = a;
         }
       }
       a = function(a, b){
@@ -3236,7 +3232,7 @@ smBlocks = function(){
         return false;
       }
       consoleInfo('supervisor attached');
-      while ((await loader.operate())) {
+      while ((await loader.cycle())) {
         ++this.counter;
       }
       consoleInfo('supervisor detached, ' + this.counter + ' actions');
@@ -3244,7 +3240,7 @@ smBlocks = function(){
     },
     detach: async function(){
       this.root = this.resizer = this.loader = null;
-      this.groups.length = this.blocks.length = 0;
+      this.groups.length = this.blocks.length = this.holders.length = 0;
       return true;
     }
   };

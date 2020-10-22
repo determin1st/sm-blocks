@@ -24,7 +24,7 @@ class StorefrontModernBlocks {
     $dir_data  = __DIR__.DIRECTORY_SEPARATOR.'data'.DIRECTORY_SEPARATOR,
     $dir_inc   = __DIR__.DIRECTORY_SEPARATOR.'inc'.DIRECTORY_SEPARATOR,
     $blocks    = [
-      'grid' => [ # {{{
+      'products' => [ # {{{
         'render_callback' => [null, 'renderProducts'],
         'attributes'      => [
           ### common
@@ -32,24 +32,12 @@ class StorefrontModernBlocks {
             'type'        => 'string',
             'default'     => 'custom',
           ],
-          ### dimensions
-          'rowsMin'       => [
-            'type'        => 'number',
-            'default'     => 1,
+          ### columns and rows [max:max:min:min]
+          'layout'        => [
+            'type'        => 'string',
+            'default'     => '4:2:2:2',
           ],
-          'rowsMax'       => [
-            'type'        => 'number',
-            'default'     => 3,
-          ],
-          'columnsMin'    => [
-            'type'        => 'number',
-            'default'     => 1,
-          ],
-          'columnsMax'    => [
-            'type'        => 'number',
-            'default'     => 4,
-          ],
-          ### content
+          ### default order
           'orderOptions'  => [
             'type'        => 'string',
             'default'     => 'featured,new,price',
@@ -66,30 +54,6 @@ class StorefrontModernBlocks {
           'itemHeight'    => [
             'type'        => 'number',
             'default'     => 640,
-          ],
-          'itemSizeBalance' => [
-            'type'        => 'string',
-            'default'     => '35:40:25',
-          ],
-          'itemImage'     => [
-            'type'        => 'boolean',
-            'default'     => true,
-          ],
-          'itemIcon'      => [
-            'type'        => 'boolean',
-            'default'     => false,
-          ],
-          'itemFeatures'  => [
-            'type'        => 'boolean',
-            'default'     => false,
-          ],
-          'itemPrice'     => [
-            'type'        => 'boolean',
-            'default'     => true,
-          ],
-          'itemControls'  => [
-            'type'        => 'boolean',
-            'default'     => true,
           ],
         ],
       ],
@@ -229,12 +193,10 @@ class StorefrontModernBlocks {
       # }}}
     ],
     $templates = [
-      'grid' => [ # {{{
+      'products' => [ # {{{
         'main' => '
         <div class="sm-blocks products {{custom}}">
-          <div style="{{style}}" data-cfg=\'{{cfg}}\'>
-            {{items}}
-          </div>
+          <div style="{{style}}" data-cfg=\'{{cfg}}\'></div>
           {{placeholder}}
         </div>
         ',
@@ -700,31 +662,14 @@ class StorefrontModernBlocks {
   public function renderProducts($attr, $content)
   {
     # prepare
-    $T = $this->templates['grid'];
-    # create elements
-    # grid items {{{
-    $items   = '';
-    $columns = $attr['columnsMax'];
-    $rows    = $attr['rowsMax'];
-    $size    = $columns * $rows;
+    $T = $this->templates['products'];
+    $layout = explode(':', $attr['layout']);
+    # grid style
+    $style  = "--columns:{$layout[0]};--rows:{$layout[1]};";
+    $style .= "--item-width:{$attr['itemWidth']}px;";
+    $style .= "--item-height:{$attr['itemHeight']}px;";
     ###
-    $a = $this->parseTemplate($T['item'], $T, $attr);
-    $b = 1 + $size;
-    while (--$b) {
-      $items .= $a;
-    }
-    # }}}
-    # class and style {{{
-    # using default to ssr-preset comparison here,
-    # expands logic into 2 equal mod directions:
-    # CSS class preset and/or SSR inline preset
-    $style  = "--columns:{$columns};--rows:{$rows};";
-    $style .= "--item-max-x:{$attr['itemWidth']}px;";
-    $style .= "--item-max-y:{$attr['itemHeight']}px;";
-    $a = explode(':', $attr['itemSizeBalance']);
-    $style .= "--item-sz-1:{$a[0]};--item-sz-2:{$a[1]};--item-sz-3:{$a[2]}";
-    # }}}
-    # initial configuration {{{
+    # configuration
     # these are client-controller side options which serve
     # to the content displayed, without direct effect on styles
     # prepare
@@ -733,17 +678,15 @@ class StorefrontModernBlocks {
       ? ($a[1] === 'desc' ? 2 : 1)
       : 0;
     $cfg = json_encode([
-      'columns'      => [$attr['columnsMin'], $attr['columnsMax']],
+      'layout'       => $layout,
       'orderOptions' => explode(',', $attr['orderOptions']),
       'orderTag'     => $a,
     ]);
-    # }}}
-    # compose all
+    # compose
     return $this->parseTemplate($T['main'], $T, [
       'custom' => $attr['customClass'],
       'style'  => $style,
       'cfg'    => $cfg,
-      'items'  => $items,
       'placeholder' => $this->templates['svg']['placeholder'],
     ]);
   }

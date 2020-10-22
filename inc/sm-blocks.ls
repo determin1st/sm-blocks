@@ -93,6 +93,16 @@ smBlocks = do ->
 		# done
 		return a
 	# }}}
+	parseTemplate = (f) -> # {{{
+		# get function's text and locate the comment
+		f = f.toString!
+		a = (f.indexOf '/*') + 2
+		b = (f.lastIndexOf '*/') - 1
+		# tidy up html content and complete
+		f = (f.substring a, b).trim!replace />\s+</g, '><'
+		return f
+		###
+	# }}}
 	# }}}
 	# fetchers {{{
 	soFetch = httpFetch.create {
@@ -485,99 +495,27 @@ smBlocks = do ->
 			return (node, state) ->
 				return new Block node, state
 		# }}}
-		card: do -> # {{{
+		productCard: do -> # {{{
 			###
-			mCart = do ->
-				# prepare
-				data = null
-				# create api
-				return {
-					add: (id) ->> # {{{
-						# fetch
-						a = await soFetch {
-								func: 'cart'
-								op: 'set'
-								id: id
-						}
-						# check
-						if a instanceof Error
-							return false
-						# TODO: optional, back-compat
-						# send woo-notification
-						# get cart data
-						a = wc_add_to_cart_params.wc_ajax_url.replace '%%endpoint%%', 'get_refreshed_fragments'
-						a = await httpFetch {
-							url: a
-							notNull: true
-						}
-						# check
-						if a instanceof Error
-							return true
-						# notify
-						jQuery document.body .trigger 'added_to_cart', [
-							a.fragments
-							a.cart_hash
-							null
-						]
-						# done
-						return true
-					# }}}
-					get: (id) -> # {{{
-						# check
-						if not data
-							return null
-						# search
-						for a,b of data when b.product_id == id
-							return b
-						# not found
-						return null
-					# }}}
-					load: ->> # {{{
-						# get cart contents
-						a = await soFetch {
-							func: 'cart'
-							op: 'get'
-						}
-						# check
-						if a instanceof Error
-							return null
-						# done
-						return data := a
-					# }}}
-				}
+			Image = (block) !-> # {{{
+				###
+				@block = block
+				@box   = a = document.createElement 'div'
+				@img   = b = document.createElement 'img'
+				###
+				b.alt = 'product'
+				b.addEventListener 'load', @loaded!
+				a.appendChild b
 			###
-			# constructors
-			Box = (node) !-> # {{{
-				@box  = node
-				@data = null
-				@set  = null
-				@cls  = null
-			# }}}
-			Data = (box, value) !-> # {{{
-				# create object shape
-				@box         = box
-				@container   = box.children.0
-				@placeholder = box.children.1
-				@value       = value
-				@config      = null
-			###
-			Data.prototype = {
-				loaded: !->
-					@box.classList.add 'loaded'
-				unloaded: !->
-					@box.classList.remove 'loaded'
-			}
-			# }}}
-			# factories
-			newImageBlock = do -> # {{{
-				loaded = (block) -> !-> # {{{
+			Image.prototype =
+				loaded: -> !~> # {{{
 					# prepare
 					img = block.data.value
 					# check image successfully loaded
 					if img.complete and img.naturalWidth != 0
 						block.data.loaded!
 				# }}}
-				set = (data) !-> # {{{
+				set: (data) !-> # {{{
 					# get related data
 					if data = data.image
 						# prepare
@@ -586,28 +524,19 @@ smBlocks = do ->
 						for a,b of data
 							img[a] = b
 				# }}}
-				cls = !-> # {{{
+				clear: !-> # {{{
 					# clear image attributes
 					a = @data.value
 					a.srcset = a.src = ''
 					@data.unloaded!
 				# }}}
-				return (node) ->
-					# create a block
-					a = new Box node
-					# get the image and
-					# set event handlers
-					img = node.querySelector 'img'
-					img.addEventListener 'load', loaded a
-					# initialize block
-					a.data = new Data node, img
-					a.set  = set
-					a.cls  = cls
-					# done
-					return a
 			# }}}
-			newTitleBlock = do -> # {{{
-				set = (data) !-> # {{{
+			Title = (block) !-> # {{{
+				###
+				@block = block
+			###
+			Title.prototype =
+				set: (data) !-> # {{{
 					# apply automatic break-lines feature,
 					# using special markers
 					a = data.name.replace /\s+([\\\|/.]){1}\s+/, "\n"
@@ -615,22 +544,13 @@ smBlocks = do ->
 					@data.container.innerText = a
 					@data.loaded!
 				# }}}
-				cls = !-> # {{{
+				clear: !-> # {{{
 					# remove text
 					@data.container.innerText = ''
 					@data.unloaded!
 				# }}}
-				return (node) ->
-					# create a block
-					a = new Box node
-					# initialize
-					a.data = new Data node, null
-					a.set  = set
-					a.cls  = cls
-					# done
-					return a
 			# }}}
-			newPriceBlock = do -> # {{{
+			Price = do -> # {{{
 				map = [ # {{{
 					'.currency'
 					'.dot'
@@ -715,7 +635,7 @@ smBlocks = do ->
 					# done
 					return a
 			# }}}
-			newControlBlock = do -> # {{{
+			Actions = do -> # {{{
 				map = [ # {{{
 					'.link'
 					'.cart'
@@ -793,67 +713,112 @@ smBlocks = do ->
 					a.cls  = cls
 					# done
 					return a
-			# }}}
-			newItem = do -> # {{{
-				map = # name => selector/factory {{{
-					name:  ['.title', newTitleBlock]
-					image: ['.head', newImageBlock]
-					price: ['.price', newPriceBlock]
-					controls: ['.controls', newControlBlock]
-				# }}}
-				Item = (node) !-> # {{{
-					# create object shape
-					@node     = node
-					@id       = 0
-					@name     = null
-					@image    = null
-					@icon     = null
-					@features = null
-					@price    = null
-					@controls = null
-				###
-				Item.prototype = {
-					set: (data) !->
-						# display item
-						# set data
-						@id = data.id
-						for a of map when @[a]
-							@[a].set data
-						# done
-						@node.classList.remove 'empty'
-					cls: !->
-						# clear item
-						# remove data
-						for a of map when @[a]
-							@[a].cls!
-						# done
-						@node.classList.add 'empty'
-				}
-				# }}}
-				return (node) ->
-					# create an item
-					a = new Item node
-					# assemble blocks
-					for b,c of map
-						if d = node.querySelector c.0
-							a[b] = c.1 d
+			###
+			Actions.prototype =
+				add: (id) ->> # {{{
+					# fetch
+					a = await soFetch {
+							func: 'cart'
+							op: 'set'
+							id: id
+					}
+					# check
+					if a instanceof Error
+						return false
+					# TODO: optional, back-compat
+					# send woo-notification
+					# get cart data
+					a = wc_add_to_cart_params.wc_ajax_url.replace '%%endpoint%%', 'get_refreshed_fragments'
+					a = await httpFetch {
+						url: a
+						notNull: true
+					}
+					# check
+					if a instanceof Error
+						return true
+					# notify
+					jQuery document.body .trigger 'added_to_cart', [
+						a.fragments
+						a.cart_hash
+						null
+					]
 					# done
-					return a
+					return true
+				# }}}
+				get: (id) -> # {{{
+					# check
+					if not data
+						return null
+					# search
+					for a,b of data when b.product_id == id
+						return b
+					# not found
+					return null
+				# }}}
+				load: ->> # {{{
+					# get cart contents
+					a = await soFetch {
+						func: 'cart'
+						op: 'get'
+					}
+					# check
+					if a instanceof Error
+						return null
+					# done
+					return data = a
+				# }}}
+			# }}}
+			template = !-> # {{{
+				/*
+				<div>
+					<div class="section a">
+						<div class="image">
+							<img alt="product">
+							<svg preserveAspectRatio="none" fill-rule="evenodd" clip-rule="evenodd" shape-rendering="geometricPrecision" viewBox="0 0 270.92 270.92">
+								<path fill-rule="nonzero" d="M135.46 245.27c-28.39 0-54.21-10.93-73.72-28.67L216.6 61.74c17.74 19.51 28.67 45.33 28.67 73.72 0 60.55-49.26 109.81-109.81 109.81zm0-219.62c29.24 0 55.78 11.56 75.47 30.25L55.91 210.93c-18.7-19.7-30.25-46.23-30.25-75.47 0-60.55 49.26-109.81 109.8-109.81zm84.55 27.76c-.12-.16-.18-.35-.33-.5-.1-.09-.22-.12-.32-.2-21.4-21.7-51.09-35.19-83.9-35.19-65.03 0-117.94 52.91-117.94 117.94 0 32.81 13.5 62.52 35.2 83.91.08.09.11.22.2.31.14.14.33.2.49.32 21.24 20.63 50.17 33.4 82.05 33.4 65.03 0 117.94-52.91 117.94-117.94 0-31.88-12.77-60.8-33.39-82.05z"/>
+							</svg>
+						</div>
+					</div>
+					<div class="section b">
+						<div class="title"><div></div></div>
+					</div>
+					<div class="section c">
+						<div class="price">
+							<div class="previous">
+								<span class="r0"></span>
+								<span class="dot"></span>
+								<span class="r1"></span>
+							</div>
+							<div class="current">
+								<div class="currency"></div>
+								<div class="value c0">0</div>
+								<div class="mantissa">
+									<span class="dot"></span>
+									<span class="c1">00</span>
+								</div>
+							</div>
+						</div>
+						<div class="actions">
+							<button type="button" class="add-to-cart">
+								<svg preserveAspectRatio="none" viewBox="0 0 446.843 446.843">
+									<path d="M444.09 93.103a14.343 14.343 0 00-11.584-5.888H109.92c-.625 0-1.249.038-1.85.119l-13.276-38.27a14.352 14.352 0 00-8.3-8.646L19.586 14.134c-7.374-2.887-15.695.735-18.591 8.1-2.891 7.369.73 15.695 8.1 18.591l60.768 23.872 74.381 214.399c-3.283 1.144-6.065 3.663-7.332 7.187l-21.506 59.739a11.928 11.928 0 001.468 10.916 11.95 11.95 0 009.773 5.078h11.044c-6.844 7.616-11.044 17.646-11.044 28.675 0 23.718 19.298 43.012 43.012 43.012s43.012-19.294 43.012-43.012c0-11.029-4.2-21.059-11.044-28.675h93.776c-6.847 7.616-11.048 17.646-11.048 28.675 0 23.718 19.294 43.012 43.013 43.012 23.718 0 43.012-19.294 43.012-43.012 0-11.029-4.2-21.059-11.043-28.675h13.433c6.599 0 11.947-5.349 11.947-11.948s-5.349-11.947-11.947-11.947H143.647l13.319-36.996c1.72.724 3.578 1.152 5.523 1.152h210.278a14.33 14.33 0 0013.65-9.959l59.739-186.387a14.33 14.33 0 00-2.066-12.828zM169.659 409.807c-10.543 0-19.116-8.573-19.116-19.116s8.573-19.117 19.116-19.117 19.116 8.574 19.116 19.117-8.573 19.116-19.116 19.116zm157.708 0c-10.543 0-19.117-8.573-19.117-19.116s8.574-19.117 19.117-19.117c10.542 0 19.116 8.574 19.116 19.117s-8.574 19.116-19.116 19.116zm75.153-261.658h-73.161V115.89h83.499l-10.338 32.259zm-21.067 65.712h-52.094v-37.038h63.967l-11.873 37.038zm-146.882 0v-37.038h66.113v37.038h-66.113zm66.113 28.677v31.064h-66.113v-31.064h66.113zm-161.569-65.715h66.784v37.038h-53.933l-12.851-37.038zm95.456-28.674V115.89h66.113v32.259h-66.113zm-28.673-32.259v32.259h-76.734l-11.191-32.259h87.925zm-43.982 126.648h43.982v31.064h-33.206l-10.776-31.064zm167.443 31.065v-31.064h42.909l-9.955 31.064h-32.954z"/>
+								</svg>
+							</button>
+							<button type="button" class="go-to-product"></button>
+						</div>
+					</div>
+				</div>
+				*/
 			# }}}
 			###
-			Block = (root) !-> # {{{
-				# base
-				@state   = state
-				@root    = root
-				@rootBox = box = root.firstChild
-				@config  = JSON.parse box.dataset.cfg
-				# controls
-				@items   = [...box.children]
-				@resizer = null
-				# state
-				@locked  = -1
-				# handlers
-				# ...
+			Block = (master) !-> # {{{
+				# create object shape
+				@master = master
+				@root   = R = document.createElement 'div'
+				# construct
+				R.className = 'sm-blocks-product-card'
+				R.innerHTML = template
+				debugger
 			###
 			Block.prototype =
 				init: -> # {{{
@@ -865,8 +830,31 @@ smBlocks = do ->
 				refresh: !-> # {{{
 					true
 				# }}}
+				set: (data) !-> # {{{
+					# display item
+					# set data
+					@id = data.id
+					for a of map when @[a]
+						@[a].set data
+					# done
+					@node.classList.remove 'empty'
+				# }}}
+				clear: !-> # {{{
+					# clear item
+					# remove data
+					for a of map when @[a]
+						@[a].cls!
+					# done
+					@node.classList.add 'empty'
+				# }}}
 			# }}}
-			return (root) -> new Block root
+			# factory
+			return (root) ->
+				# prepare template
+				if typeof template == 'function'
+					template := parseTemplate template
+				# create
+				return new Block root
 		# }}}
 	M = # masters
 		'products': do -> # {{{
@@ -964,7 +952,7 @@ smBlocks = do ->
 				@rootBox = box = root.firstChild
 				@config  = JSON.parse box.dataset.cfg
 				# controls
-				@items   = [...box.children]
+				@items   = []
 				@resizer = null
 				# state
 				@locked  = -1
@@ -980,7 +968,19 @@ smBlocks = do ->
 					o.order = @config.orderTag
 				# }}}
 				init: (cfg) -> # {{{
-					# operate
+					# set grid parameters
+					a = @config.columns
+					b = @rootBox.style
+					b.setProperty '--columns', a.0
+					b.setProperty '--rows', a.1
+					debugger
+					# create items
+					a = a.0 * a.1
+					b = -1
+					c = @items
+					while ++b < a
+						c[*] = @state.f.productCard @
+					# render items
 					#@resizer = new Resizer @
 					# done
 					return true
@@ -1015,7 +1015,7 @@ smBlocks = do ->
 				refresh: !-> # {{{
 					true
 				# }}}
-				eat: (record) -> # {{{
+				load: (record, index) -> # {{{
 					return true
 				# }}}
 			# }}}
@@ -1268,7 +1268,7 @@ smBlocks = do ->
 				@index   = index
 				@rootBox = rootBox = root.firstChild
 				# controls
-				@section = S = state.factory.section root
+				@section = S = state.f.section root
 				@checks  = new Checkbox @, S.rootItem
 				# state
 				@locked  = -1
@@ -1853,7 +1853,7 @@ smBlocks = do ->
 					then 0
 					else 1
 				@inputs  = I = new TextInputs @, box
-				@section = S = state.factory.section root.parentNode.parentNode.parentNode
+				@section = S = state.f.section root.parentNode.parentNode.parentNode
 				# }}}
 				# state
 				@locked  = -1
@@ -3153,7 +3153,6 @@ smBlocks = do ->
 			@data  = null
 		###
 		Loader.prototype =
-			name: 'loader'
 			init: ->> # {{{
 				# prepare
 				T = window.performance.now!
@@ -3167,8 +3166,9 @@ smBlocks = do ->
 					a.configure D
 					S.config <<< a.config
 				# get remote
+				debugger
 				if (cfg = await soFetch D) instanceof Error
-					consoleError c.message
+					consoleError cfg.message
 					return false
 				###
 				# initialize state
@@ -3201,7 +3201,7 @@ smBlocks = do ->
 				for a,b in (await Promise.all a)
 					# check
 					if not a
-						consoleError 'Failed to initialize a '+B[b].group+' block'
+						consoleError 'failed to initialize a '+B[b].group+' block'
 						return false
 					# lock constructed
 					B[b].lock 1
@@ -3291,7 +3291,7 @@ smBlocks = do ->
 					# done
 					return true
 			# }}}
-			operate: ->> # {{{
+			cycle: ->> # {{{
 				###
 				# wait for update
 				if not (await @charge!)
@@ -3303,10 +3303,10 @@ smBlocks = do ->
 				while ~--a
 					if (b = B[a]).level < @level
 						# lock lower levels (dont wait)
-						b.lock 1, @level
+						b.lock 1
 					else
 						# notify higher levels (allow restart)
-						if not b.notify!
+						if not b.notify @level
 							return true
 				# check for restart
 				return true if @dirty
@@ -3317,7 +3317,7 @@ smBlocks = do ->
 				# check
 				if R instanceof Error
 					return if R.id == 4
-						then true   # cancelled, dirty state
+						then true   # cancelled, restart
 						else false  # fatal failure
 				# read metadata
 				if (a = await R.readInt!) == null
@@ -3329,31 +3329,35 @@ smBlocks = do ->
 				@state.total  = a
 				@state.page.1 = Math.ceil (a / @data.limit)
 				# unlock and refresh blocks
-				for a in B
-					a.lock 0, @level if a.locked
-					a.refresh!
-				# clear group flags
-				for a in @super.groups when a.state.pending
-					a.state.pending = false
+				a = -1
+				while ++a < B.length
+					if (b = B[a]).locked
+						b.lock 0
+					b.refresh @level
+				# reset groups
+				B = @super.groups
+				a = -1
+				while ++a < B.length
+					if (b = B[a]).state.pending
+						b.state.pending = false
 				# reset priority
 				@level = 0
 				###
-				# feed eaters (with records)
-				if (B = @super.eaters).length
-					# iterate for projected count
-					a = @data.limit
-					while ~--a and not @dirty
-						# get record
-						if (b = await R.readJSON!) == null
+				# load records
+				if (B = @super.holders).length
+					# iterate projected count
+					a = -1
+					b = @data.limit
+					while ++a < b and not @dirty
+						# read
+						if (c = await R.readJSON!) == null
 							R.cancel!
 							return false
-						# feed
-						for c in B
-							c.eat b
-					# end feed
-					for c in B
-						c.eat null
-					# satisfy chrome (2020-04), it produces unnecessary errors
+						# load
+						d = -1
+						while ++d < B.length
+							B[d].load c, d
+					# satisfy chrome (2020-04) as it dumps error
 					await R.read!
 				# complete
 				R.cancel!
@@ -3430,7 +3434,7 @@ smBlocks = do ->
 	newGroup = do -> # {{{
 		State = (slaves) !-> # {{{
 			# create object shape
-			@factory = slaves
+			@f       = slaves
 			@config  = null
 			@data    = null
 			@pending = false
@@ -3469,16 +3473,16 @@ smBlocks = do ->
 		# create object shape
 		@masters = m
 		@slaves  = s
-		@root    = null
+		@root    = null # attachment point
 		@resizer = null
 		@loader  = null
-		@counter = 0 # user actions
-		@groups  = []
-		@blocks  = []
-		@eaters  = []
-		# log
-		m = (m and 'custom ') or ''
-		consoleInfo 'new '+m+'supervisor'
+		@counter = 0    # user actions
+		@groups  = []   # block groups
+		@blocks  = []   # all blocks
+		@holders = []   # receiver blocks
+		# done
+		s = (m != M and 'custom ') or ''
+		consoleInfo 'new '+s+'supervisor'
 	###
 	SUPERVISOR.prototype =
 		attach: (root, base = '.sm-blocks') ->> # {{{
@@ -3496,7 +3500,6 @@ smBlocks = do ->
 			# prepare
 			groups = @groups
 			blocks = @blocks
-			eaters = @eaters
 			# create managed groups
 			for a,b of @masters
 				if (a = [...(root.querySelectorAll base+'.'+a)]).length
@@ -3507,9 +3510,10 @@ smBlocks = do ->
 			# collect blocks
 			for a in groups
 				blocks.push ...a.blocks
-			# collect eater blocks
-			for a in blocks when a.eat
-				eaters[*] = a
+			# collect receivers
+			b = @holders
+			for a in blocks when a.load
+				b[*] = a
 			# sort blocks and groups by priority level (ascending)
 			a = (a, b) ->
 				return if a.level < b.level
@@ -3531,7 +3535,7 @@ smBlocks = do ->
 				return false
 			# enter the dragon
 			consoleInfo 'supervisor attached'
-			while await loader.operate!
+			while await loader.cycle!
 				++@counter
 			# complete
 			consoleInfo 'supervisor detached, '+@counter+' actions'
@@ -3540,7 +3544,7 @@ smBlocks = do ->
 		detach: ->> # {{{
 			# cleanup
 			@root = @resizer = @loader = null
-			@groups.length = @blocks.length = 0
+			@groups.length = @blocks.length = @holders.length = 0
 			# done
 			return true
 		# }}}
