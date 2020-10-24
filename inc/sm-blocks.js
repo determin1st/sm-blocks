@@ -750,11 +750,13 @@ smBlocks = function(){
       };
       Block = function(master){
         var R;
-        this.master = master;
-        this.root = R = document.createElement('div');
+        R = document.createElement('div');
         R.className = 'sm-blocks-product-card';
         R.innerHTML = template;
-        debugger;
+        R.appendChild(master.root.children[1].cloneNode(true));
+        this.master = master;
+        this.root = R;
+        this.rootBox = R.firstChild;
       };
       Block.prototype = {
         init: function(){
@@ -798,79 +800,165 @@ smBlocks = function(){
     'products': function(){
       var Resizer, Block;
       Resizer = function(block){
-        var c, s, o, this$ = this;
+        var this$ = this;
         this.block = block;
-        this.config = c = block.config;
-        this.style = s = getComputedStyle(block.rootBox);
-        this.observer = o = new ResizeObserver(function(e){
-          this$.set(e);
-        });
-        this.columnsMin = c.columnsMin;
-        this.columnsMax = c.columnsMax;
-        this.columnsGap = parseInt(s.getPropertyValue('--column-gap'));
-        this.rowsMin = c.rowsMin;
-        this.rowsMax = c.rowsMax;
-        this.rowsGap = parseInt(s.getPropertyValue('--row-gap'));
-        this.itemX = parseInt(s.getPropertyValue('--item-max-x'));
-        this.itemY = parseInt(s.getPropertyValue('--item-max-y'));
-        this.itemXA = this.itemX + this.columnsGap / 2;
-        this.itemYA = this.itemY + this.rowsGap / 2;
-        this.fontSizeMax = parseInt(s.getPropertyValue('--font-size'));
-        this.ratio = this.itemY / this.itemX;
-        this.width = 0;
-        this.fontSize = 0;
-        this.columns = 0;
-        this.rows = 0;
-        o.observe(block, {
-          box: 'border-box'
-        });
-      };
-      Resizer.prototype = {
-        set: function(e){
-          var x, a, w, i$, ref$, len$, c;
-          x = e
+        this.style = getComputedStyle(block.rootBox);
+        this.pads = [0, 0];
+        this.layout = [0, 0, 0];
+        this.gaps = [0, 0];
+        this.sizes = [0, 0, 0];
+        this.factor = 1;
+        this.observer = null;
+        this.onChange = null;
+        this.resize = function(e){
+          var B, C, w, ref$, a, b, c, d;
+          B = this$.block;
+          C = B.config.layout;
+          w = e
             ? e[0].contentRect.width
-            : root.clientWidth;
-          if (state.columnsMin === state.columnsMax) {
-            state.columns = state.columnsMax;
-            state.rows = state.rowsMin;
-          } else {
-            if ((a = x / state.itemXA | 0) > state.columnsMax) {
-              state.columns = state.columnsMax;
-              state.rows = state.rowsMin;
-            } else if (a < state.columnsMin) {
-              state.columns = state.columnsMin;
-              state.rows = state.rowsMax;
-            } else {
-              state.columns = a;
-              state.rows = Math.ceil(gridList.length / a);
+            : B.root.clientWidth - this$.pads[0];
+          ref$ = this$.calculateLayout(w, 1), a = ref$[0], b = ref$[1], c = ref$[2], d = ref$[3];
+          /***
+          # determine current layout
+          # columns
+          a = C.2
+          b = @sizes.0
+          c = @gaps.0
+          # check dynamic
+          if a and a < C.0
+          	# determine optimal
+          	while (d = a*b + (a - 1)*c) <= e and a < C.0
+          		++a
+          	# check overflow
+          	if d > e and a > C.2
+          		# decrease and re-calculate
+          		--a
+          		d = a*b + (a - 1)*c
+          	# rows
+          	# check dynamic
+          	if not (b = C.3)
+          		# determine optimal
+          		c = C.0 * C.1
+          		b = (c / a) .|. 0
+          		# fit all items
+          		++b if a*b < c
+          else
+          	# fixed columns/rows
+          	a = C.0
+          	b = C.1
+          	d = a*b + (a - 1)*c
+          # determine item count
+          c = a * b
+          /***/
+          e = d > e ? e / d : 1;
+          if (this$.onChange) {
+            d = e;
+            if ((e = this$.onChange(e)) < d) {
+              ref$ = this$.calculateLayout(w, e), a = ref$[0], b = ref$[1], c = ref$[2];
             }
           }
-          a = state.columns;
-          w = a === 1
-            ? state.itemX
-            : state.itemX * a + state.columnGap * (a - 1);
-          if (w <= x) {
-            a = state.rows;
-            state.width = w;
-            state.height = a === 1
-              ? state.itemY
-              : state.itemY * a + state.rowGap * (a - 1);
-            state.fontSize = state.fontSizeMax;
+          if (this$.layout[0] !== a) {
+            this$.layout[0] = a;
+            B.rootBox.style.setProperty('--columns', a);
+          }
+          if (this$.layout[1] !== b) {
+            this$.layout[1] = b;
+            B.rootBox.style.setProperty('--rows', b);
+          }
+          if ((a = this$.layout[2]) !== c) {
+            this$.layout[2] = c;
+            b = B.items.length;
+            if (c > a) {
+              if (c < b) {
+                b = c;
+              }
+              --a;
+              while (++a < b) {
+                B.items[a].root.classList.add('v');
+              }
+            } else {
+              if (a > b) {
+                a = b;
+              }
+              while (--a >= c) {
+                B.items[a].root.classList.remove('v');
+              }
+            }
+          }
+          if (!this$.onChange && Math.abs(this$.factor - e) > 0.01) {
+            a = B.rootBox.style;
+            b = '--sm-blocks-size-factor';
+            if ((this$.factor = e) === 1) {
+              a.removeProperty(b);
+            } else {
+              a.setProperty(b, e);
+            }
+          }
+        };
+      };
+      Resizer.prototype = {
+        init: function(){
+          var a, s;
+          a = this.block.config.layout;
+          this.layout[0] = a[0];
+          this.layout[1] = a[1];
+          s = getComputedStyle(this.block.root);
+          a = this.pads;
+          a[0] = parseInt(s.getPropertyValue('padding-left'));
+          a[0] += parseInt(s.getPropertyValue('padding-right'));
+          a[1] = parseInt(s.getPropertyValue('padding-top'));
+          a[2] += parseInt(s.getPropertyValue('padding-bottom'));
+          s = this.style;
+          a = this.gaps;
+          a[0] = parseInt(s.getPropertyValue('--column-gap'));
+          a[1] = parseInt(s.getPropertyValue('--row-gap'));
+          a = this.sizes;
+          a[0] = parseInt(s.getPropertyValue('--item-width'));
+          a[1] = parseInt(s.getPropertyValue('--item-height'));
+          a[2] = a[1] / a[0];
+        },
+        attach: function(){
+          if (this.observer) {
+            this.detach();
+          }
+          this.init();
+          this.observer = new ResizeObserver(this.resize);
+          this.observer.observe(this.block.root);
+        },
+        detach: function(){
+          if (this.observer) {
+            this.observer.disconnect();
+            this.observer = null;
+          }
+        },
+        calculateLayout: function(w, e){
+          var C, a, b, c, d;
+          C = this.block.config.layout;
+          a = C[2];
+          b = e * this.sizes[0];
+          c = e * this.gaps[0];
+          if (a && a < C[0]) {
+            while ((d = a * b + (a - 1) * c) <= w && a < C[0]) {
+              ++a;
+            }
+            if (d > w && a > C[2]) {
+              --a;
+              d = a * b + (a - 1) * c;
+            }
+            if (!(b = C[3])) {
+              c = C[0] * C[1];
+              b = c / a | 0;
+              if (a * b < c) {
+                ++b;
+              }
+            }
           } else {
-            a = x / w;
-            state.width = x;
-            state.height = state.rows * state.itemYA * a;
-            state.fontSize = state.fontSizeMax * a;
+            a = C[0];
+            b = C[1];
+            d = a * b + (a - 1) * c;
           }
-          this.rootBox.style.setProperty('--columns', state.columns);
-          this.rootBox.style.setProperty('--rows', state.rows);
-          this.rootBox.style.setProperty('--height', state.height + 'px');
-          this.rootBox.style.setProperty('--font-size', state.fontSize + 'px');
-          for (i$ = 0, len$ = (ref$ = gridControl).length; i$ < len$; ++i$) {
-            c = ref$[i$];
-            c.event('resize', state);
-          }
+          c = a * b;
+          return [a, b, c, d];
         }
       };
       Block = function(state, root){
@@ -880,7 +968,7 @@ smBlocks = function(){
         this.rootBox = box = root.firstChild;
         this.config = JSON.parse(box.dataset.cfg);
         this.items = [];
-        this.resizer = null;
+        this.resizer = new Resizer(this);
         this.locked = -1;
       };
       Block.prototype = {
@@ -888,29 +976,31 @@ smBlocks = function(){
         level: 3,
         configure: function(o){
           var a;
-          a = this.config.columns;
+          a = this.config.layout;
           o.limit = a[0] * a[1];
           o.order = this.config.orderTag;
         },
         init: function(cfg){
-          var a, b, c;
-          a = this.config.columns;
+          var a, b, c, d;
+          a = this.config.layout;
           b = this.rootBox.style;
           b.setProperty('--columns', a[0]);
           b.setProperty('--rows', a[1]);
-          debugger;
           a = a[0] * a[1];
           b = -1;
           c = this.items;
           while (++b < a) {
-            c[c.length] = this.state.f.productCard(this);
+            c[c.length] = d = this.state.f.productCard(this);
+            this.rootBox.appendChild(d.root);
           }
+          this.resizer.attach();
           return true;
         },
         lock: async function(level){
           var c0, c1;
           c0 = this.root.classList;
           c1 = this.rootBox.classList;
+          console.log('products.lock', level);
           if (this.locked !== level) {
             if (~level) {
               if (level) {
@@ -2253,6 +2343,7 @@ smBlocks = function(){
         }
       };
       Resizer = function(block){
+        var this$ = this;
         this.block = block;
         this.rootCS = getComputedStyle(block.root);
         this.rootBoxCS = getComputedStyle(block.rootBox);
@@ -2260,9 +2351,77 @@ smBlocks = function(){
         this.baseSz = [0, 0, 0, 0, 0];
         this.currentSz = [0, 0, 0, 0, 0];
         this.observer = null;
-        this.resize = this.resizeFunc();
-        this.ready = false;
         this.onChange = null;
+        this.ready = false;
+        this.resize = function(e){
+          var B, R, w, a, b, c, d;
+          if (!this$.ready) {
+            return;
+          }
+          B = this$.block;
+          R = this$.block.range;
+          if (e) {
+            w = e[0].contentRect.width;
+          } else {
+            a = this$.rootPads;
+            a = a[1] + a[3];
+            if ((w = B.root.clientWidth - a) < 0) {
+              w = 0;
+            }
+          }
+          this$.currentSz[0] = w;
+          e = w / this$.baseSz[0];
+          if (this$.onChange) {
+            e = this$.onChange(e);
+          }
+          b = this$.currentSz[1];
+          this$.currentSz[1] = c = e > 0.999
+            ? 0
+            : e * this$.baseSz[1];
+          a = 0;
+          if (b && !c) {
+            a = -1;
+            this$.currentSz[2] = 0;
+            this$.currentSz[3] = 0;
+          } else if (c && Math.abs(c - b) > 0.1) {
+            a = 1;
+            this$.currentSz[2] = e * this$.baseSz[3];
+            this$.currentSz[3] = e * this$.baseSz[4];
+          }
+          if (a && !this$.onChange) {
+            b = B.root.style;
+            c = '--sm-blocks-size-factor';
+            if (~a) {
+              b.setProperty(c, e);
+            } else {
+              b.removeProperty(c);
+            }
+          }
+          if (B.config.range === 2 && R.mode === 2) {
+            a = this$.baseSz[0] - this$.baseSz[2];
+            a = e > 0.999
+              ? w - a
+              : w - e * a;
+            if ((c = this$.currentSz)[2]) {
+              b = c[3]
+                ? (c[3] + c[2]) / 2
+                : c[2];
+              c = c[4];
+            } else {
+              b = this$.baseSz[3];
+              c = c[4];
+            }
+            if ((d = a / B.current[1]) <= b) {
+              d = 0;
+            }
+            this$.currentSz[4] = d;
+            if (c && !d) {
+              R.box.style.removeProperty('--page-size');
+            } else if (d && Math.abs(d - b) > 0.1) {
+              R.box.style.setProperty('--page-size', d + 'px');
+            }
+          }
+        };
       };
       Resizer.prototype = {
         init: function(){
@@ -2305,78 +2464,6 @@ smBlocks = function(){
             this.observer.disconnect();
             this.observer = null;
           }
-        },
-        resizeFunc: function(){
-          var this$ = this;
-          return function(e){
-            var B, R, w, a, b, c, d;
-            if (!this$.ready) {
-              return;
-            }
-            B = this$.block;
-            R = this$.block.range;
-            if (e) {
-              w = e[0].contentRect.width;
-            } else {
-              a = this$.rootPads;
-              a = a[1] + a[3];
-              if ((w = B.root.clientWidth - a) < 0) {
-                w = 0;
-              }
-            }
-            this$.currentSz[0] = w;
-            e = w / this$.baseSz[0];
-            if (this$.onChange) {
-              e = this$.onChange(e);
-            }
-            b = this$.currentSz[1];
-            this$.currentSz[1] = c = e > 0.999
-              ? 0
-              : e * this$.baseSz[1];
-            a = 0;
-            if (b && !c) {
-              a = -1;
-              this$.currentSz[2] = 0;
-              this$.currentSz[3] = 0;
-            } else if (c && Math.abs(c - b) > 0.1) {
-              a = 1;
-              this$.currentSz[2] = e * this$.baseSz[3];
-              this$.currentSz[3] = e * this$.baseSz[4];
-            }
-            if (a && !this$.onChange) {
-              b = B.root.style;
-              c = '--sm-blocks-size-factor';
-              if (~a) {
-                b.setProperty(c, e);
-              } else {
-                b.removeProperty(c);
-              }
-            }
-            if (B.config.range === 2 && R.mode === 2) {
-              a = this$.baseSz[0] - this$.baseSz[2];
-              a = e > 0.999
-                ? w - a
-                : w - e * a;
-              if ((c = this$.currentSz)[2]) {
-                b = c[3]
-                  ? (c[3] + c[2]) / 2
-                  : c[2];
-                c = c[4];
-              } else {
-                b = this$.baseSz[3];
-                c = c[4];
-              }
-              if ((d = a / B.current[1]) <= b) {
-                d = 0;
-              }
-              this$.currentSz[4] = d;
-              if (c && !d) {
-                R.box.style.removeProperty('--page-size');
-              } else if (d && Math.abs(d - b) > 0.1) {
-                R.box.style.setProperty('--page-size', d + 'px');
-              }
-            }
-          };
         }
       };
       PageGoto = function(block){
@@ -2887,7 +2974,6 @@ smBlocks = function(){
             import$(S.config, a.config);
           }
         }
-        debugger;
         if ((cfg = (await soFetch(D))) instanceof Error) {
           consoleError(cfg.message);
           return false;

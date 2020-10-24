@@ -6,22 +6,6 @@ defined('ABSPATH') || exit();
 get_header('shop');
 # initial state
 $og  = json_encode([ # products grid {{{
-  ##
-  "size"        => 8,
-  "columns"     => 4,
-  "columnsMin"  => 2,
-  "order"       => "default",
-  ##
-  "maxX" => 288,
-  "maxY" => 400,
-  "fontSize" => 24,
-  "itemSizeBalance" => "55:17:28",
-  ##
-  "itemImage"    => true,
-  "itemIcon"     => false,
-  "itemFeatures" => false,
-  "itemPrice"    => true,
-  "itemControls" => true,
 ]);
 # }}}
 $oo  = json_encode([ # orderer {{{
@@ -40,10 +24,6 @@ $ocf = json_encode([ # category filter {{{
   'hasCount'     => true,
 ]);
 # }}}
-# page title
-$title = substr(get_locale(), 0, 2) === 'en'
-  ? 'test version'
-  : 'версия для тестирования';
 # generate markup
 $o = <<<EOD
 
@@ -54,12 +34,16 @@ $o = <<<EOD
     <!-- :sm-blocks/category-filter {"baseCategory":"37"} /-->
   </div>
   <div class="b sm-blocks-resizer">
-    <h3>{$title}</h3>
+    <h3>TEST</h3>
     <div class="c">
       <!-- wp:sm-blocks/paginator {"gotoMode":3} /-->
       <!-- wp:sm-blocks/orderer {$oo} /-->
     </div>
-    <!-- wp:sm-blocks/grid {$og} /-->
+    <!-- wp:sm-blocks/products {
+
+      "layout":"4:2:1:0"
+
+    } /-->
   </div>
 </div>
 

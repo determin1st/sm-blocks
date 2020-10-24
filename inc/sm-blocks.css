@@ -82,6 +82,8 @@
   left: 0;
   width: 100%;
   height: 100%;
+}
+.sm-blocks svg {
   fill: rgba(192,192,192,0.2);
 }
 .sm-blocks.v > div {
@@ -102,17 +104,15 @@
   --size-a: 35;
   --size-b: 40;
   --size-c: 25;
-  width: 100%;
-  height: 100%;
   padding: 2px;
 }
 .sm-blocks-product-card > div {
+  display: none;
+  flex-direction: column;
   width: 100%;
   height: 100%;
   min-width: 0;
   min-height: 0;
-  display: flex;
-  flex-direction: column;
 }
 .sm-blocks-product-card > div > .section {
   display: flex;
@@ -252,6 +252,17 @@
   border-width: 1px;
 }
 .sm-blocks-product-card > div.v > .section > div {
+  display: none;
+}
+.sm-blocks-product-card > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.sm-blocks-product-card.w > div {
+  display: flex;
+}
+.sm-blocks-product-card.w > svg {
   display: none;
 }
 .sm-blocks.main-section {
@@ -411,26 +422,37 @@
   align-items: center;
   width: 100%;
   height: auto;
-  padding: 2px 0 2px 0;
+  padding: 2px 0 2px 8px;
 }
 .sm-blocks.products > div {
   --columns: 1;
   --rows: 1;
   --column-gap: 4px;
-  --columns-gap: calc(var(--column-gap) * calc(var(--columns) - 1));
   --row-gap: 4px;
-  --rows-gap: calc(var(--row-gap) * calc(var(--rows) - 1));
   --item-width: 304px;
-  --item-height: 640px;
+  --item-height: 404px;
+  --item-x: calc(var(--item-width) * var(--sm-blocks-size-factor));
+  --item-y: calc(var(--item-height) * var(--sm-blocks-size-factor));
+  --gap-x: calc(var(--column-gap) * var(--sm-blocks-size-factor));
+  --gap-y: calc(var(--row-gap) * var(--sm-blocks-size-factor));
+  --grid-width: calc(var(--columns) * var(--item-x) + calc(var(--columns) - 1) * var(--gap-x));
+  --grid-height: calc(var(--rows) * var(--item-y) + calc(var(--rows) - 1) * var(--gap-y));
   display: grid;
   grid-template-columns: repeat(var(--columns), 1fr);
-  grid-column-gap: var(--column-gap);
-  grid-row-gap: var(--row-gap);
+  grid-column-gap: var(--gap-x);
+  grid-row-gap: var(--gap-y);
   justify-content: center;
   width: 100%;
+  max-width: var(--grid-width);
+  height: var(--grid-height);
+}
+.sm-blocks.products > div > div {
+  width: 100%;
   height: 100%;
-  max-width: calc(var(--columns) * var(--item-width) + var(--rows-gap));
-  max-height: calc(var(--rows) * var(--item-height) + var(--columns-gap));
+  display: none;
+}
+.sm-blocks.products > div > div.v {
+  display: block;
 }
 .sm-blocks.paginator {
   --width: calc(1.35 * var(--height));

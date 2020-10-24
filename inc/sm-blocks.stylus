@@ -73,7 +73,8 @@ WebSafeFontMono = Consolas, Courier, monospace
 		left:   0
 		width:  100%
 		height: 100%
-		fill:   alpha(silver, 0.2)
+	svg
+		fill: alpha(silver, 0.2)
 	// constructed state
 	&.v
 		> div
@@ -96,16 +97,14 @@ WebSafeFontMono = Consolas, Courier, monospace
 	--size-b: 40
 	--size-c: 25
 	////
-	width:  100%
-	height: 100%
 	padding: 2px
-	> div
+	> div // {{{
+		display: none
+		flex-direction: column
 		width:  100%
 		height: 100%
 		min-width:  0
 		min-height: 0
-		display: flex
-		flex-direction: column
 		> .section
 			display: flex
 			flex-basis:  0
@@ -285,6 +284,18 @@ WebSafeFontMono = Consolas, Courier, monospace
 				> div
 					// don't display anything else
 					display: none;
+	// }}}
+	> svg // {{{
+		display: block
+		width:  100%
+		height: 100%
+	// }}}
+	// constructed
+	&.w
+		> div
+			display: flex
+		> svg
+			display: none
 // }}}
 .sm-blocks.main-section // {{{
 	// root
@@ -441,31 +452,49 @@ WebSafeFontMono = Consolas, Courier, monospace
 // ===
 .sm-blocks.products // {{{
 	display: flex
-	flex-direction: column // just in case
-	align-items: center // grid is centered, not stretched
-	width:  100% // take all width
-	height: auto // will grow/shrink automatically
-	padding: 2px 0 2px 0
+	flex-direction: column
+	align-items: center
+	width:  100% // take all width (observed)
+	height: auto // grow/shrink automatically (calculated)
+	padding: 2px 0 2px 8px
 	> div
-		// initial settings
+		// default settings (absolute)
 		--columns: 1
 		--rows: 1
 		--column-gap: 4px
-		--columns-gap: calc(var(--column-gap) * calc(var(--columns) - 1))
 		--row-gap: 4px
-		--rows-gap: calc(var(--row-gap) * calc(var(--rows) - 1))
-		--item-width:  304px
-		--item-height: 640px
+		--item-width: 304px
+		--item-height: 404px
+		// calculated (relative)
+		--item-x: calc(var(--item-width) * var(--sm-blocks-size-factor))
+		--item-y: calc(var(--item-height) * var(--sm-blocks-size-factor))
+		--gap-x: calc(var(--column-gap) * var(--sm-blocks-size-factor))
+		--gap-y: calc(var(--row-gap) * var(--sm-blocks-size-factor))
+		--grid-width: calc(
+			var(--columns) * var(--item-x) + \
+			calc(var(--columns) - 1) * var(--gap-x) \
+		)
+		--grid-height: calc(
+			var(--rows) * var(--item-y) + \
+			calc(var(--rows) - 1) * var(--gap-y) \
+		)
 		////
 		display: grid
 		grid-template-columns: repeat(var(--columns), 1fr)
-		grid-column-gap: var(--column-gap)
-		grid-row-gap: var(--row-gap)
+		grid-column-gap: var(--gap-x)
+		grid-row-gap: var(--gap-y)
 		justify-content: center
-		width:  100%
-		height: 100%
-		max-width:  calc(var(--columns) * var(--item-width) + var(--rows-gap))
-		max-height: calc(var(--rows) * var(--item-height) + var(--columns-gap))
+		width: 100%
+		max-width: var(--grid-width)
+		height: var(--grid-height)
+		> div
+			width:  100%
+			height: 100%
+			//max-width: var(--item-x)
+			//height: var(--item-y)
+			display: none
+			&.v
+				display: block
 // }}}
 .sm-blocks.paginator // {{{
 	// configuration

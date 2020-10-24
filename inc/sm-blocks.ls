@@ -812,13 +812,16 @@ smBlocks = do ->
 			# }}}
 			###
 			Block = (master) !-> # {{{
-				# create object shape
-				@master = master
-				@root   = R = document.createElement 'div'
 				# construct
+				R = document.createElement 'div'
 				R.className = 'sm-blocks-product-card'
 				R.innerHTML = template
-				debugger
+				# reuse master's placeholder
+				R.appendChild (master.root.children.1.cloneNode true)
+				# create object shape
+				@master  = master
+				@root    = R
+				@rootBox = R.firstChild
 			###
 			Block.prototype =
 				init: -> # {{{
@@ -859,90 +862,177 @@ smBlocks = do ->
 	M = # masters
 		'products': do -> # {{{
 			Resizer = (block) !-> # {{{
-				# base
+				# create object shape
 				@block    = block
-				@config   = c = block.config
-				@style    = s = getComputedStyle block.rootBox
-				@observer = o = new ResizeObserver (e) !~> @set e
-				# config
-				@columnsMin = c.columnsMin
-				@columnsMax = c.columnsMax
-				@columnsGap = parseInt (s.getPropertyValue '--column-gap')
-				@rowsMin    = c.rowsMin
-				@rowsMax    = c.rowsMax
-				@rowsGap    = parseInt (s.getPropertyValue '--row-gap')
-				@itemX      = parseInt (s.getPropertyValue '--item-max-x')
-				@itemY      = parseInt (s.getPropertyValue '--item-max-y')
-				@itemXA     = @itemX + @columnsGap / 2
-				@itemYA     = @itemY + @rowsGap / 2
-				@fontSizeMax = parseInt (s.getPropertyValue '--font-size')
-				@ratio      = @itemY / @itemX # aspect ratio (ideal proportion)
-				# current
-				@width      = 0
-				@fontSize   = 0
-				@columns    = 0
-				@rows       = 0
-				# initialize
-				o.observe block, {box: 'border-box'}
+				@style    = getComputedStyle block.rootBox
+				###
+				@pads     = [0,0]   # container padding
+				@layout   = [0,0,0] # current column-count,row-count,max-item-count
+				@gaps     = [0,0]   # column,row
+				@sizes    = [0,0,0] # item's width,height,aspect-ratio
+				@factor   = 1       # current size factor
+				###
+				@observer = null    # resize observer
+				@onChange = null    # resize controller callback
+				@resize   = (e) !~> # {{{
+					# prepare
+					B = @block
+					C = B.config.layout
+					# get current width of the grid
+					w = if e
+						then e.0.contentRect.width
+						else B.root.clientWidth - @pads.0
+					# assuming no size factor applied,
+					# determine current layout
+					[a,b,c,d] = @calculateLayout w, 1
+					/***
+					# determine current layout
+					# columns
+					a = C.2
+					b = @sizes.0
+					c = @gaps.0
+					# check dynamic
+					if a and a < C.0
+						# determine optimal
+						while (d = a*b + (a - 1)*c) <= e and a < C.0
+							++a
+						# check overflow
+						if d > e and a > C.2
+							# decrease and re-calculate
+							--a
+							d = a*b + (a - 1)*c
+						# rows
+						# check dynamic
+						if not (b = C.3)
+							# determine optimal
+							c = C.0 * C.1
+							b = (c / a) .|. 0
+							# fit all items
+							++b if a*b < c
+					else
+						# fixed columns/rows
+						a = C.0
+						b = C.1
+						d = a*b + (a - 1)*c
+					# determine item count
+					c = a * b
+					/***/
+					# determine size factor
+					e = if d > e
+						then e / d # overflow
+						else 1     # normal
+					# callback master
+					if @onChange
+						d = e
+						if (e = @onChange e) < d
+							[a,b,c] = @calculateLayout w, e
+					# update layout
+					if @layout.0 != a
+						@layout.0 = a
+						B.rootBox.style.setProperty '--columns', a
+					if @layout.1 != b
+						@layout.1 = b
+						B.rootBox.style.setProperty '--rows', b
+					if (a = @layout.2) != c
+						# store
+						@layout.2 = c
+						# get current items count
+						b = B.items.length
+						# check
+						if c > a
+							# show more items
+							b = c if c < b
+							--a
+							while ++a < b
+								B.items[a].root.classList.add 'v'
+						else
+							# show less items
+							a = b if a > b
+							while --a >= c
+								B.items[a].root.classList.remove 'v'
+					# update size factor
+					if not @onChange and (Math.abs (@factor - e)) > 0.01
+						a = B.rootBox.style
+						b = '--sm-blocks-size-factor'
+						if (@factor = e) == 1
+							a.removeProperty b
+						else
+							a.setProperty b, e
+					# done
+				# }}}
 			###
 			Resizer.prototype =
-				set: (e) !-> # {{{
-					# get current width
-					x = if e
-						then e.0.contentRect.width
-						else root.clientWidth
-					# determine current column/row count
-					if state.columnsMin == state.columnsMax
-						# fixed,
-						# maximal-minimal
-						state.columns = state.columnsMax
-						state.rows    = state.rowsMin
+				init: !-> # {{{
+					# prepare
+					# determine initial layout (max-max)
+					a = @block.config.layout
+					@layout.0 = a.0
+					@layout.1 = a.1
+					# determine container padding
+					s    = getComputedStyle @block.root
+					a    = @pads
+					a.0  = parseInt (s.getPropertyValue 'padding-left')
+					a.0 += parseInt (s.getPropertyValue 'padding-right')
+					a.1  = parseInt (s.getPropertyValue 'padding-top')
+					a.2 += parseInt (s.getPropertyValue 'padding-bottom')
+					# determine gaps
+					s   = @style
+					a   = @gaps
+					a.0 = parseInt (s.getPropertyValue '--column-gap')
+					a.1 = parseInt (s.getPropertyValue '--row-gap')
+					# determine item size
+					a   = @sizes
+					a.0 = parseInt (s.getPropertyValue '--item-width')
+					a.1 = parseInt (s.getPropertyValue '--item-height')
+					a.2 = a.1 / a.0
+					# done
+				# }}}
+				attach: !-> # {{{
+					@detach! if @observer
+					@init!
+					@observer = new ResizeObserver @resize
+					@observer.observe @block.root
+				# }}}
+				detach: !-> # {{{
+					if @observer
+						@observer.disconnect!
+						@observer = null
+				# }}}
+				calculateLayout: (w, e) -> # {{{
+					# prepare
+					C = @block.config.layout
+					# determine current layout
+					# columns
+					a = C.2
+					b = e * @sizes.0
+					c = e * @gaps.0
+					# check dynamic
+					if a and a < C.0
+						# determine optimal
+						while (d = a*b + (a - 1)*c) <= w and a < C.0
+							++a
+						# check overflow
+						if d > w and a > C.2
+							# decrease and re-calculate
+							--a
+							d = a*b + (a - 1)*c
+						# rows
+						# check dynamic
+						if not (b = C.3)
+							# determine optimal
+							c = C.0 * C.1
+							b = (c / a) .|. 0
+							# fit all items
+							++b if a*b < c
 					else
-						# float
-						if (a = x / state.itemXA .|. 0) > state.columnsMax
-							# maximal-minimal
-							state.columns = state.columnsMax
-							state.rows    = state.rowsMin
-						else if a < state.columnsMin
-							# minimal-maximal
-							state.columns = state.columnsMin
-							state.rows    = state.rowsMax
-						else
-							# in between,
-							# ceiling effectively covers the case,
-							# when item count is less than column count
-							state.columns = a
-							state.rows    = Math.ceil (gridList.length / a)
-					# determine ideal width/height
-					# start with width
-					a = state.columns
-					w = if a == 1
-						then state.itemX
-						else state.itemX * a + state.columnGap * (a - 1)
-					# check against current
-					if w <= x
-						# perfect fit
-						a = state.rows
-						state.width  = w
-						state.height = if a == 1
-							then state.itemY
-							else state.itemY * a + state.rowGap * (a - 1)
-						state.fontSize = state.fontSizeMax
-					else
-						# loose fit,
-						# preserve aspect ratio
-						a = x / w
-						state.width  = x
-						state.height = state.rows * state.itemYA * a
-						state.fontSize = state.fontSizeMax * a
-					# update
-					@rootBox.style.setProperty '--columns', state.columns
-					@rootBox.style.setProperty '--rows', state.rows
-					@rootBox.style.setProperty '--height', state.height+'px'
-					@rootBox.style.setProperty '--font-size', state.fontSize+'px'
-					# dispatch resize event
-					for c in gridControl
-						c.event 'resize', state
+						# fixed columns/rows
+						a = C.0
+						b = C.1
+						d = a*b + (a - 1)*c
+					# determine max items count
+					c = a * b
+					# done
+					return [a,b,c,d]
 				# }}}
 			# }}}
 			Block = (state, root) !-> # {{{
@@ -953,7 +1043,7 @@ smBlocks = do ->
 				@config  = JSON.parse box.dataset.cfg
 				# controls
 				@items   = []
-				@resizer = null
+				@resizer = new Resizer @
 				# state
 				@locked  = -1
 				# handlers
@@ -963,26 +1053,25 @@ smBlocks = do ->
 				group: 'products'
 				level: 3
 				configure: (o) !-> # {{{
-					a = @config.columns
+					a = @config.layout
 					o.limit = a.0 * a.1
 					o.order = @config.orderTag
 				# }}}
 				init: (cfg) -> # {{{
 					# set grid parameters
-					a = @config.columns
+					a = @config.layout
 					b = @rootBox.style
 					b.setProperty '--columns', a.0
 					b.setProperty '--rows', a.1
-					debugger
 					# create items
 					a = a.0 * a.1
 					b = -1
 					c = @items
 					while ++b < a
-						c[*] = @state.f.productCard @
-					# render items
-					#@resizer = new Resizer @
+						c[*] = d = @state.f.productCard @
+						@rootBox.appendChild d.root
 					# done
+					@resizer.attach!
 					return true
 				# }}}
 				lock: (level) ->> # {{{
@@ -990,6 +1079,7 @@ smBlocks = do ->
 					c0 = @root.classList
 					c1 = @rootBox.classList
 					###
+					console.log 'products.lock', level
 					if @locked != level
 						if ~level
 							if level
@@ -2501,60 +2591,9 @@ smBlocks = do ->
 					0     #   4: optimal-page-x
 				]
 				@observer  = null # resize observer
-				@resize    = @resizeFunc!
-				@ready     = false
 				@onChange  = null
-			###
-			Resizer.prototype = {
-				init: !-> # {{{
-					# prepare
-					R = @block.range
-					# determine container paddings
-					a = [
-						'padding-top'
-						'padding-right'
-						'padding-bottom'
-						'padding-left'
-					]
-					b = -1
-					while ++b < a.length
-						@rootPads[b] = parseInt (@rootCS.getPropertyValue a[b])
-					# determine base sizes
-					# containers
-					@baseSz.0 = parseFloat (@rootBoxCS.getPropertyValue 'width')
-					@baseSz.1 = parseFloat (@rootCS.getPropertyValue '--height-px')
-					@baseSz.2 = parseFloat (R.cs.getPropertyValue 'width')
-					# pages
-					c = 'min-width'
-					if ~R.current
-						# current and standard
-						a = getComputedStyle R.pages[R.current]
-						b = getComputedStyle if R.current
-							then R.pages.0
-							else R.pages.1
-						a = parseFloat (a.getPropertyValue c)
-						b = parseFloat (b.getPropertyValue c)
-					else
-						# standard only
-						a = getComputedStyle R.pages.0
-						a = b = parseFloat (a.getPropertyValue c)
-					# store
-					@baseSz.3 = a
-					@baseSz.4 = b
-					# done
-					@ready = true
-				# }}}
-				attach: !-> # {{{
-					@detatch! if @observer
-					@observer = o = new ResizeObserver @resize
-					o.observe @block.root
-				# }}}
-				detach: !-> # {{{
-					if @observer
-						@observer.disconnect!
-						@observer = null
-				# }}}
-				resizeFunc: -> (e) !~> # {{{
+				@ready     = false
+				@resize    = (e) !~> # {{{
 					# check
 					if not @ready
 						return
@@ -2649,6 +2688,56 @@ smBlocks = do ->
 						else if d and (Math.abs (d - b)) > 0.1
 							R.box.style.setProperty '--page-size', d+'px'
 					# done
+				# }}}
+			###
+			Resizer.prototype = {
+				init: !-> # {{{
+					# prepare
+					R = @block.range
+					# determine container paddings
+					a = [
+						'padding-top'
+						'padding-right'
+						'padding-bottom'
+						'padding-left'
+					]
+					b = -1
+					while ++b < a.length
+						@rootPads[b] = parseInt (@rootCS.getPropertyValue a[b])
+					# determine base sizes
+					# containers
+					@baseSz.0 = parseFloat (@rootBoxCS.getPropertyValue 'width')
+					@baseSz.1 = parseFloat (@rootCS.getPropertyValue '--height-px')
+					@baseSz.2 = parseFloat (R.cs.getPropertyValue 'width')
+					# pages
+					c = 'min-width'
+					if ~R.current
+						# current and standard
+						a = getComputedStyle R.pages[R.current]
+						b = getComputedStyle if R.current
+							then R.pages.0
+							else R.pages.1
+						a = parseFloat (a.getPropertyValue c)
+						b = parseFloat (b.getPropertyValue c)
+					else
+						# standard only
+						a = getComputedStyle R.pages.0
+						a = b = parseFloat (a.getPropertyValue c)
+					# store
+					@baseSz.3 = a
+					@baseSz.4 = b
+					# done
+					@ready = true
+				# }}}
+				attach: !-> # {{{
+					@detatch! if @observer
+					@observer = o = new ResizeObserver @resize
+					o.observe @block.root
+				# }}}
+				detach: !-> # {{{
+					if @observer
+						@observer.disconnect!
+						@observer = null
 				# }}}
 			}
 			# }}}
@@ -3166,7 +3255,6 @@ smBlocks = do ->
 					a.configure D
 					S.config <<< a.config
 				# get remote
-				debugger
 				if (cfg = await soFetch D) instanceof Error
 					consoleError cfg.message
 					return false

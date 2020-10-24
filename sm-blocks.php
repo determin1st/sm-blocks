@@ -32,12 +32,16 @@ class StorefrontModernBlocks {
             'type'        => 'string',
             'default'     => 'custom',
           ],
-          ### columns and rows [max:max:min:min]
+          ### grid dimensions
           'layout'        => [
             'type'        => 'string',
-            'default'     => '4:2:2:2',
+            'default'     => '4:2:1:0',# [maxColumns:minRows:minColumns:maxRows]
           ],
-          ### default order
+          'itemSize'     => [
+            'type'        => 'string',
+            'default'     => '0:0',# [width:height]
+          ],
+          ### records order
           'orderOptions'  => [
             'type'        => 'string',
             'default'     => 'featured,new,price',
@@ -45,15 +49,6 @@ class StorefrontModernBlocks {
           'orderTag'      => [
             'type'        => 'string',
             'default'     => 'price:asc',
-          ],
-          ### item
-          'itemWidth'     => [
-            'type'        => 'number',
-            'default'     => 304,
-          ],
-          'itemHeight'    => [
-            'type'        => 'number',
-            'default'     => 640,
           ],
         ],
       ],
@@ -664,15 +659,25 @@ class StorefrontModernBlocks {
     # prepare
     $T = $this->templates['products'];
     $layout = explode(':', $attr['layout']);
-    # grid style
-    $style  = "--columns:{$layout[0]};--rows:{$layout[1]};";
-    $style .= "--item-width:{$attr['itemWidth']}px;";
-    $style .= "--item-height:{$attr['itemHeight']}px;";
-    ###
-    # configuration
+    foreach ($layout as &$a) {
+      $a = intval($a);
+    }
+    unset($a);
+    # determine grid style
+    $style = "--columns:{$layout[0]};--rows:{$layout[1]};";
+    if (($a = $attr['itemSize']) && strlen($a) > 2)
+    {
+      $a = explode(':', $a);
+      if (($b = intval($a[0])) > 0) {
+        $style .= "--item-width:{$b}px;";
+      }
+      if (($b = intval($a[1])) > 0) {
+        $style .= "--item-height:{$b}px;";
+      }
+    }
+    # determine configuration
     # these are client-controller side options which serve
-    # to the content displayed, without direct effect on styles
-    # prepare
+    # to the content displayed, without direct effect on styles..
     $a = explode(':', $attr['orderTag']);
     $a[1] = count($a) === 2
       ? ($a[1] === 'desc' ? 2 : 1)
@@ -1007,6 +1012,10 @@ class StorefrontModernBlocks {
   # }}}
   private function apiConfig($p) # {{{
   {
+    # check
+    if ($p['limit'] <= 0) {
+      $this->apiFail(400, 'incorrect limit');
+    }
     # query products (thin parameters)
     $q = [
       'order'    => null,
@@ -1016,19 +1025,17 @@ class StorefrontModernBlocks {
     if (($q = $this->db_Products($q)) === null) {
       $this->apiFail(500, 'failed to get products map');
     }
-    # determine
-    # count of records and pages
+    # determine count of records and page range
     $count = count($q);
     $page  = [0, ceil($count / $p['limit'])];
-    # language specific data
+    # determine language specific data
     $locale = __DIR__.DIRECTORY_SEPARATOR.$this->name.'-locale.php';
     $locale = (include $locale);
     $locale = array_key_exists($p['lang'], $locale)
       ? $locale[$p['lang']]
       : $locale['en'];
-    # send
-    header('content-type: application/json');
-    echo(json_encode([
+    # encode result
+    $q = json_encode([
       'total'     => $count,
       'page'      => $page,
       'category'  => $p['category'],
@@ -1037,7 +1044,14 @@ class StorefrontModernBlocks {
       'currency'  => $this->db_Currency(),
       'cart'      => $this->db_Cart(),
       'locale'    => $locale,
-    ], JSON_INVALID_UTF8_SUBSTITUTE));
+    ], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+    # check
+    if ($q === null) {
+      $this->apiFail(500, json_last_error_msg());
+    }
+    # send
+    header('content-type: application/json');
+    echo $q;
   }
   # }}}
   private function apiData($p) # {{{
