@@ -66,13 +66,9 @@ class StorefrontModernBlocks {
             'default'     => true,
           ],
           ### section
-          'sectionTitle'  => [
-            'type'        => 'string',
-            'default'     => '{"en":"Categories","ru":"Категории"}',
-          ],
           'sectionMode'   => [
             'type'        => 'number',
-            'default'     => 1|2|4|8|16,
+            'default'     => 1|2|4,
           ],
           'sectionOpened' => [
             'type'        => 'boolean',
@@ -159,13 +155,9 @@ class StorefrontModernBlocks {
             'default'     => true,
           ],
           ###
-          'sectionTitle'  => [
-            'type'        => 'string',
-            'default'     => '{"en":"Price","ru":"Цена"}',
-          ],
           'sectionMode'   => [
             'type'        => 'number',
-            'default'     => 1|2|4|8|16,
+            'default'     => 1|2|4,
           ],
           'sectionSwitch' => [
             'type'        => 'boolean',
@@ -193,74 +185,6 @@ class StorefrontModernBlocks {
         <div class="sm-blocks products {{custom}}">
           <div style="{{style}}" data-cfg=\'{{cfg}}\'></div>
           {{placeholder}}
-        </div>
-        ',
-        'item' => '
-        <div class="item empty">
-          <div class="box">
-            {{itemImage}}
-            <div class="body">
-              {{itemIcon}}
-              <div class="title ph">
-                <div></div>{{emptyLine}}
-              </div>
-              {{itemFeatures}}
-            </div>
-            <div class="foot">
-              {{itemPrice}}
-              {{itemControls}}
-            </div>
-          </div>
-        </div>
-        ',
-        # parts
-        'itemImage' => '
-        <div class="head ph">
-          <div><img alt="product"></div>{{noImage}}
-        </div>
-        ',
-        'itemIcon' => '
-        <div class="icon">
-          <div class="a ph">
-            <div></div>{{noImage}}
-          </div>
-          <div class="b ph">
-            <div></div>{{emptyLine}}
-          </div>
-        </div>
-        ',
-        'itemFeatures' => '
-        <div class="features ph">
-          <div></div>{{emptyBlock}}
-        </div>
-        ',
-        'itemPrice' => '
-        <div class="price ph">
-          <div>
-            <div class="v old">
-              <span class="r0"></span>
-              <span class="dot"></span>
-              <span class="r1"></span>
-            </div>
-            <div class="v current">
-              <div class="currency"></div>
-              <div class="value c0">0</div>
-              <div class="mantissa">
-                <span class="dot"></span>
-                <span class="c1">00</span>
-              </div>
-            </div>
-          </div>
-          {{emptyLine}}
-        </div>
-        ',
-        'itemControls' => '
-        <div class="controls ph">
-          <div>
-            <button type="button" class="cart">{{cartIcon}}</button>
-            <a href="#" class="link">подробнее</a>
-          </div>
-          {{noControls}}
         </div>
         ',
         # icons
@@ -327,7 +251,7 @@ class StorefrontModernBlocks {
         </div>
         ',
         'page' => '
-        <div class="page"><button type="button"></button></div>
+        <div class="sm-buttons page"><button type="button"></button></div>
         ',
         'sep1' => '
         <div class="sep L">
@@ -344,7 +268,8 @@ class StorefrontModernBlocks {
         </div>
         ',
         'gotoF' => '
-        <div class="goto FL F"><button type="button">
+        <div class="sm-buttons goto FL F">
+        <button type="button">
         <svg preserveAspectRatio="none" viewBox="0 0 100 100">
           <path d="M58.644 27.26v8.294c0 .571-.305 1.1-.8 1.385L37.632 48.608a1.6 1.6 0 000 2.771l20.212 11.669c.495.286.8.814.8 1.385v8.294a1.6 1.6 0 01-2.399 1.385L16.869 51.379a1.6 1.6 0 010-2.771l39.375-22.733a1.6 1.6 0 012.4 1.385z"/>
           <path d="M57.844 63.048l-2.376-1.372c-.013.043-.023.09-.032.136l.409.236c.495.286.8.814.8 1.385v8.294c0 1.008-.894 1.693-1.803 1.575l1.404.81a1.6 1.6 0 002.399-1.385v-8.294a1.603 1.603 0 00-.801-1.385zM37.632 48.608l20.212-11.669a1.6 1.6 0 00.8-1.385V27.26c0-1.115-1.092-1.84-2.091-1.512.054.16.091.328.091.512v8.294c0 .571-.305 1.1-.8 1.385L35.632 47.608c-.078.052-.745.516-.8 1.385-.057.911.609 1.467.673 1.518l1.916 1.328a.747.747 0 01.019-.51.575.575 0 01.037-.07c-.895-.672-.852-2.069.155-2.651z"/>
@@ -353,10 +278,12 @@ class StorefrontModernBlocks {
           <path d="M85.258 63.048l-2.376-1.372c-.013.043-.023.09-.032.136l.409.236c.495.286.8.814.8 1.385v8.294c0 1.008-.894 1.693-1.803 1.575l1.404.81a1.6 1.6 0 002.399-1.385v-8.294a1.603 1.603 0 00-.801-1.385zM65.047 48.608l20.212-11.669a1.6 1.6 0 00.8-1.385V27.26c0-1.115-1.092-1.84-2.091-1.512.054.16.091.328.091.512v8.294c0 .571-.305 1.1-.8 1.385L63.047 47.608c-.078.052-.745.516-.8 1.385-.057.911.609 1.467.673 1.518l1.916 1.328a.747.747 0 01.019-.51.575.575 0 01.037-.07c-.896-.672-.853-2.069.155-2.651z"/>
           <path fill="none" stroke-miterlimit="10" d="M86.058 27.26v8.294c0 .571-.305 1.1-.8 1.385L65.047 48.608a1.6 1.6 0 000 2.771l20.212 11.669c.495.286.8.814.8 1.385v8.294a1.6 1.6 0 01-2.399 1.385L44.283 51.379a1.6 1.6 0 010-2.771l39.375-22.733a1.6 1.6 0 012.4 1.385z"/>
         </svg>
-        </button></div>
+        </button>
+        </div>
         ',
         'gotoL' => '
-        <div class="goto FL L"><button type="button">
+        <div class="sm-buttons goto FL L">
+        <button type="button">
         <svg preserveAspectRatio="none" viewBox="0 0 100 100">
           <path d="M41.762 27.26v8.294c0 .571.305 1.1.8 1.385l20.212 11.669a1.6 1.6 0 010 2.771L42.562 63.048a1.6 1.6 0 00-.8 1.385v8.294a1.6 1.6 0 002.399 1.385l39.375-22.733a1.6 1.6 0 000-2.771L44.161 25.875a1.6 1.6 0 00-2.399 1.385z"/>
           <path d="M83.537 48.608L44.161 25.875a1.56 1.56 0 00-.597-.19l37.972 21.923a1.6 1.6 0 010 2.771L42.161 73.112c-.1.058-.205.092-.308.126.308.914 1.401 1.398 2.308.874l39.375-22.733a1.6 1.6 0 00.001-2.771z"/>
@@ -365,25 +292,30 @@ class StorefrontModernBlocks {
           <path d="M56.438 48.621L17.063 25.888a1.56 1.56 0 00-.597-.19l37.972 21.923a1.6 1.6 0 010 2.771L15.063 73.125c-.1.058-.205.092-.308.126.308.914 1.401 1.398 2.308.874l39.375-22.733a1.6 1.6 0 000-2.771z"/>
           <path fill="none" stroke-miterlimit="10" d="M14.664 27.273v8.294c0 .571.305 1.1.8 1.385l20.212 11.669a1.6 1.6 0 010 2.771L15.464 63.061a1.6 1.6 0 00-.8 1.385v8.294a1.6 1.6 0 002.399 1.385l39.375-22.733a1.6 1.6 0 000-2.771L17.063 25.888a1.6 1.6 0 00-2.399 1.385z"/>
         </svg>
-        </button></div>
+        </button>
+        </div>
         ',
         'gotoP' => '
-        <div class="goto PN P"><button type="button">
+        <div class="sm-buttons goto PN P">
+        <button type="button">
         <svg preserveAspectRatio="none" viewBox="0 0 100 100">
           <path d="M70.787 27.267v8.294c0 .571-.305 1.1-.8 1.385L49.776 48.615a1.6 1.6 0 000 2.771l20.212 11.669c.495.286.8.814.8 1.385v8.294a1.6 1.6 0 01-2.399 1.385L29.013 51.385a1.6 1.6 0 010-2.771l39.375-22.733a1.6 1.6 0 012.399 1.386z"/>
           <path d="M69.987 63.055l-2.376-1.372c-.013.043-.023.09-.032.136l.409.236c.495.286.8.814.8 1.385v8.294c0 1.008-.894 1.693-1.803 1.575l1.404.81a1.6 1.6 0 002.399-1.385V64.44a1.6 1.6 0 00-.801-1.385zM49.776 48.615l20.212-11.669a1.6 1.6 0 00.8-1.385v-8.294c0-1.115-1.092-1.84-2.091-1.512.054.16.091.328.091.512v8.294c0 .571-.305 1.1-.8 1.385L47.776 47.615c-.078.052-.745.516-.8 1.385-.057.911.609 1.467.673 1.518l1.916 1.328a.747.747 0 01.019-.51.575.575 0 01.037-.07c-.896-.673-.853-2.07.155-2.651z"/>
           <path fill="none" stroke-miterlimit="10" d="M70.787 27.267v8.294c0 .571-.305 1.1-.8 1.385L49.776 48.615a1.6 1.6 0 000 2.771l20.212 11.669c.495.286.8.814.8 1.385v8.294a1.6 1.6 0 01-2.399 1.385L29.013 51.385a1.6 1.6 0 010-2.771l39.375-22.733a1.6 1.6 0 012.399 1.386z"/>
         </svg>
-        </button></div>
+        </button>
+        </div>
         ',
         'gotoN' => '
-        <div class="goto PN N"><button type="button">
+        <div class="sm-buttons goto PN N">
+        <button type="button">
         <svg preserveAspectRatio="none" viewBox="0 0 100 100">
           <path d="M28.213 27.267v8.294c0 .571.305 1.1.8 1.385l20.212 11.669a1.6 1.6 0 010 2.771L29.013 63.055a1.6 1.6 0 00-.8 1.385v8.294a1.6 1.6 0 002.399 1.385l39.375-22.733a1.6 1.6 0 000-2.771L30.612 25.881a1.6 1.6 0 00-2.399 1.386z"/>
           <path d="M69.987 48.615L30.612 25.881a1.56 1.56 0 00-.597-.19l37.972 21.923a1.6 1.6 0 010 2.771L28.612 73.119c-.1.058-.205.092-.308.126.308.914 1.401 1.398 2.308.874l39.375-22.733a1.6 1.6 0 000-2.771z"/>
           <path fill="none" stroke-miterlimit="10" d="M28.213 27.267v8.294c0 .571.305 1.1.8 1.385l20.212 11.669a1.6 1.6 0 010 2.771L29.013 63.055a1.6 1.6 0 00-.8 1.385v8.294a1.6 1.6 0 002.399 1.385l39.375-22.733a1.6 1.6 0 000-2.771L30.612 25.881a1.6 1.6 0 00-2.399 1.386z"/>
         </svg>
-        </button></div>
+        </button>
+        </div>
         ',
         ###
         'gap-static' => '
@@ -482,15 +414,14 @@ class StorefrontModernBlocks {
         'main' => '
         <div class="sm-blocks main-section {{custom}}">
           <div class="item{{class}}" data-cfg=\'{{cfg}}\'>
-            {{titleMain}}
-            {{sep1}}{{section}}{{sep2}}
+            {{titleMain}}{{sep}}{{section}}
           </div>
           {{placeholder}}
         </div>
         ',
         'titleMain' => '
         <div class="title">
-          <h3><label>{{title}}</label></h3>
+          <h3><label></label></h3>
           <button class="arrow{{arrow}}" type="button">{{arrowIcon}}</button>
           {{extraMain}}
         </div>
@@ -513,13 +444,13 @@ class StorefrontModernBlocks {
           <path class="a" stroke-linejoin="round" d="M8 12l2.5-4L13 4H3l2.5 4z"/>
         </svg>
         ',
-        'sep1' => '
-        <svg class="A" preserveAspectRatio="none" viewBox="0 0 100 5">
+        'sep' => '
+        <svg class="sep" preserveAspectRatio="none" viewBox="0 0 100 5">
           <polygon points="2,0 98.001,0 100,4 100,5 0,5 0,4 "/>
         </svg>
         ',
         'sep2' => '
-        <svg class="B" preserveAspectRatio="none" viewBox="0 0 100 5">
+        <svg class="sep" preserveAspectRatio="none" viewBox="0 0 100 5">
           <polygon points="0,0 100,0 100,1 98.001,5 2,5 0,1 "/>
         </svg>
         ',
@@ -707,16 +638,11 @@ class StorefrontModernBlocks {
     if (!($root = $this->getCategoryTree($a, $b))) {
       return '';
     }
-    # get title
-    $title = empty($root['name'])
-      ? $this->parseLocalName($attr['sectionTitle'])
-      : $root['name'];
     # create a section
     return $this->renderSection([
       'custom'    => 'category-filter custom',
       'mode'      => $attr['sectionMode'],
       'autofocus' => $attr['focusGreedy'],
-      'title'     => $title,
       'extraMain' => '',
       'extra'     => $this->parseTemplate($T['extra'], $T),
       'items'     => $root,
@@ -828,7 +754,6 @@ class StorefrontModernBlocks {
     return $this->renderSection([
       'mode'      => $attr['sectionMode'],
       'autofocus' => $attr['focusGreedy'],
-      'title'     => $this->parseLocalName($attr['sectionTitle']),
       'extraMain' => '',
       'extra'     => '',
       'items'     => $content,
@@ -852,8 +777,6 @@ class StorefrontModernBlocks {
       : '';
     $titleMain = !!($mode &  2);# has title
     $arrow     = !!($mode &  4);# may be opened/closed
-    $sep1      = !!($mode &  8);# has top separator
-    $sep2      = !!($mode & 16);# has bottom separator
     # check items
     if (is_array($content))
     {
@@ -884,12 +807,9 @@ class StorefrontModernBlocks {
       'cfg'       => $config,
       'titleMain' => $titleMain,
       'extraMain' => $attr['extraMain'],
-      'title'     => $attr['title'],
       'extra'     => $attr['extra'],
       'arrow'     => ($arrow ? ' v' : ''),
-      'sep1'      => $sep1,
       'items'     => $content,
-      'sep2'      => $sep2,
       'placeholder' => $this->templates['svg']['placeholder'],
     ]);
   }
@@ -1097,13 +1017,13 @@ class StorefrontModernBlocks {
       }
       # create transferable item
       $item = [
-        'id'       => intval($id),
-        'name'     => $a['name'],
-        'type'     => $a['product_type'],
-        'link'     => get_permalink($id),
-        'image'    => null,
-        'price'    => null,
-        'stock'    => [
+        'id'    => intval($id),
+        'title' => $a['title'],
+        'type'  => $a['product_type'],
+        'link'  => get_permalink($id),
+        'image' => null,
+        'price' => null,
+        'stock' => [
           'status'    => $a['_stock_status'],
           'backorder' => $a['_backorders'],
           'count'     => (($a['_stock'] !== null)
@@ -1528,15 +1448,14 @@ EOD;
     $db  = $this->db;
     $wp_ = $this->prefix;
     $res = null;
-    # get
-    # data {{{
+    # get posts {{{
     # assemble a query
     $q = <<<EOD
 
       SELECT
         post_author   AS author,
         post_date     AS created,
-        post_title    AS name,
+        post_title    AS title,
         post_excerpt  AS excerpt,
         post_status   AS status,
         post_name     AS slug,
@@ -1557,7 +1476,7 @@ EOD;
     # cleanup
     $a->free();
     # }}}
-    # metadata {{{
+    # get metadata {{{
     # create a query
     $q = <<<EOD
 

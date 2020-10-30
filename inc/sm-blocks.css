@@ -2,11 +2,11 @@
 * storefront modern blocks
 */
 :root {
-  --sm-blocks-size-factor: 1;
+  --sm-blocks-factor: 1;
+  --sm-blocks-height: 48px;
 }
 .sm-blocks {
-  --height-px: 48px;
-  --height: calc(var(--height-px) * var(--sm-blocks-size-factor));
+  --height: calc(var(--sm-blocks-height) * var(--sm-blocks-factor));
   --font-size: calc(0.35 * var(--height));
   position: relative;
   box-sizing: border-box;
@@ -46,7 +46,7 @@
   font-family: inherit;
   font-size: 1em;
   font-weight: bold;
-  line-height: 1;
+  line-height: 1.25;
   outline: 0;
   text-transform: none;
   text-decoration: none;
@@ -67,6 +67,45 @@
 .sm-blocks button > svg {
   fill: transparent;
   stroke: transparent;
+}
+.sm-blocks .sm-buttons > button {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-width: 0.05em;
+  border-style: solid;
+  border-color: #c0c0c0;
+  border-radius: 0.1em;
+  background-color: #dcdcdc;
+  color: #708090;
+  box-shadow: inset 0 0 0.4em 0 #c0c0c0;
+  text-decoration: none;
+  letter-spacing: 0;
+  font-family: 'Arial Black', 'Arial Bold', Gadget, sans-serif;
+  font-size: var(--font-size);
+  touch-action: none;
+}
+.sm-blocks .sm-buttons > button > svg {
+  fill: #708090;
+}
+.sm-blocks .sm-buttons > button:hover,
+.sm-blocks .sm-buttons > button:focus,
+.sm-blocks .sm-buttons > button:active {
+  font-weight: bolder;
+  border-color: #2f4f4f;
+  color: #2f4f4f;
+}
+.sm-blocks .sm-buttons > button:hover > svg,
+.sm-blocks .sm-buttons > button:focus > svg,
+.sm-blocks .sm-buttons > button:active > svg {
+  fill: #2f4f4f;
+}
+.sm-blocks .sm-buttons > button:focus,
+.sm-blocks .sm-buttons > button:active {
+  background-color: #c0c0c0;
+  box-shadow: inset 0 0 0 0.01em #fff;
 }
 .sm-blocks > div {
   overflow: hidden;
@@ -97,197 +136,62 @@
   display: none;
 }
 .sm-blocks.v.f > div.v {
-  box-shadow: inset 0px 0px 8px 1px rgba(106,90,205,0.25);
+  box-shadow: inset 0px 0px 4px 1px rgba(106,90,205,0.15);
   border-radius: 2px;
-}
-.sm-blocks-product-card {
-  --size-a: 35;
-  --size-b: 40;
-  --size-c: 25;
-  padding: 2px;
-}
-.sm-blocks-product-card > div {
-  display: none;
-  flex-direction: column;
-  width: 100%;
-  height: 100%;
-  min-width: 0;
-  min-height: 0;
-}
-.sm-blocks-product-card > div > .section {
-  display: flex;
-  flex-basis: 0;
-  flex-shrink: 100;
-}
-.sm-blocks-product-card > div > .section.a {
-  flex-grow: var(--size-a);
-}
-.sm-blocks-product-card > div > .section.a > .image {
-  flex-grow: var(--item-sz-1);
-}
-.sm-blocks-product-card > div > .section.a > .image > div {
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: center;
-}
-.sm-blocks-product-card > div > .section.a > .image > div > img {
-  max-width: 100%;
-  max-height: 100%;
-}
-.sm-blocks-product-card > div > .section.b {
-  flex-grow: var(--size-b);
-}
-.sm-blocks-product-card > div > .section.b > .title {
-  max-height: calc(3 * var(--font-size-header));
-}
-.sm-blocks-product-card > div > .section.b > .title > div,
-.sm-blocks-product-card > div > .section.b > .title > div > button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  font-size: var(--font-size-header);
-  line-height: 1;
-  text-align: center;
-  word-break: keep-all;
-  overflow: hidden;
-}
-.sm-blocks-product-card > div > .section.c {
-  flex-grow: var(--size-c);
-}
-.sm-blocks-product-card > div > .section.c > .price {
-  max-height: calc(3 * var(--font-size));
-  font-size: var(--font-size-header);
-}
-.sm-blocks-product-card > div > .section.c > .price > div {
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-.sm-blocks-product-card > div > .section.c > .price > div > .old {
-  display: none;
-  line-height: 0.65em;
-  opacity: 0.7;
-}
-.sm-blocks-product-card > div > .section.c > .price > div > .old > span {
-  text-decoration: line-through;
-  font-size: 0.65em;
-}
-.sm-blocks-product-card > div > .section.c > .price > div > .current {
-  display: flex;
-  line-height: 0.9em;
-}
-.sm-blocks-product-card > div > .section.c > .price > div > .current > .currency {
-  font-size: 1em;
-  padding-right: 0.2em;
-}
-.sm-blocks-product-card > div > .section.c > .price > div > .current > .value {
-  font-size: 1em;
-  font-weight: bold;
-}
-.sm-blocks-product-card > div > .section.c > .price > div > .current > .mantissa {
-  font-size: 0.7em;
-  padding-top: 0.1em;
-  display: flex;
-}
-.sm-blocks-product-card > div > .section.c > .price > div.none {
-  display: none;
-}
-.sm-blocks-product-card > div > .section.c > .price > div.lower > .old {
-  display: block;
-}
-.sm-blocks-product-card > div > .section.c > .price > div.right > .current > .currency {
-  order: 2;
-  padding-left: 0.2em;
-  padding-right: 0;
-}
-.sm-blocks-product-card > div > .section.c > .actions {
-  max-height: calc(3 * var(--font-size));
-}
-.sm-blocks-product-card > div > .section.c > .actions > div {
-  padding-left: 4px;
-  padding-right: 4px;
-}
-.sm-blocks-product-card > div > .section.c > .actions > div a,
-.sm-blocks-product-card > div > .section.c > .actions > div button {
-  flex: 1 1 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  font-size: var(--font-size);
-  font-weight: bold;
-  border-width: 0;
-  border-style: solid;
-  border-color: #708090;
-  border-radius: 2px;
-  background-color: #dcdcdc;
-  color: #000;
-  outline: 0;
-  cursor: pointer;
-}
-.sm-blocks-product-card > div > .section.c > .actions > div a:focus,
-.sm-blocks-product-card > div > .section.c > .actions > div button:focus {
-  border-width: 1px;
-  background-color: #c0c0c0;
-}
-.sm-blocks-product-card > div > .section.c > .actions > div a:hover,
-.sm-blocks-product-card > div > .section.c > .actions > div button:hover {
-  background-color: #c0c0c0;
-}
-.sm-blocks-product-card > div > .section.c > .actions > div .cart {
-  max-width: calc(30px + var(--svg-icon-size));
-}
-.sm-blocks-product-card > div > .section.c > .actions > div .cart > svg {
-  width: var(--svg-icon-size);
-  height: auto;
-  fill: #000;
-}
-.sm-blocks-product-card > div > .section.c > .actions > div .cart.none {
-  display: none;
-}
-.sm-blocks-product-card > div.v > .section {
-  border-style: solid;
-  border-color: #dcdcdc;
-  border-width: 1px;
-}
-.sm-blocks-product-card > div.v > .section > div {
-  display: none;
-}
-.sm-blocks-product-card > svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-.sm-blocks-product-card.w > div {
-  display: flex;
-}
-.sm-blocks-product-card.w > svg {
-  display: none;
 }
 .sm-blocks.main-section {
   width: 100%;
   height: auto;
   padding: 0 0 4px 0;
 }
+.sm-blocks.main-section > div.item {
+  font-size: var(--height);
+}
+.sm-blocks.main-section > div.item > .title {
+  height: 1em;
+  padding: 0.05em 0 0.05em 4px;
+}
+.sm-blocks.main-section > div.item > .title > h3 {
+  order: 1;
+  font-size: 0.7em;
+}
+.sm-blocks.main-section > div.item > .title > button.arrow {
+  order: 2;
+  min-width: 1.2em;
+  padding: 0.1em 0.1em 0.1em 0.4em;
+}
+.sm-blocks.main-section > div.item > .section {
+  padding: 0;
+}
+.sm-blocks.main-section > div.item > .sep {
+  height: 3px;
+  fill: #dcdcdc;
+}
+.sm-blocks.main-section .item {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+}
 .sm-blocks.main-section .item > .title {
-  position: relative;
+  height: 0.8em;
+  padding: 0.05em 0 0.05em 0;
   display: flex;
   flex-direction: row;
-  height: 2em;
-  padding: 0.1em 0 0.1em 0;
+  align-items: stretch;
+  justify-content: flex-start;
 }
 .sm-blocks.main-section .item > .title > h3 {
-  flex: 1 1 0;
   order: 1;
-  font-family: Verdana, Arial, sans-serif;
-  font-size: 1em;
-  font-weight: bold;
+  flex: 1 1 0;
+  font-size: 0.35em;
+  border-radius: 4px;
   display: flex;
   align-items: center;
+  font-family: Verdana, Helvetica, Arial, sans-serif;
+  font-weight: bold;
   color: #708090;
   background-color: transparent;
-  border-radius: 4px;
   cursor: pointer;
   user-select: none;
 }
@@ -302,15 +206,16 @@
   display: block;
 }
 .sm-blocks.main-section .item > .title > button.arrow {
-  flex: 0 0 0;
   order: 2;
-  min-width: 2.8em;
-  padding: 0.1em 0.1em 0.1em 1.1em;
-  height: 100%;
+  flex: 0 0 0;
+  min-width: 1em;
+  padding: 0.05em 0.05em 0.05em 0.35em;
   background-color: transparent;
-  border-radius: 4px;
+  border-radius: 1%;
 }
 .sm-blocks.main-section .item > .title > button.arrow > svg {
+  width: auto;
+  height: 100%;
   fill: #c0c0c0;
   stroke: #708090;
 }
@@ -319,12 +224,11 @@
   transform: rotate(90deg);
 }
 .sm-blocks.main-section .item > .section {
-  width: 100%;
   min-height: 0;
-  overflow: hidden;
-  display: none;
   height: 0;
   opacity: 0;
+  display: none;
+  overflow: hidden;
 }
 .sm-blocks.main-section .item.opened > .title > button.arrow > svg {
   fill: #708090;
@@ -391,35 +295,11 @@
 .sm-blocks.main-section .item.v.active > svg {
   fill: rgba(106,90,205,0.4);
 }
-.sm-blocks.main-section > div.item {
-  display: flex;
-  flex-direction: column;
-  padding: 0 6px 0 6px;
-}
-.sm-blocks.main-section > div.item > .title {
-  height: 3em;
-  padding: 4px 0 4px 0;
-}
-.sm-blocks.main-section > div.item > .title > h3 {
-  font-size: 2em;
-  font-weight: bold;
-}
-.sm-blocks.main-section > div.item > .title > button.arrow {
-  height: 100%;
-  min-width: calc(3em - 8px);
-  padding: 4px;
-}
-.sm-blocks.main-section > div.item > .section {
-  padding: 0;
-}
-.sm-blocks.main-section > div.item > svg {
-  height: 3px;
-  fill: #dcdcdc;
-}
 .sm-blocks.products {
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  flex-direction: row;
+  justify-content: center;
+  align-items: flex-start;
   width: 100%;
   height: auto;
   padding: 2px 0 2px 8px;
@@ -427,98 +307,274 @@
 .sm-blocks.products > div {
   --columns: 1;
   --rows: 1;
-  --column-gap: 4px;
-  --row-gap: 4px;
+  --column-gap: 8px;
+  --row-gap: 16px;
   --item-width: 304px;
   --item-height: 404px;
-  --item-x: calc(var(--item-width) * var(--sm-blocks-size-factor));
-  --item-y: calc(var(--item-height) * var(--sm-blocks-size-factor));
-  --gap-x: calc(var(--column-gap) * var(--sm-blocks-size-factor));
-  --gap-y: calc(var(--row-gap) * var(--sm-blocks-size-factor));
+  --item-x: calc(var(--item-width) * var(--sm-blocks-factor));
+  --item-y: calc(var(--item-height) * var(--sm-blocks-factor));
+  --gap-x: calc(var(--column-gap) * var(--sm-blocks-factor));
+  --gap-y: calc(var(--row-gap) * var(--sm-blocks-factor));
   --grid-width: calc(var(--columns) * var(--item-x) + calc(var(--columns) - 1) * var(--gap-x));
   --grid-height: calc(var(--rows) * var(--item-y) + calc(var(--rows) - 1) * var(--gap-y));
   display: grid;
   grid-template-columns: repeat(var(--columns), 1fr);
   grid-column-gap: var(--gap-x);
   grid-row-gap: var(--gap-y);
-  justify-content: center;
-  width: 100%;
+  flex: 1 1 0;
   max-width: var(--grid-width);
   height: var(--grid-height);
 }
 .sm-blocks.products > div > div {
-  width: 100%;
-  height: 100%;
+  justify-self: stretch;
+  align-self: stretch;
+  max-width: var(--item-x);
+  height: var(--item-y);
   display: none;
 }
 .sm-blocks.products > div > div.v {
   display: block;
 }
+.sm-blocks.products > div > .product {
+  --a-size: 60;
+  --b-size: 27;
+  --c-size: 12;
+  padding: 2px;
+  overflow: hidden;
+}
+.sm-blocks.products > div > .product > div {
+  display: none;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+.sm-blocks.products > div > .product > div > .section {
+  flex-shrink: 100;
+  flex-basis: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  font-size: var(--font-size);
+}
+.sm-blocks.products > div > .product > div > .section > div {
+  flex: 1 1 0;
+}
+.sm-blocks.products > div > .product > div > .section.a {
+  flex-grow: var(--a-size);
+}
+.sm-blocks.products > div > .product > div > .section.a > .image {
+  display: flex;
+  align-items: center;
+}
+.sm-blocks.products > div > .product > div > .section.a > .image > img {
+  flex: 1 1 0;
+  display: none;
+  width: auto;
+  height: auto;
+}
+.sm-blocks.products > div > .product > div > .section.a > .image > svg {
+  flex: 1 1 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.sm-blocks.products > div > .product > div > .section.a > .image.w {
+  flex-direction: row;
+}
+.sm-blocks.products > div > .product > div > .section.a > .image.w > img {
+  max-width: 100%;
+}
+.sm-blocks.products > div > .product > div > .section.a > .image.h {
+  flex-direction: column;
+}
+.sm-blocks.products > div > .product > div > .section.a > .image.h > img {
+  max-height: 100%;
+}
+.sm-blocks.products > div > .product > div > .section.a > .image.v > img {
+  display: block;
+}
+.sm-blocks.products > div > .product > div > .section.a > .image.v > svg {
+  display: none;
+}
+.sm-blocks.products > div > .product > div > .section.b {
+  flex-grow: var(--b-size);
+}
+.sm-blocks.products > div > .product > div > .section.b > .title {
+  order: 1;
+  flex: 0 0 0;
+  min-height: 3.45em;
+  padding-bottom: 0.4em;
+}
+.sm-blocks.products > div > .product > div > .section.b > .title > div {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: Verdana, Helvetica, Arial, sans-serif;
+  font-size: 1.1em;
+  font-weight: bold;
+  line-height: 1;
+  text-align: center;
+  word-break: keep-all;
+  owerflow-break: keep-all;
+  overflow: hidden;
+  color: #000;
+}
+.sm-blocks.products > div > .product > div > .section.b > .price {
+  order: 0;
+  max-height: 2.2em;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: center;
+  padding-bottom: 0.4em;
+}
+.sm-blocks.products > div > .product > div > .section.b > .price > div {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  line-height: 1;
+}
+.sm-blocks.products > div > .product > div > .section.b > .price > .currency {
+  justify-content: flex-end;
+  font-family: Verdana, Helvetica, Arial, sans-serif;
+  font-size: 1.8em;
+  padding-right: 0.15em;
+  color: #708090;
+}
+.sm-blocks.products > div > .product > div > .section.b > .price > .pad {
+  flex: 1 1 0;
+}
+.sm-blocks.products > div > .product > div > .section.b > .price > .value > div {
+  font-family: 'Arial Black', 'Arial Bold', Gadget, sans-serif;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+}
+.sm-blocks.products > div > .product > div > .section.b > .price > .value.a {
+  justify-content: center;
+  padding-bottom: 0.14em;
+}
+.sm-blocks.products > div > .product > div > .section.b > .price > .value.a > .integer {
+  font-size: 1.4em;
+  color: #2f4f4f;
+}
+.sm-blocks.products > div > .product > div > .section.b > .price > .value.a > .fraction {
+  font-size: 1.2em;
+  color: #708090;
+  padding-bottom: 0.03em;
+}
+.sm-blocks.products > div > .product > div > .section.b > .price > .value.b {
+  flex: 0 1 auto;
+  padding-left: 1em;
+  padding-bottom: 0.25em;
+  text-decoration: line-through;
+  text-decoration-color: #2f4f4f;
+}
+.sm-blocks.products > div > .product > div > .section.b > .price > .value.b > .integer {
+  font-size: 1em;
+  color: #708090;
+}
+.sm-blocks.products > div > .product > div > .section.b > .price > .value.b > .fraction {
+  font-size: 0.8em;
+  color: #708090;
+  padding-bottom: 0.1em;
+}
+.sm-blocks.products > div > .product > div > .section.b > .price.equal > .value.b > div {
+  display: none;
+}
+.sm-blocks.products > div > .product > div > .section.c {
+  flex-grow: var(--c-size);
+}
+.sm-blocks.products > div > .product > div > .section.c > .actions {
+  --height: calc(var(--item-y) * var(--c-size) / 100);
+  font-size: calc(0.4 * var(--height));
+  padding-left: var(--pad);
+  padding-right: var(--pad);
+  display: flex;
+  flex-direction: row;
+  gap: 2px;
+}
+.sm-blocks.products > div > .product > div > .section.c > .actions > button {
+  flex: 1 1 0;
+}
+.sm-blocks.products > div > .product > div > .section.c > .actions > button.add-to-cart {
+  max-width: calc(8px + var(--height));
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+.sm-blocks.products > div > .product > div > .section.c > .actions > button.add-to-cart > svg {
+  width: auto;
+  height: 100%;
+}
+.sm-blocks.products > div > .product > div.v > .section {
+  border-style: solid;
+  border-color: #dcdcdc;
+  border-width: 1px;
+}
+.sm-blocks.products > div > .product > div.v > .section > div {
+  display: none;
+}
+.sm-blocks.products > div > .product > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.sm-blocks.products > div > .product.ready > div {
+  display: flex;
+}
+.sm-blocks.products > div > .product.ready > svg {
+  display: none;
+}
 .sm-blocks.paginator {
-  --width: calc(1.35 * var(--height));
   width: 100%;
   height: calc(8px + var(--height));
   padding: 4px 0 4px 0;
   display: flex;
   flex-direction: row;
+  align-items: stretch;
   justify-content: center;
-/**/
 }
 .sm-blocks.paginator > div {
+  font-size: var(--sm-blocks-height);
   flex: 0 0 auto;
   width: auto;
+  height: 100%;
   display: flex;
   flex-direction: row;
+  align-items: stretch;
   touch-action: none;
-/*===*/
-/*===*/
+}
+.sm-blocks.paginator > div > div {
+  flex: 1 0 0;
 }
 .sm-blocks.paginator > div > .goto {
-  flex: 1 1 0;
-  max-width: calc(2px + var(--width));
+  max-width: 1.05em;
 }
-.sm-blocks.paginator > div > .goto > button {
-  width: 100%;
+.sm-blocks.paginator > div > .goto.PN > button {
+  padding: 0.25em 0 0.25em 0;
+}
+.sm-blocks.paginator > div > .goto.PN > button > svg {
+  width: auto;
   height: 100%;
-  border: 1px solid #c0c0c0;
-  border-radius: 2px;
-  background-color: #dcdcdc;
-  box-shadow: inset 0 0 10px 0 #c0c0c0;
-  touch-action: none;
 }
-.sm-blocks.paginator > div > .goto > button:hover {
-  border-color: #2f4f4f;
-}
-.sm-blocks.paginator > div > .goto > button:active,
-.sm-blocks.paginator > div > .goto > button:focus {
-  background-color: #c0c0c0;
-  border-color: #2f4f4f;
-  box-shadow: inset 0 0 0 1px #fff;
-}
-.sm-blocks.paginator > div > .goto.P {
-  padding-left: 2px;
-}
-.sm-blocks.paginator > div > .goto.N {
-  padding-right: 2px;
-}
-.sm-blocks.paginator > div > .goto.FN.active,
-.sm-blocks.paginator > div > .goto.PN.active {
-  padding-top: 2px;
-  padding-bottom: 2px;
-}
-.sm-blocks.paginator > div > .goto.FN.active > button,
 .sm-blocks.paginator > div > .goto.PN.active > button {
-  background-color: #000;
-  padding: 4px;
+  padding: 0;
 }
-.sm-blocks.paginator > div > .goto.FN.active > button > svg,
-.sm-blocks.paginator > div > .goto.PN.active > button > svg {
-  fill: #fff;
+.sm-blocks.paginator > div > .goto.both.P {
+  padding-left: 0.05em;
+}
+.sm-blocks.paginator > div > .goto.both.N {
+  padding-right: 0.05em;
 }
 .sm-blocks.paginator > div > .sep {
-  flex: 1 0 0;
-  max-width: 8px;
-  padding: 2px 0 2px 0;
+  max-width: 0.19em;
+  padding: 0.02em 0 0.02em 0;
 }
 .sm-blocks.paginator > div > .sep > svg {
   fill: #c0c0c0;
@@ -531,22 +587,13 @@
 }
 .sm-blocks.paginator > div > .range {
   --count: 0;
-  --max-width: calc(2px + (1 + var(--count)) * var(--width));
-  --page-size: var(--width);
-  flex: 1 0 0;
-  width: 10000px;
-  max-width: var(--max-width);
+  --page-size: 1.34em;
+  font-size: var(--page-size);
+  max-width: calc(1em + 1em * var(--count));
   display: flex;
   flex-direction: row;
   justify-content: center;
 /*===*
-			&.nogap
-				// range without gaps
-				// reduced size
-				--max-width: calc(2px + var(--count) * var(--width))
-				// dragging is not possible
-				> .page.x > button
-					cursor: default
 			&.active.drag
 				// current page is being dragged
 				cursor: grabbing
@@ -560,16 +607,20 @@
 }
 .sm-blocks.paginator > div > .range > .gap {
   flex: 0 100 0;
-  min-width: calc(0.25 * var(--width));
-  padding: 2px 0 2px 0;
+  min-width: 0.25em;
+  padding: 0.02em 0 0.02em 0;
 }
 .sm-blocks.paginator > div > .range > .gap > svg {
-  fill: #c0c0c0;
+  fill: #dcdcdc;
 }
 .sm-blocks.paginator > div > .range > .page {
   flex: 0 0 0;
-  min-width: var(--page-size);
-  padding: 2px 1px 2px 1px;
+  min-width: 1em;
+  padding: 0.035em 1px 0.035em 1px;
+}
+.sm-blocks.paginator > div > .range > .page > button {
+  color: #2f4f4f;
+  font-size: var(--font-size);
 }
 .sm-blocks.paginator > div > .range > .page.F {
   padding-left: 0;
@@ -577,51 +628,35 @@
 .sm-blocks.paginator > div > .range > .page.L {
   padding-right: 0;
 }
-.sm-blocks.paginator > div > .range > .page > button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  border-width: 1px;
-  border-style: solid;
-  border-color: #c0c0c0;
-  border-radius: 2px;
-  background-color: #dcdcdc;
-  box-shadow: inset 0 0 10px 0 #c0c0c0;
-  text-decoration: none;
-  touch-action: none;
-}
-.sm-blocks.paginator > div > .range > .page > button:hover {
-  font-weight: bolder;
-  border-color: #2f4f4f;
-  color: #708090;
-}
-.sm-blocks.paginator > div > .range > .page > button:active,
-.sm-blocks.paginator > div > .range > .page > button:focus {
-  font-weight: bolder;
-  background-color: #c0c0c0;
-  border-color: #2f4f4f;
-  color: #708090;
-  box-shadow: inset 0 0 0 1px #fff;
-}
 .sm-blocks.paginator > div > .range > .page.x {
-  min-width: calc(2px + var(--page-size));
-  padding-top: 2px;
-  padding-bottom: 2px;
+  min-width: 1.15em;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 .sm-blocks.paginator > div > .range > .page.x > button {
-  font-size: 1.4em;
+  font-size: calc(1.25 * var(--font-size));
   border-color: #000;
   background-color: #000;
+  color: #fff;
   cursor: grab;
 }
 .sm-blocks.paginator > div > .range > .page.x > button:hover {
-  color: #789;
+  color: rgba(255,255,255,0.5);
 }
-.sm-blocks.paginator > div > .range > .page.x > button:active,
-.sm-blocks.paginator > div > .range > .page.x > button:focus {
-  box-shadow: inset 0 0 1px 1px #fff;
+.sm-blocks.paginator > div > .range > .page.x > button:focus,
+.sm-blocks.paginator > div > .range > .page.x > button:active {
+  color: #fff;
+  box-shadow: inset 0 0 0.1em 0.1em #fff;
+}
+.sm-blocks.paginator > div > .range.nogap {
+  max-width: calc(1em * var(--count));
+  min-width: calc(1em + 1em * var(--count));
+}
+.sm-blocks.paginator > div > .range.nogap > .page.x > button {
+  cursor: default;
+}
+.sm-blocks.paginator.v > div {
+  font-size: var(--height);
 }
 .sm-blocks.paginator.v > div.flexy {
   width: 100%;
@@ -631,13 +666,13 @@
   max-width: 100%;
 }
 .sm-blocks.paginator.v > div.flexy > .range > .gap {
-  padding: 2px 1px 2px 1px;
-}
-.sm-blocks.paginator.v > div.flexy > .range.active > .gap > svg {
-  fill: #c0c0c0;
+  padding: 0.025em 0 0.025em 0;
 }
 .sm-blocks.paginator.v > div.flexy > .range.nogap > .page {
   flex-grow: 1;
+}
+.sm-blocks.paginator.v > div.flexy > .range.active > .gap > svg {
+  fill: #c0c0c0;
 }
 .sm-blocks.paginator.v > div.nosep > .goto.P {
   padding-right: 1px;
@@ -648,14 +683,14 @@
 .sm-blocks.paginator.v > div.v > .goto > button > svg {
   fill: #708090;
 }
+.sm-blocks.paginator.v > div.v > .goto.active > button {
+  background-color: #000;
+}
+.sm-blocks.paginator.v > div.v > .goto.active > button > svg {
+  fill: #fff;
+}
 .sm-blocks.paginator.v > div.v > .range > .gap > svg {
   fill: #c0c0c0;
-}
-.sm-blocks.paginator.v > div.v > .range > .page > button {
-  color: #000;
-}
-.sm-blocks.paginator.v > div.v > .range > .page.x > button {
-  color: #fff;
 }
 .sm-blocks.paginator.v > div.v.flexy > .range > .gap > svg {
   fill: #dcdcdc;
@@ -667,11 +702,10 @@
   fill: #708090;
 }
 .sm-blocks.main-section.category-filter .item > .title > button.checkbox {
-  flex: 0 0 0;
   order: 0;
-  min-width: 2.2em;
-  height: 100%;
-  padding: 0 0.4em 0 0;
+  flex: 0 0 0;
+  min-width: 1em;
+  padding: 0 0.2em 0 0;
 }
 .sm-blocks.main-section.category-filter .item > .title > button.checkbox > svg {
   background-color: rgba(220,220,220,0.2);
@@ -681,7 +715,7 @@
   stroke: transparent;
 }
 .sm-blocks.main-section.category-filter .item > .section {
-  padding: 0 0 0 0.6em;
+  padding: 0 0 0 0.2em;
 }
 .sm-blocks.main-section.category-filter .item.v.checked > .title > h3 {
   color: #2f4f4f;
@@ -749,8 +783,8 @@
 .sm-blocks.main-section.category-filter .item.v.opened.focused-2 > .title > h3 {
   color: rgba(72,61,139,0.8);
 }
-.sm-blocks.main-section.category-filter > .item > .section {
-  padding: 4px 0 4px 0;
+.sm-blocks.main-section.category-filter > div.item > .section {
+  padding: 2px 0 2px 4px;
 }
 .sm-blocks.price-filter {
   width: 100%;
@@ -760,6 +794,7 @@
 .sm-blocks.price-filter > div {
   width: 100%;
   height: 100%;
+  padding: 0 4px 0 4px;
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -790,7 +825,7 @@
   position: absolute;
   top: 0;
   width: 100%;
-  font-family: Verdana, Arial, sans-serif;
+  font-family: Verdana, Helvetica, Arial, sans-serif;
   font-size: 0.8em;
   font-weight: bold;
   padding: 0.2em 0 0 0;

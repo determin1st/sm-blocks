@@ -2,17 +2,19 @@
 * storefront modern blocks
 */
 // font shortcuts {{{
-WebSafeFontSans = Verdana, Arial, sans-serif
 WebSafeFontMono = Consolas, Courier, monospace
+WebSafeFontFat = 'Arial Black', 'Arial Bold', Gadget, sans-serif
+WebSafeFontUI = Verdana, Helvetica, Arial, sans-serif
+WebSafeFontHeadline = Times, 'Times New Roman', serif
 // }}}
 :root // {{{
-	--sm-blocks-size-factor: 1 // constant
+	--sm-blocks-factor: 1    // size reduction factor 0-100%
+	--sm-blocks-height: 48px // default vertical base for the frame
 // }}}
 // ===
 .sm-blocks // {{{
-	// common config
-	--height-px: 48px
-	--height:    calc(var(--height-px) * var(--sm-blocks-size-factor))
+	// base block config
+	--height: calc(var(--sm-blocks-height) * var(--sm-blocks-factor))
 	--font-size: calc(0.35 * var(--height))
 	// root
 	position:   relative
@@ -38,7 +40,7 @@ WebSafeFontMono = Consolas, Courier, monospace
 		font-family: inherit
 		font-size:   1em
 		font-weight: bold
-		line-height: 1
+		line-height: 1.25
 		outline:     0
 		text-transform:  none
 		text-decoration: none
@@ -57,6 +59,40 @@ WebSafeFontMono = Consolas, Courier, monospace
 		> svg
 			fill:   transparent
 			stroke: transparent
+	// }}}
+	.sm-buttons // {{{
+		> button
+			width:   100%
+			height:  100%
+			display: flex
+			align-items: center
+			justify-content: center
+			border-width: 0.05em
+			border-style: solid
+			border-color: silver
+			border-radius: 0.1em
+			background-color: gainsboro
+			color: slategray
+			box-shadow: inset 0 0 0.4em 0 silver
+			text-decoration: none
+			letter-spacing: 0
+			font-family: WebSafeFontFat
+			font-size: var(--font-size)
+			touch-action: none // pointer events only
+			> svg
+				fill: slategray
+			&:hover,
+			&:focus,
+			&:active
+				font-weight: bolder
+				border-color: darkslategray
+				color: darkslategray
+				> svg
+					fill: darkslategray
+			&:focus,
+			&:active
+				background-color: silver
+				box-shadow: inset 0 0 0 0.01em white
 	// }}}
 	// rootBox
 	> div
@@ -88,276 +124,92 @@ WebSafeFontMono = Consolas, Courier, monospace
 		// focused state
 		&.f
 			> div.v
-				box-shadow: inset 0px 0px 8px 1px alpha(slateblue, 0.25)
+				box-shadow: inset 0px 0px 4px 1px alpha(slateblue, 0.15)
 				border-radius: 2px
-// }}}
-.sm-blocks-product-card // {{{
-	// settings
-	--size-a: 35
-	--size-b: 40
-	--size-c: 25
-	////
-	padding: 2px
-	> div // {{{
-		display: none
-		flex-direction: column
-		width:  100%
-		height: 100%
-		min-width:  0
-		min-height: 0
-		> .section
-			display: flex
-			flex-basis:  0
-			flex-shrink: 100
-			&.a
-				flex-grow: var(--size-a)
-				> .image // {{{
-					flex-grow: var(--item-sz-1);
-					> div
-					{
-						flex-direction: column;
-						align-items: stretch;
-						justify-content: center;
-						> img
-						{
-							max-width:  100%;
-							max-height: 100%;
-						}
-					}
-				// }}}
-			&.b
-				flex-grow: var(--size-b)
-				> .title // {{{
-				{
-					// This block is fixed at top space it may take.
-					// The multiplier to header size should be +1 from
-					//  the desired number of lines, the default is 3,
-					//  which means that 2 lines will display perfectly fine.
-					// The plugin script auto-breaks titles,
-					//  this is done via special markers in the block's
-					//  content data. Markers are natural, like " | " or " . ",
-					//  it will replace it with line break for
-					//  the perfect text fit.
-					max-height: calc(3 * var(--font-size-header));
-					> div, > div > button // TODO: kind of merging should be removed?
-					{
-						display: flex;
-						align-items: center;
-						justify-content: center;
-						font-weight: bold;
-						font-size: var(--font-size-header);// auto-controlled
-						line-height: 1;
-						text-align: center;
-						word-break: keep-all;// +to break-word Asian languages
-						overflow: hidden;
-					}
-				}
-				// }}}
-			&.c
-				flex-grow: var(--size-c)
-				> .price // {{{
-				{
-					max-height: calc(3 * var(--font-size));
-					font-size: var(--font-size-header);
-					> div
-					{
-						flex-direction: column;
-						align-items: center;
-						justify-content: center;
-						> .old
-						{
-							display: none;
-							line-height: 0.65em;
-							opacity: 0.7;
-							> span
-							{
-								text-decoration: line-through;
-								font-size: 0.65em;
-							}
-						}
-						> .current
-						{
-							display: flex;
-							line-height: 0.9em;
-							> .currency
-							{
-								font-size: 1em;
-								padding-right: 0.2em;
-							}
-							> .value
-							{
-								font-size: 1em;
-								font-weight: bold;
-							}
-							> .mantissa
-							{
-								font-size: 0.7em;
-								padding-top: 0.1em;
-								display: flex;
-							}
-						}
-						// states
-						&.none // no price specified
-						{
-							display: none;
-						}
-						&.higher // current > old
-						{
-						}
-						&.lower  // current < old
-						{
-							> .old {display: block;}
-						}
-						&.right  // currency sign position
-						{
-							> .current > .currency
-							{
-								order: 2;
-								padding-left: 0.2em;
-								padding-right: 0;
-							}
-						}
-					}
-				}
-				// }}}
-				> .actions // {{{
-				{
-					max-height: calc(3 * var(--font-size));
-					> div
-					{
-						padding-left:  4px;
-						padding-right: 4px;
-						a, button // buttons
-						{
-							flex: 1 1 auto;
-							display: flex;
-							align-items: center;
-							justify-content: center;
-							padding: 0;
-							font-size: var(--font-size);
-							font-weight: bold;
-							border-width: 0;
-							border-style: solid;
-							border-color: slategray;
-							border-radius: 2px;
-							background-color: gainsboro;
-							color: black;
-							outline: 0;
-							cursor: pointer;
-							&:focus
-							{
-								border-width: 1px;
-								background-color: silver;
-							}
-							&:hover
-							{
-								background-color: silver;
-							}
-						}
-						.cart
-						{
-							// limited width
-							max-width: calc(30px + var(--svg-icon-size));
-							> svg
-							{
-								width: var(--svg-icon-size);
-								height: auto;
-								fill: black;
-							}
-							&.none // out of stock
-							{
-								display: none;
-							}
-						}
-					}
-				}
-				// }}}
-		// loaded
-		&.v
-			> .section
-				// display a small border
-				border-style: solid;
-				border-color: gainsboro;
-				border-width: 1px;
-				//border-right-width:  1px;
-				//border-bottom-width: 1px;
-				> div
-					// don't display anything else
-					display: none;
-	// }}}
-	> svg // {{{
-		display: block
-		width:  100%
-		height: 100%
-	// }}}
-	// constructed
-	&.w
-		> div
-			display: flex
-		> svg
-			display: none
 // }}}
 .sm-blocks.main-section // {{{
 	// root
 	width:  100%
 	height: auto
 	padding: 0 0 4px 0
-	// content
-	.item // {{{
-		//=== DISABLED
-		//=== CLOSED {{{
+	// rootBox (first item)
+	> div.item
+		font-size: var(--height)
 		> .title
-			position: relative
+			height: 1em
+			padding: 0.05em 0 0.05em 4px
+			> h3
+				order: 1
+				font-size: 0.7em
+			> button.arrow
+				order: 2
+				min-width:  1.2em
+				padding: 0.1em 0.1em 0.1em 0.4em
+		> .section
+			padding: 0
+		> .sep
+			height: 3px
+			fill: gainsboro
+	////
+	.item
+		display: flex
+		flex-direction: column
+		align-items: stretch
+		justify-content: flex-start
+		> .title // {{{
+			height: 0.8em
+			padding: 0.05em 0 0.05em 0
 			display: flex
 			flex-direction: row
-			height: 2em
-			padding: 0.1em 0 0.1em 0
-			> h3
-				flex: 1 1 0
+			align-items: stretch
+			justify-content: flex-start
+			> h3 // {{{
 				order: 1
-				font-family: WebSafeFontSans
-				font-size: 1em
-				font-weight: bold
-				//font-weight: bold
+				flex: 1 1 0
+				font-size: 0.35em
+				border-radius: 4px
 				display: flex
 				align-items: center
+				font-family: WebSafeFontUI
+				font-weight: bold
 				color: slategray
 				background-color: transparent
-				border-radius: 4px
 				cursor: pointer
 				user-select: none
 				> label
 					cursor: pointer
-			> button
+			// }}}
+			> button // {{{
 				background-color: transparent
 				display: none
 				&.v
 					display: block
 				&.arrow
-					flex: 0 0 0
 					order: 2
-					min-width: 2.8em
-					padding: 0.1em 0.1em 0.1em 1.1em
-					height: 100%
+					flex: 0 0 0
+					min-width:  1em
+					padding: 0.05em 0.05em 0.05em 0.35em
 					background-color: transparent
-					border-radius: 4px
+					border-radius: 1%
 					> svg
+						width:  auto
+						height: 100%
 						fill: silver
 						stroke: slategray
 						> .a
 							transform-origin: 50% 50%
 							transform: rotate(90deg)
-		> .section
-			width: 100%
+			// }}}
+		// }}}
+		> .section // {{{
 			min-height: 0
-			overflow: hidden
-			////
-			display: none
 			height:  0
 			opacity: 0
+			display: none
+			overflow: hidden
 		// }}}
-		//=== OPENED {{{
-		&.opened
+		////
+		&.opened // {{{
 			> .title > button.arrow
 				> svg
 					fill: slategray
@@ -369,10 +221,8 @@ WebSafeFontMono = Consolas, Courier, monospace
 				height:  auto
 				opacity: 1
 		// }}}
-		//=== ENABLED
 		&.v
-			//=== CLOSED {{{
-			&.hovered
+			&.hovered // {{{
 				> .title
 					> h3.h
 						color: darkslategray
@@ -383,7 +233,8 @@ WebSafeFontMono = Consolas, Courier, monospace
 						> svg
 							fill: darkslategray
 							stroke: gainsboro
-			&.focused
+			// }}}
+			&.focused // {{{
 				> .title
 					> h3.f
 						color: darkslateblue
@@ -395,8 +246,7 @@ WebSafeFontMono = Consolas, Courier, monospace
 							fill: slateblue
 							stroke: silver
 			// }}}
-			//=== OPENED {{{
-			&.opened
+			&.opened // {{{
 				> .title
 					> h3
 						color: darkslategray
@@ -417,43 +267,21 @@ WebSafeFontMono = Consolas, Courier, monospace
 							fill: slateblue
 							stroke: mediumslateblue
 			// }}}
-			&.active
+			&.active // {{{
 				> .title
 					> h3
 						color: slateblue
 						filter: brightness(80%)
 				> svg
 					fill: alpha(slateblue, 0.4)
-	// }}}
-	// rootBox (first .item)
-	> div.item
-		display: flex
-		flex-direction: column
-		padding: 0 6px 0 6px
-		> .title // {{{
-			height: 3em
-			padding: 4px 0 4px 0
-			> h3
-				font-size: 2em
-				font-weight: bold
-			> button.arrow
-				height: 100%
-				min-width: calc(3em - 8px)
-				padding: 4px
-		// }}}
-		> .section // {{{
-			padding: 0
-		// }}}
-		> svg // {{{
-			height: 3px
-			fill: gainsboro
-		// }}}
+			// }}}
 // }}}
 // ===
 .sm-blocks.products // {{{
 	display: flex
-	flex-direction: column
-	align-items: center
+	flex-direction: row
+	justify-content: center
+	align-items: flex-start
 	width:  100% // take all width (observed)
 	height: auto // grow/shrink automatically (calculated)
 	padding: 2px 0 2px 8px
@@ -461,15 +289,15 @@ WebSafeFontMono = Consolas, Courier, monospace
 		// default settings (absolute)
 		--columns: 1
 		--rows: 1
-		--column-gap: 4px
-		--row-gap: 4px
+		--column-gap: 8px
+		--row-gap: 16px
 		--item-width: 304px
 		--item-height: 404px
 		// calculated (relative)
-		--item-x: calc(var(--item-width) * var(--sm-blocks-size-factor))
-		--item-y: calc(var(--item-height) * var(--sm-blocks-size-factor))
-		--gap-x: calc(var(--column-gap) * var(--sm-blocks-size-factor))
-		--gap-y: calc(var(--row-gap) * var(--sm-blocks-size-factor))
+		--item-x: calc(var(--item-width) * var(--sm-blocks-factor))
+		--item-y: calc(var(--item-height) * var(--sm-blocks-factor))
+		--gap-x: calc(var(--column-gap) * var(--sm-blocks-factor))
+		--gap-y: calc(var(--row-gap) * var(--sm-blocks-factor))
 		--grid-width: calc(
 			var(--columns) * var(--item-x) + \
 			calc(var(--columns) - 1) * var(--gap-x) \
@@ -478,82 +306,251 @@ WebSafeFontMono = Consolas, Courier, monospace
 			var(--rows) * var(--item-y) + \
 			calc(var(--rows) - 1) * var(--gap-y) \
 		)
-		////
+		// container
 		display: grid
 		grid-template-columns: repeat(var(--columns), 1fr)
 		grid-column-gap: var(--gap-x)
 		grid-row-gap: var(--gap-y)
-		justify-content: center
-		width: 100%
+		flex: 1 1 0
 		max-width: var(--grid-width)
 		height: var(--grid-height)
+		// common card layout
 		> div
-			width:  100%
-			height: 100%
-			//max-width: var(--item-x)
-			//height: var(--item-y)
+			justify-self: stretch // width=100%
+			align-self: stretch // height=100%
+			max-width: var(--item-x)
+			height: var(--item-y)
 			display: none
 			&.v
 				display: block
+		// standard product card
+		> .product
+			////
+			--a-size: 60
+			--b-size: 27
+			--c-size: 12
+			////
+			padding: 2px
+			overflow: hidden
+			> div // {{{
+				display: none
+				flex-direction: column
+				width:  100%
+				height: 100%
+				min-width:  0
+				min-height: 0
+				> .section
+					flex-shrink: 100
+					flex-basis:  0
+					display: flex
+					flex-direction: column
+					align-items: stretch
+					font-size: var(--font-size)
+					// common feature container (image,title,..)
+					> div
+						flex: 1 1 0
+					&.a
+						flex-grow: var(--a-size)
+						> .image // {{{
+							display: flex
+							align-items: center
+							> img
+								flex: 1 1 0
+								display: none
+								width: auto
+								height: auto
+							> svg
+								flex: 1 1 0
+								display: block
+								width:  100%
+								height: 100%
+							&.w
+								flex-direction: row
+								> img
+									max-width: 100%
+							&.h
+								flex-direction: column
+								> img
+									max-height: 100%
+							&.v
+								> img
+									display: block
+								> svg
+									display: none
+						// }}}
+					&.b
+						flex-grow: var(--b-size)
+						> .title // {{{
+							order: 1
+							flex: 0 0 0
+							min-height: 3.45em
+							padding-bottom: 0.4em
+							> div
+								height: 100%
+								display: flex
+								align-items: center
+								justify-content: center
+								font-family: WebSafeFontUI
+								font-size: 1.1em
+								font-weight: bold
+								line-height: 1
+								text-align: center
+								word-break: keep-all // +to break-word Asian languages
+								owerflow-break: keep-all // +to break-word Asian languages
+								overflow: hidden
+								color: black
+						// }}}
+						> .price // {{{
+							order: 0
+							max-height: 2.2em
+							display: flex
+							flex-direction: row
+							align-items: stretch
+							justify-content: center
+							padding-bottom: 0.4em
+							> div
+								flex: 0 0 auto
+								display: flex
+								flex-direction: row
+								align-items: flex-end
+								line-height: 1
+							> .currency
+								justify-content: flex-end
+								font-family: WebSafeFontUI
+								font-size: 1.8em
+								padding-right: 0.15em
+								color: slategray
+							> .pad
+								flex: 1 1 0
+							> .value
+								> div
+									font-family: WebSafeFontFat
+									text-overflow: ellipsis
+									overflow:      hidden
+									white-space:   nowrap
+									word-break:    break-all
+									overflow-wrap: anywhere // modern word-break
+								&.a
+									justify-content: center
+									padding-bottom: 0.14em
+									> .integer
+										font-size: 1.4em
+										color: darkslategray
+									> .fraction
+										font-size: 1.2em
+										color: slategray
+										padding-bottom: 0.03em
+								&.b
+									flex: 0 1 auto
+									padding-left: 1em
+									padding-bottom: 0.25em
+									text-decoration: line-through
+									text-decoration-color: darkslategray
+									> .integer
+										font-size: 1em
+										color: slategray
+									> .fraction
+										font-size: 0.8em
+										color: slategray
+										padding-bottom: 0.1em
+							////
+							&.equal
+								> .value.b > div
+									display: none
+						// }}}
+					&.c
+						flex-grow: var(--c-size)
+						> .actions // {{{
+							////
+							--height: calc(var(--item-y) * var(--c-size) / 100)
+							////
+							font-size: calc(0.4 * var(--height))
+							padding-left:  var(--pad)
+							padding-right: var(--pad)
+							display: flex
+							flex-direction: row
+							gap: 2px
+							> button
+								flex: 1 1 0
+								&.add-to-cart
+									max-width: calc(8px + var(--height))
+									padding-top:    6px
+									padding-bottom: 6px
+									> svg
+										width:  auto
+										height: 100%
+						// }}}
+				// loaded
+				&.v
+					> .section
+						// display a small border
+						border-style: solid;
+						border-color: gainsboro;
+						border-width: 1px;
+						//border-right-width:  1px;
+						//border-bottom-width: 1px;
+						> div
+							// don't display anything else
+							display: none;
+			// }}}
+			> svg // {{{
+				display: block
+				width:  100%
+				height: 100%
+			// }}}
+			// constructed
+			&.ready
+				> div
+					display: flex
+				> svg
+					display: none
 // }}}
 .sm-blocks.paginator // {{{
-	// configuration
-	--width: calc(1.35 * var(--height))
-	// ===
-	width:  100%
+	width: 100%
 	height: calc(8px + var(--height))
 	padding: 4px 0 4px 0
 	display: flex
-	flex-direction:  row
+	flex-direction: row
+	align-items: stretch
 	justify-content: center
 	> div
+		font-size: var(--sm-blocks-height) // base sizes
 		flex: 0 0 auto
 		width: auto
-		//max-width: 10000px
+		height: 100%
 		display: flex
 		flex-direction: row
+		align-items: stretch
 		touch-action: none
-		/*===*/
+		> div
+			flex: 1 0 0
 		> .goto // {{{
-			flex: 1 1 0
-			max-width: calc(2px + var(--width))
-			> button
-				width:  100%
-				height: 100%
-				border: 1px solid silver
-				border-radius: 2px
-				background-color: gainsboro
-				box-shadow: inset 0 0 10px 0 silver
-				touch-action: none
-				&:hover
-					border-color: darkslategray
-				&:active,
-				&:focus
-					background-color: silver
-					border-color: darkslategray
-					box-shadow: inset 0 0 0 1px white
-			////
-			&.P
-				padding-left: 2px
-			&.N
-				padding-right: 2px
-			&.FN.active,
-			&.PN.active
-				padding-top:    2px
-				padding-bottom: 2px
+			max-width: 1.05em
+			// previous-next
+			&.PN
+				// spacing for svg icon scaling
 				> button
-					background-color: black
-					padding: 4px
+					padding: 0.25em 0 0.25em 0
 					> svg
-						fill: white
+						width:  auto
+						height: 100%
+				// fast forward/backward state
+				&.active > button
+					padding: 0
+			// both FL and PN are present
+			&.both
+				// first-next/previous-last spacing
+				&.P
+					padding-left:  0.05em
+				&.N
+					padding-right: 0.05em
 		// }}}
 		> .sep // {{{
-			flex: 1 0 0
-			max-width: 8px
-			padding: 2px 0 2px 0
+			max-width: 0.19em
+			padding: 0.02em 0 0.02em 0
 			> svg
 				fill: silver
-			////
+			// left-right
 			&.L
 				padding-left:  0
 			&.R
@@ -561,145 +558,132 @@ WebSafeFontMono = Consolas, Courier, monospace
 		// }}}
 		> .range // {{{
 			////
-			--count: 0
-			--max-width: calc(2px + (1+var(--count)) * var(--width))
-			--page-size: var(--width)
+			// configuration
+			--count: 0 // number of page buttons
+			--page-size: 1.34em
+			// range must fit all buttons and 2 gaps,
+			// minimal space that gaps may take equals to 1 page button by default
+			font-size: var(--page-size)
+			max-width: calc(1em + 1em * var(--count))
 			////
-			flex:  1 0 0
-			width: 10000px
-			max-width: var(--max-width)
 			display: flex
-			flex-direction:  row
-			justify-content: center
+			flex-direction:  row // horizontal by default
+			justify-content: center // alignment (plenty of space)
+			// elements are not displayed by default,
+			// visibility is determined by range state
 			> div
 				display: none
-			> div.v
-				display: block
+				&.v
+					display: block
 			////
 			> .gap
-				flex: 0 100 0
-				min-width: calc(0.25 * var(--width))
-				padding: 2px 0 2px 0
+				flex: 0 100 0 // shrink only, by default
+				min-width: 0.25em // exact minimal
+				padding: 0.02em 0 0.02em 0
 				> svg
-					fill: silver
-			////
+					fill: gainsboro
 			> .page
-				flex: 0 0 0
-				min-width: var(--page-size)
-				padding: 2px 1px 2px 1px
+				flex: 0 0 0 // fixed (size controlled automatically)
+				min-width: 1em // exact base
+				padding: 0.035em 1px 0.035em 1px
+				> button
+					color: darkslategray
+					//font-size: 0.28em
+					font-size: var(--font-size)
+				// first-last pages
 				&.F
-					padding-left: 0
+					padding-left:  0
 				&.L
 					padding-right: 0
-				////
-				> button
-					display: flex
-					align-items: center
-					justify-content: center
-					width:   100%
-					height:  100%
-					border-width: 1px
-					border-style: solid
-					border-color: silver
-					border-radius: 2px
-					background-color: gainsboro
-					box-shadow: inset 0 0 10px 0 silver
-					text-decoration: none
-					touch-action: none // pointer events only
-					&:hover
-						font-weight: bolder
-						border-color: darkslategray
-						color: slategray
-					&:active,
-					&:focus
-						font-weight: bolder
-						background-color: silver
-						border-color: darkslategray
-						color: slategray
-						box-shadow: inset 0 0 0 1px white
 				// selected page
 				&.x
-					min-width: calc(2px + var(--page-size))
-					padding-top:    2px
-					padding-bottom: 2px
+					min-width: 1.15em
+					padding-top: 0
+					padding-bottom: 0
 					> button
-						font-size: 1.4em
+						font-size: calc(1.25 * var(--font-size))
 						border-color: black
 						background-color: black
+						color: alpha(white, 1)
 						cursor: grab
 						&:hover
-							color: lightslategray
-						&:active,
-						&:focus
-							box-shadow: inset 0 0 1px 1px white
-			/*===*
+							color: alpha(white, 0.5)
+						&:focus,
+						&:active
+							color: alpha(white, 1)
+							box-shadow: inset 0 0 0.1em 0.1em white
+			// range without gaps
 			&.nogap
-				// range without gaps
-				// reduced size
-				--max-width: calc(2px + var(--count) * var(--width))
-				// dragging is not possible
+				// only page buttons
+				//--max-width: calc(var(--count) * 1em)
+				max-width: calc(1em * var(--count))
+				min-width: calc(1em + 1em * var(--count))
+				// dragging is not possible by default
 				> .page.x > button
 					cursor: default
+			/*===*
 			&.active.drag
 				// current page is being dragged
 				cursor: grabbing
 			/*===*/
 		// }}}
-		/*===*/
-	&.v > div
-		/*===*/
-		&.flexy // {{{
-			width: 100%
-			> .range
-				width:     100%
-				max-width: 100%
-				> .gap
-					padding: 2px 1px 2px 1px
-				&.active > .gap > svg
-					fill: silver
-				&.nogap > .page
-					flex-grow: 1
-		// }}}
-		&.nosep // {{{
-			> .goto
-				&.P
-					padding-right: 1px
-				&.N
-					padding-left: 1px
-		// }}}
-		&.v // {{{
-			> .goto > button > svg
-				fill: slategray
-			> .range
-				> .gap > svg
-					fill: silver
-				> .page
-					> button
-						color: black
-					&.x > button
-						color: white
-			&.flexy
-				> .range > .gap > svg
-					fill: gainsboro
-				> .range.active > .gap > svg
-					fill: silver
-			&.hovered
-				> .sep > svg
-					fill: slategray
-		// }}}
-		/*===*/
-	/**/
+	// constructed
+	&.v
+		> div
+			font-size: var(--height)
+			&.flexy // {{{
+				width: 100%
+				> .range
+					width: 100%
+					max-width: 100%
+					// custom spacing
+					> .gap
+						padding: 0.025em 0 0.025em 0
+					// flexy nogap mode allows dragging,
+					// page buttons are stretched
+					&.nogap > .page
+						flex-grow: 1
+					// custom range gap when active
+					&.active > .gap > svg
+						fill: silver
+			// }}}
+			&.nosep // {{{
+				> .goto
+					&.P
+						padding-right: 1px
+					&.N
+						padding-left: 1px
+			// }}}
+			&.v // {{{
+				> .goto
+					> button > svg
+						fill: slategray
+					&.active
+						> button
+							background-color: black
+							> svg
+								fill: white
+				> .range
+					> .gap > svg
+						fill: silver
+				&.flexy
+					> .range > .gap > svg
+						fill: gainsboro
+					> .range.active > .gap > svg
+						fill: silver
+				&.hovered
+					> .sep > svg
+						fill: slategray
+			// }}}
 // }}}
 .sm-blocks.main-section.category-filter // {{{
-	////
 	.item
 		> .title
 			> button.checkbox
-				flex: 0 0 0
 				order: 0
-				min-width: 2.2em
-				height: 100%
-				padding: 0 0.4em 0 0
+				flex: 0 0 0
+				min-width: 1em
+				padding: 0 0.2em 0 0
 				> svg
 					background-color: alpha(gainsboro, 0.2)
 					border: 1px solid slategray
@@ -707,7 +691,8 @@ WebSafeFontMono = Consolas, Courier, monospace
 					fill: transparent
 					stroke: transparent
 		> .section
-			padding: 0 0 0 0.6em
+			// shift child sections to the right
+			padding: 0 0 0 0.2em
 		//===
 		&.v
 			//=== CLOSED {{{
@@ -772,10 +757,10 @@ WebSafeFontMono = Consolas, Courier, monospace
 						> h3
 							color: alpha(darkslateblue, 0.8)
 			// }}}
-		////
-	> .item
+	// rootBox
+	> div.item
 		> .section
-			padding: 4px 0 4px 0
+			padding: 2px 0 2px 4px
 // }}}
 .sm-blocks.price-filter // {{{
 	// root
@@ -786,6 +771,7 @@ WebSafeFontMono = Consolas, Courier, monospace
 	> div
 		width:  100%
 		height: 100%
+		padding: 0 4px 0 4px
 		display: flex
 		flex-direction: row
 		align-items: center
@@ -815,7 +801,7 @@ WebSafeFontMono = Consolas, Courier, monospace
 					position:  absolute
 					top:       0
 					width:     100%
-					font-family: WebSafeFontSans
+					font-family: WebSafeFontUI
 					font-size:   0.8em
 					font-weight: bold
 					padding: 0.2em 0 0 0

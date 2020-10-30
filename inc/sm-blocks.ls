@@ -4,12 +4,12 @@ smBlocks = do ->
 	# helpers {{{
 	###
 	# TODO
-	# - NEW STRUCTURE REFACTORING!!!!!!!!!!!!!
+	# - refactor master blocks (conform supervisor)
 	# - determine optimal height for paginator/orderer (CSS)
-	# - lock -1/0/1
 	# - category count display (extra)
 	# - static paginator max-width auto-calc
 	# - grid's goto next page + scroll up (?)
+	# - unify "sm-blocks" selector prefix
 	###
 	consoleError = (msg) !-> # {{{
 		a = '%csm-blocks: %c'+msg
@@ -19,42 +19,45 @@ smBlocks = do ->
 		a = '%csm-blocks: %c'+msg
 		console.log a, 'font-weight:bold;color:slateblue', 'color:aquamarine'
 	# }}}
-	newPromise = -> # {{{
-		# create a custom promise
+	newPromise = (id = -1) -> # {{{
+		# create promise
 		r = null
 		p = new Promise (resolve) !->
 			r := resolve
-		# create a resolver
-		p.pending = true
+		# create resolver
+		p.pending = id
 		p.resolve = (data) !->
-			p.pending = false
+			p.pending = 0
 			r data
-		# create a continuator
-		p.spin = ->
+		# create spinner
+		p.spin = (data) ->
+			# resolve current
+			p.resolve data
 			# create another
 			a = newPromise!
-			# resolve
-			p.pending = false
-			r!
-			# replace
+			# replace current with another
 			p.resolve = a.resolve
 			p.spin    = a.spin
-			# done
 			return a
 		# done
 		return p
 	# }}}
-	newDelay = (ms) -> # {{{
+	newDelay = (ms = 0) -> # {{{
 		# create custom promise
 		p = newPromise!
+		r = p.resolve
 		# start timer
 		t = setTimeout !->
-			p.resolve true
+			r true
 		, ms
-		# add cancellation
-		p.cancel = !->
+		# replace resolver
+		p.resolve = (flag = true) !->
 			clearTimeout t
-			p.resolve false
+			r flag
+		# create cancellator
+		p.cancel = (flag = false) !->
+			clearTimeout t
+			r flag
 		# done
 		return p
 	# }}}
@@ -455,7 +458,11 @@ smBlocks = do ->
 				# }}}
 			###
 			Block.prototype =
-				init: ->> # {{{
+				init: (title) ->> # {{{
+					# set default title
+					if title and not (a = @rootItem.title.firstChild).textContent
+						a.textContent = title
+					# attach events and complete
 					@rootItem.attach!
 					@root.classList.add 'v'
 					return true
@@ -496,278 +503,8 @@ smBlocks = do ->
 				return new Block node, state
 		# }}}
 		productCard: do -> # {{{
-			###
-			Image = (block) !-> # {{{
-				###
-				@block = block
-				@box   = a = document.createElement 'div'
-				@img   = b = document.createElement 'img'
-				###
-				b.alt = 'product'
-				b.addEventListener 'load', @loaded!
-				a.appendChild b
-			###
-			Image.prototype =
-				loaded: -> !~> # {{{
-					# prepare
-					img = block.data.value
-					# check image successfully loaded
-					if img.complete and img.naturalWidth != 0
-						block.data.loaded!
-				# }}}
-				set: (data) !-> # {{{
-					# get related data
-					if data = data.image
-						# prepare
-						img = @data.value
-						# set image attributes
-						for a,b of data
-							img[a] = b
-				# }}}
-				clear: !-> # {{{
-					# clear image attributes
-					a = @data.value
-					a.srcset = a.src = ''
-					@data.unloaded!
-				# }}}
-			# }}}
-			Title = (block) !-> # {{{
-				###
-				@block = block
-			###
-			Title.prototype =
-				set: (data) !-> # {{{
-					# apply automatic break-lines feature,
-					# using special markers
-					a = data.name.replace /\s+([\\\|/.]){1}\s+/, "\n"
-					# set text content
-					@data.container.innerText = a
-					@data.loaded!
-				# }}}
-				clear: !-> # {{{
-					# remove text
-					@data.container.innerText = ''
-					@data.unloaded!
-				# }}}
-			# }}}
-			Price = do -> # {{{
-				map = [ # {{{
-					'.currency'
-					'.dot'
-					'.r0'
-					'.r1'
-					'.c0'
-					'.c1'
-				]
-				expThousandSplit = /\B(?=(\d{3})+(?!\d))/
-				expValueSplit = /[^0-9]/
-				# }}}
-				set = (data) !-> #  # {{{
-					# prepare
-					v = @data.value
-					c = gridState.config.currency # :|
-					# check
-					if d = data.price # [regular_price,price]
-						# split decimal parts
-						a = d.0.split expValueSplit, 2
-						b = d.1.split expValueSplit, 2
-						# truncate mantissa
-						a.1 = if a.1
-							then (a.1.substring 0, c.3).padEnd c.3, '0'
-							else '0'.repeat c.3
-						b.1 = if b.1
-							then (b.1.substring 0, c.3).padEnd c.3, '0'
-							else '0'.repeat c.3
-						# split thousands
-						if c.2
-							a.0 = a.0.replace expThousandSplit, c.2
-							b.0 = b.0.replace expThousandSplit, c.2
-						# map data
-						c = [c.0, c.1, a.0, a.1, b.0, b.1]
-						# set values
-						for n,i in @data.value when n
-							n.forEach (n) !->
-								n.textContent = c[i]
-						# compose full values (dot notation strings)
-						c = a.0 + '.' + a.1
-						d = b.0 + '.' + b.1
-						# set states
-						# the difference class
-						if c != d
-							# compare and set
-							@data.container.classList.add if c > d
-								then 'lower'
-								else 'higher'
-						# currency sign position
-						if gridState.config.currency.4 # :|
-							# right (the default is left)
-							@data.container.classList.add 'right'
-					else
-						# no price specified
-						@data.container.classList.add 'none'
-					# complete
-					@data.loaded!
-				# }}}
-				cls = !-> # {{{
-					# clear values
-					for n,i in @data.value when n
-						n.forEach (n) !->
-							n.textContent = ''
-					# done
-					@data.unloaded!
-				# }}}
-				return (node) ->
-					# create a block
-					a = new Box node
-					# get elements
-					e = map.map (e) ->
-						e = [...node.querySelectorAll e]
-						return if e.length
-							then e
-							else null
-					# check
-					if (e.every (e) -> e == null)
-						e = null
-					# initialize
-					a.data = new Data node, e
-					a.set  = set
-					a.cls  = cls
-					# done
-					return a
-			# }}}
-			Actions = do -> # {{{
-				map = [ # {{{
-					'.link'
-					'.cart'
-				]
-				# }}}
-				set = (data) !-> # {{{
-					# prepare
-					c = @data.config = []
-					e = @data.value
-					s = data.stock
-					# set links
-					e.0 and e.0.forEach (e) !->
-						e.href = data.link
-					# set add-to-carts
-					e.1 and e.1.forEach (e, i) !->
-						# check if product available
-						if s.status != 'instock'
-							e.classList.add 'none'
-							return
-						# check stock count and
-						# set initial button state
-						x = mCart.get data.id
-						if s.count == 0 or (x and s.count <= x.quantity)
-							e.disabled = true
-						# create event handler and
-						# store it for later removal
-						c[i] = f = (a) !->>
-							# prepare
-							a.preventDefault!
-							e.disabled = true
-							# add simple single product to cart
-							if not (a = await mCart.add data.id)
-								return
-							# reload cart items and
-							# check if more items may be added
-							if not await mCart.load!
-								return
-							x = mCart.get data.id
-							if not x or s.count <= x.quantity
-								return
-							# unlock
-							e.disabled = false
-						# set it
-						e.addEventListener 'click', f
-					# complete
-					@data.loaded!
-				# }}}
-				cls = !-> # {{{
-					# prepare
-					c = @data.config
-					e = @data.value
-					# clear links
-					e.0 and e.0.forEach (e) !->
-						e.href = ''
-					# clear add-to-carts
-					e.1 and e.1.forEach (e, i) !->
-						e.removeEventListener 'click', c[i]
-						e.disabled = false
-						e.classList.remove 'none'
-					# done
-					@data.unloaded!
-				# }}}
-				return (node) ->
-					# create a block
-					a = new Box node
-					# get elements
-					e = map.map (e) ->
-						e = [...node.querySelectorAll e]
-						return if e.length
-							then e
-							else null
-					# initialize
-					a.data = new Data node, e
-					a.set  = set
-					a.cls  = cls
-					# done
-					return a
-			###
-			Actions.prototype =
-				add: (id) ->> # {{{
-					# fetch
-					a = await soFetch {
-							func: 'cart'
-							op: 'set'
-							id: id
-					}
-					# check
-					if a instanceof Error
-						return false
-					# TODO: optional, back-compat
-					# send woo-notification
-					# get cart data
-					a = wc_add_to_cart_params.wc_ajax_url.replace '%%endpoint%%', 'get_refreshed_fragments'
-					a = await httpFetch {
-						url: a
-						notNull: true
-					}
-					# check
-					if a instanceof Error
-						return true
-					# notify
-					jQuery document.body .trigger 'added_to_cart', [
-						a.fragments
-						a.cart_hash
-						null
-					]
-					# done
-					return true
-				# }}}
-				get: (id) -> # {{{
-					# check
-					if not data
-						return null
-					# search
-					for a,b of data when b.product_id == id
-						return b
-					# not found
-					return null
-				# }}}
-				load: ->> # {{{
-					# get cart contents
-					a = await soFetch {
-						func: 'cart'
-						op: 'get'
-					}
-					# check
-					if a instanceof Error
-						return null
-					# done
-					return data = a
-				# }}}
-			# }}}
+			init  = newPromise!
+			sizes = null # dimensions of card elements
 			template = !-> # {{{
 				/*
 				<div>
@@ -780,84 +517,406 @@ smBlocks = do ->
 						</div>
 					</div>
 					<div class="section b">
-						<div class="title"><div></div></div>
-					</div>
-					<div class="section c">
+						<div class="title"><div><span></span></div></div>
 						<div class="price">
-							<div class="previous">
-								<span class="r0"></span>
-								<span class="dot"></span>
-								<span class="r1"></span>
+							<div class="currency"><span></span></div>
+							<div class="value a">
+								<div class="integer"><span></span></div>
+								<div class="fraction"><span></span><span></span></div>
 							</div>
-							<div class="current">
-								<div class="currency"></div>
-								<div class="value c0">0</div>
-								<div class="mantissa">
-									<span class="dot"></span>
-									<span class="c1">00</span>
-								</div>
+							<div class="value b">
+								<div class="integer"><span></span></div>
+								<div class="fraction"><span></span><span></span></div>
 							</div>
 						</div>
-						<div class="actions">
+					</div>
+					<div class="section c">
+						<div class="actions sm-buttons">
+							<button type="button" class="open"></button>
 							<button type="button" class="add-to-cart">
 								<svg preserveAspectRatio="none" viewBox="0 0 446.843 446.843">
 									<path d="M444.09 93.103a14.343 14.343 0 00-11.584-5.888H109.92c-.625 0-1.249.038-1.85.119l-13.276-38.27a14.352 14.352 0 00-8.3-8.646L19.586 14.134c-7.374-2.887-15.695.735-18.591 8.1-2.891 7.369.73 15.695 8.1 18.591l60.768 23.872 74.381 214.399c-3.283 1.144-6.065 3.663-7.332 7.187l-21.506 59.739a11.928 11.928 0 001.468 10.916 11.95 11.95 0 009.773 5.078h11.044c-6.844 7.616-11.044 17.646-11.044 28.675 0 23.718 19.298 43.012 43.012 43.012s43.012-19.294 43.012-43.012c0-11.029-4.2-21.059-11.044-28.675h93.776c-6.847 7.616-11.048 17.646-11.048 28.675 0 23.718 19.294 43.012 43.013 43.012 23.718 0 43.012-19.294 43.012-43.012 0-11.029-4.2-21.059-11.043-28.675h13.433c6.599 0 11.947-5.349 11.947-11.948s-5.349-11.947-11.947-11.947H143.647l13.319-36.996c1.72.724 3.578 1.152 5.523 1.152h210.278a14.33 14.33 0 0013.65-9.959l59.739-186.387a14.33 14.33 0 00-2.066-12.828zM169.659 409.807c-10.543 0-19.116-8.573-19.116-19.116s8.573-19.117 19.116-19.117 19.116 8.574 19.116 19.117-8.573 19.116-19.116 19.116zm157.708 0c-10.543 0-19.117-8.573-19.117-19.116s8.574-19.117 19.117-19.117c10.542 0 19.116 8.574 19.116 19.117s-8.574 19.116-19.116 19.116zm75.153-261.658h-73.161V115.89h83.499l-10.338 32.259zm-21.067 65.712h-52.094v-37.038h63.967l-11.873 37.038zm-146.882 0v-37.038h66.113v37.038h-66.113zm66.113 28.677v31.064h-66.113v-31.064h66.113zm-161.569-65.715h66.784v37.038h-53.933l-12.851-37.038zm95.456-28.674V115.89h66.113v32.259h-66.113zm-28.673-32.259v32.259h-76.734l-11.191-32.259h87.925zm-43.982 126.648h43.982v31.064h-33.206l-10.776-31.064zm167.443 31.065v-31.064h42.909l-9.955 31.064h-32.954z"/>
 								</svg>
 							</button>
-							<button type="button" class="go-to-product"></button>
 						</div>
 					</div>
 				</div>
 				*/
 			# }}}
-			###
+			Items = (block) !-> # {{{
+				# {{{
+				# create object shape
+				@image   = new @image block
+				@title   = new @title block
+				@price   = new @price block
+				@actions = new @actions block
+				# initialize
+				do ~>>
+					# wait variables initialized
+					await init
+					# check container's aspect ratio,
+					# assuming that image item takes all,
+					# first section's space (gaps doesn't break ration), and
+					# determine optimal display variant (class)
+					if sizes.0 < 1
+						# vertical is smaller than horizontal,
+						# stretch image by [h]eight and
+						# unleash automatic browser's width calculation
+						@image.box.classList.add 'h'
+					else
+						# vertical is bigger than horizontal,
+						# stretch image by [w]idth and
+						# unleash automatic browser's height calculation
+						@image.box.classList.add 'w'
+					# now, loaded image (if any) may show up
+					@image.ready.resolve!
+				# }}}
+			Items.prototype =
+				### a
+				image: do -> # {{{
+					Item = (block) !->
+						@block  = block
+						@box    = box = block.rootBox.querySelector '.image'
+						@image  = box.firstChild
+						@ready  = newPromise!
+						@loaded = false
+						@load   = ~>> # {{{
+							# check image successfully loaded and valid
+							if @image.complete and \
+							   @image.naturalWidth >= 1 and \
+							   @image.naturalHeight >= 1
+								###
+								await @ready
+								@box.classList.add 'v'
+								@loaded = true
+							# done
+							return true
+						# }}}
+					###
+					Item.prototype =
+						set: (data) -> # {{{
+							# check
+							if not data.image
+								return true
+							# set handler
+							@image.addEventListener 'load', @load
+							# set image attributes
+							for a,b of data.image
+								@image[a] = b
+							# done
+							return true
+						# }}}
+						clear: !-> # {{{
+							@image.removeEventListener 'load', @load
+							if @loaded
+								@box.classList.remove 'v'
+								@image.className = ''
+								@image.src = ''
+								@loaded = false
+						# }}}
+					###
+					return Item
+				# }}}
+				### b
+				title: do -> # {{{
+					Item = (block) !->
+						@block = block
+						@box   = box = block.rootBox.querySelector '.title'
+						@title = box.firstChild
+					###
+					eBreakMarkers = /\s+([\\\|/.]){1}\s+/
+					Item.prototype =
+						set: (data) -> # {{{
+							# check
+							if not (data = data.title)
+								return true
+							# break title into lines
+							data = data.replace eBreakMarkers, "\n"
+							# TODO: check it fits the container height and
+							# TODO: cut string if required
+							# set
+							@title.firstChild.textContent = data
+							# done
+							return true
+						# }}}
+						clear: !-> # {{{
+							@title.firstChild.textContent = ''
+						# }}}
+					###
+					return Item
+				# }}}
+				price: do -> # {{{
+					Item = (block) !->
+						@block    = block
+						@box      = box = block.rootBox.querySelector '.price'
+						@currency = querySelectorChild box, '.currency'
+						@boxes    = box = [
+							querySelectorChild box, '.value.a' # current
+							querySelectorChild box, '.value.b' # regular
+						]
+						@values   = [
+							box.0.children.0 # integer
+							box.0.children.1 # fraction
+							box.1.children.0
+							box.1.children.1
+						]
+						@money    = [0,0] # integers (no fraction)
+					###
+					eBreakThousands = /\B(?=(\d{3})+(?!\d))/
+					eNotNumber = /[^0-9]/
+					Item.prototype =
+						set: (data) -> # {{{
+							# check
+							if not (data = data.price)
+								return true
+							# get global config
+							if not (cfg = @block.master.cfg.currency)
+								return false
+							# split numbers [regular,current] into integer and fraction
+							b = data.0.split eNotNumber, 2
+							a = data.1.split eNotNumber, 2
+							# truncate fraction point
+							a.1 = if a.1
+								then (a.1.substring 0, cfg.3).padEnd cfg.3, '0'
+								else '0'.repeat cfg.3
+							b.1 = if b.1
+								then (b.1.substring 0, cfg.3).padEnd cfg.3, '0'
+								else '0'.repeat cfg.3
+							# determine money values
+							c = @money
+							d = +('1' + ('0'.repeat cfg.3))
+							c.0 = d*(+(a.0)) + (+a.1)
+							c.1 = d*(+(b.0)) + (+b.1)
+							# separate integer thousands
+							if cfg.2
+								a.0 = a.0.replace eBreakThousands, cfg.2
+								b.0 = b.0.replace eBreakThousands, cfg.2
+							# set values
+							@currency.firstChild.textContent = cfg.0
+							c = @values
+							c.0.firstChild.textContent = a.0
+							c.1.firstChild.textContent = cfg.1
+							c.1.lastChild.textContent  = a.1
+							c.2.firstChild.textContent = b.0
+							c.3.firstChild.textContent = cfg.1
+							c.3.lastChild.textContent  = b.1
+							# set styles
+							# price difference
+							c = @money
+							d = if c.0 == c.1
+								then 'equal'
+								else if c.0 > c.1
+									then 'lower'
+									else 'higher'
+							@box.classList.add d
+							# currency sign position
+							d = if cfg.4
+								then 'right'
+								else 'left'
+							@box.classList.add d
+							# done
+							@box.classList.add 'v'
+							return true
+						# }}}
+						clear: !-> # {{{
+							@box.className = 'price'
+						# }}}
+					###
+					return Item
+				# }}}
+				### c
+				actions: do -> # {{{
+					Item = (block) !->
+						@block   = block
+						@box     = box = block.rootBox.querySelector '.actions'
+						@buttons = b = [
+							box.querySelector '.add-to-cart'
+							box.querySelector '.open'
+						]
+						# initialize
+						a = block.master.cfg.locale.product.0
+						b.1.textContent = a
+					###
+					Item.prototype =
+						set: (data) -> # {{{
+							/***
+							# prepare
+							c = @data.config = []
+							e = @data.value
+							s = data.stock
+							# set links
+							e.0 and e.0.forEach (e) !->
+								e.href = data.link
+							# set add-to-carts
+							e.1 and e.1.forEach (e, i) !->
+								# check if product available
+								if s.status != 'instock'
+									e.classList.add 'none'
+									return
+								# check stock count and
+								# set initial button state
+								x = mCart.get data.id
+								if s.count == 0 or (x and s.count <= x.quantity)
+									e.disabled = true
+								# create event handler and
+								# store it for later removal
+								c[i] = f = (a) !->>
+									# prepare
+									a.preventDefault!
+									e.disabled = true
+									# add simple single product to cart
+									if not (a = await mCart.add data.id)
+										return
+									# reload cart items and
+									# check if more items may be added
+									if not await mCart.load!
+										return
+									x = mCart.get data.id
+									if not x or s.count <= x.quantity
+										return
+									# unlock
+									e.disabled = false
+								# set it
+								e.addEventListener 'click', f
+							/***/
+							# done
+							return true
+						# }}}
+						clear: !-> # {{{
+							true
+							/***
+							# prepare
+							c = @data.config
+							e = @data.value
+							# clear links
+							e.0 and e.0.forEach (e) !->
+								e.href = ''
+							# clear add-to-carts
+							e.1 and e.1.forEach (e, i) !->
+								e.removeEventListener 'click', c[i]
+								e.disabled = false
+								e.classList.remove 'none'
+							/***/
+						# }}}
+						addToCart: (id) ->> # {{{
+							# fetch
+							a = await soFetch {
+									func: 'cart'
+									op: 'set'
+									id: id
+							}
+							# check
+							if a instanceof Error
+								return false
+							# TODO: optional, back-compat, remove it
+							# send woo-notification
+							# get cart data
+							a = wc_add_to_cart_params.wc_ajax_url.replace '%%endpoint%%', 'get_refreshed_fragments'
+							a = await httpFetch {
+								url: a
+								notNull: true
+							}
+							# check
+							if a instanceof Error
+								return true
+							# notify
+							jQuery document.body .trigger 'added_to_cart', [
+								a.fragments
+								a.cart_hash
+								null
+							]
+							# done
+							return true
+						# }}}
+						getProduct: (id) -> # {{{
+							# check
+							if not data
+								return null
+							# search
+							for a,b of data when b.product_id == id
+								return b
+							# not found
+							return null
+						# }}}
+					###
+					return Item
+				# }}}
+			# }}}
 			Block = (master) !-> # {{{
 				# construct
+				# create root
 				R = document.createElement 'div'
-				R.className = 'sm-blocks-product-card'
+				R.className = 'product'
 				R.innerHTML = template
-				# reuse master's placeholder
+				# create placeholder (reuse master)
 				R.appendChild (master.root.children.1.cloneNode true)
 				# create object shape
 				@master  = master
 				@root    = R
 				@rootBox = R.firstChild
+				@id      = -1
+				@items   = new Items @
 			###
 			Block.prototype =
-				init: -> # {{{
-					return true
-				# }}}
-				lock: ->> # {{{
-					return true
-				# }}}
-				refresh: !-> # {{{
-					true
-				# }}}
-				set: (data) !-> # {{{
-					# display item
-					# set data
-					@id = data.id
-					for a of map when @[a]
-						@[a].set data
+				set: (record) -> # {{{
+					# set own
+					@id = record.id
+					# set items
+					a = @items
+					for b of a
+						if not a[b].set record
+							return false
 					# done
-					@node.classList.remove 'empty'
+					@root.classList.add 'ready'
+					return true
 				# }}}
 				clear: !-> # {{{
-					# clear item
-					# remove data
-					for a of map when @[a]
-						@[a].cls!
+					# clear items
+					a = @items
+					for b of a
+						a[b].clear!
 					# done
-					@node.classList.add 'empty'
+					@root.classList.remove 'ready'
 				# }}}
 			# }}}
-			# factory
-			return (root) ->
-				# prepare template
-				if typeof template == 'function'
+			return (m) ->
+				# initialize first
+				if init.pending
 					template := parseTemplate template
 				# create
-				return new Block root
+				m = new Block m
+				# attach to the master
+				m.master.rootBox.appendChild m.root
+				# initialize last
+				if init.pending
+					# read container styles
+					s = getComputedStyle m.root
+					sizes := s = [
+						parseInt (s.getPropertyValue '--a-size')
+						parseInt (s.getPropertyValue '--b-size')
+						parseInt (s.getPropertyValue '--c-size')
+						parseInt (s.getPropertyValue 'padding-left')
+						parseInt (s.getPropertyValue 'padding-right')
+						parseInt (s.getPropertyValue 'padding-top')
+						parseInt (s.getPropertyValue 'padding-bottom')
+					]
+					# determine default item size
+					a = m.master.resizer.sizes
+					b = a.1 - s.5 - s.6
+					a = a.0 - s.3 - s.4
+					# convert relative heights to absolute and
+					# determine aspect ratios
+					s.0 = (b * s.0 / 100) / a
+					s.1 = (b * s.1 / 100) / a
+					s.2 = (b * s.2 / 100) / a
+					# keep default size of the item
+					s.3 = a
+					s.4 = b
+					# complete
+					s.length = 5
+					init.resolve!
+				# done
+				return m
 		# }}}
 	M = # masters
 		'products': do -> # {{{
@@ -874,52 +933,25 @@ smBlocks = do ->
 				###
 				@observer = null    # resize observer
 				@onChange = null    # resize controller callback
-				@resize   = (e) !~> # {{{
-					# prepare
-					B = @block
-					C = B.config.layout
+				@debounce = newDelay!
+				@bounces  = 0
+				@resize   = (e) ~>> # {{{
+					# apply debounce algorithm
+					if @debounce.pending
+						@debounce.cancel (++@bounces == 3)
+					if not await (@debounce = newDelay 100)
+						return false
+					@bounces = 0
 					# get current width of the grid
 					w = if e
 						then e.0.contentRect.width
-						else B.root.clientWidth - @pads.0
+						else @block.root.clientWidth - @pads.0
 					# assuming no size factor applied,
 					# determine current layout
 					[a,b,c,d] = @calculateLayout w, 1
-					/***
-					# determine current layout
-					# columns
-					a = C.2
-					b = @sizes.0
-					c = @gaps.0
-					# check dynamic
-					if a and a < C.0
-						# determine optimal
-						while (d = a*b + (a - 1)*c) <= e and a < C.0
-							++a
-						# check overflow
-						if d > e and a > C.2
-							# decrease and re-calculate
-							--a
-							d = a*b + (a - 1)*c
-						# rows
-						# check dynamic
-						if not (b = C.3)
-							# determine optimal
-							c = C.0 * C.1
-							b = (c / a) .|. 0
-							# fit all items
-							++b if a*b < c
-					else
-						# fixed columns/rows
-						a = C.0
-						b = C.1
-						d = a*b + (a - 1)*c
-					# determine item count
-					c = a * b
-					/***/
 					# determine size factor
-					e = if d > e
-						then e / d # overflow
+					e = if d > w
+						then w / d # overflow
 						else 1     # normal
 					# callback master
 					if @onChange
@@ -929,36 +961,38 @@ smBlocks = do ->
 					# update layout
 					if @layout.0 != a
 						@layout.0 = a
-						B.rootBox.style.setProperty '--columns', a
+						@block.rootBox.style.setProperty '--columns', a
 					if @layout.1 != b
 						@layout.1 = b
-						B.rootBox.style.setProperty '--rows', b
+						@block.rootBox.style.setProperty '--rows', b
 					if (a = @layout.2) != c
 						# store
 						@layout.2 = c
-						# get current items count
-						b = B.items.length
+						# get current items
+						d = @block.items
+						b = d.length
 						# check
 						if c > a
 							# show more items
 							b = c if c < b
 							--a
 							while ++a < b
-								B.items[a].root.classList.add 'v'
+								d[a].root.classList.add 'v'
 						else
 							# show less items
 							a = b if a > b
 							while --a >= c
-								B.items[a].root.classList.remove 'v'
+								d[a].root.classList.remove 'v'
 					# update size factor
-					if not @onChange and (Math.abs (@factor - e)) > 0.01
-						a = B.rootBox.style
-						b = '--sm-blocks-size-factor'
+					if not @onChange and (Math.abs (@factor - e)) > 0.005
+						a = @block.root.style
+						b = '--sm-blocks-factor'
 						if (@factor = e) == 1
 							a.removeProperty b
 						else
 							a.setProperty b, e
 					# done
+					return true
 				# }}}
 			###
 			Resizer.prototype =
@@ -974,7 +1008,7 @@ smBlocks = do ->
 					a.0  = parseInt (s.getPropertyValue 'padding-left')
 					a.0 += parseInt (s.getPropertyValue 'padding-right')
 					a.1  = parseInt (s.getPropertyValue 'padding-top')
-					a.2 += parseInt (s.getPropertyValue 'padding-bottom')
+					a.1 += parseInt (s.getPropertyValue 'padding-bottom')
 					# determine gaps
 					s   = @style
 					a   = @gaps
@@ -1041,13 +1075,13 @@ smBlocks = do ->
 				@root    = root
 				@rootBox = box = root.firstChild
 				@config  = JSON.parse box.dataset.cfg
+				@cfg     = null # global
 				# controls
 				@items   = []
 				@resizer = new Resizer @
 				# state
+				@loaded  = 0
 				@locked  = -1
-				# handlers
-				# ...
 			###
 			Block.prototype =
 				group: 'products'
@@ -1058,20 +1092,22 @@ smBlocks = do ->
 					o.order = @config.orderTag
 				# }}}
 				init: (cfg) -> # {{{
+					# set global config
+					@cfg = cfg
 					# set grid parameters
 					a = @config.layout
 					b = @rootBox.style
 					b.setProperty '--columns', a.0
 					b.setProperty '--rows', a.1
+					# activate resizer
+					@resizer.attach!
 					# create items
 					a = a.0 * a.1
 					b = -1
 					c = @items
 					while ++b < a
-						c[*] = d = @state.f.productCard @
-						@rootBox.appendChild d.root
+						c[*] = @state.f.productCard @
 					# done
-					@resizer.attach!
 					return true
 				# }}}
 				lock: (level) ->> # {{{
@@ -1079,7 +1115,6 @@ smBlocks = do ->
 					c0 = @root.classList
 					c1 = @rootBox.classList
 					###
-					console.log 'products.lock', level
 					if @locked != level
 						if ~level
 							if level
@@ -1099,13 +1134,30 @@ smBlocks = do ->
 					@locked = level
 					return true
 				# }}}
-				notify: -> # {{{
+				notify: (level) -> # {{{
+					# check
+					if level > 0
+						# query parameters changed
+						@lock 1 # loading in progress
+					# done
 					return true
 				# }}}
 				refresh: !-> # {{{
 					true
 				# }}}
 				load: (record, index) -> # {{{
+					# prepare
+					I = @items
+					# check overlap
+					if (a = @loaded) > index
+						# clear items in reverse order
+						while --a >= index
+							I[a].clear!
+					# set product card
+					if not I[index].set record
+						return false
+					# done
+					@loaded = index + 1
 					return true
 				# }}}
 			# }}}
@@ -1421,7 +1473,8 @@ smBlocks = do ->
 				level: 2
 				init: (cfg) ->> # {{{
 					# initialize
-					if not (await @section.init!)
+					cfg = cfg.locale.category.0
+					if not (await @section.init cfg)
 						return false
 					# activate controls
 					@checks.attach!
@@ -2005,7 +2058,8 @@ smBlocks = do ->
 				group: 'price'
 				level: 2
 				init: (cfg) ->> # {{{
-					if not (await @section.init!)
+					# initialize
+					if not (await @section.init cfg.locale.price.title)
 						return false
 					# copy current
 					@current[0 to 4] = @state.data
@@ -2090,34 +2144,32 @@ smBlocks = do ->
 			Control = (block) !-> # {{{
 				# data
 				@block     = block
-				@lock      = null # promise
-				@lockType  = 0    # lock source
-				@dragbox   = []
-				@maxSpeed  = 10   # pages per second
-				@brake     = 15   # pages left before slowdown
+				@lock      = newDelay! # common promise
+				@dragbox   = [
+				]
+				@fastLock  = null
+				@fastCfg   = @fastCfg
 				# handlers
 				@keyDown = (e) !~> # {{{
+					# prepare
+					B = @block
 					# check requirements
-					if @lock or @block.locked or \
-						not @block.range.mode
-						###
+					if B.locked or not B.range.mode or @lock.pending
 						return
 					# check key-code
 					switch e.code
 					case <[ArrowLeft ArrowDown]>
 						# fast-backward
-						# get node
-						a = @block.gotos.btnPN.0
-						# start
-						@lockType = 1
-						@fast null, a, false
+						a = if (a = B.gotos.btnPN).length
+							then a.0
+							else null
+						@fastGo null, a, false
 					case <[ArrowRight ArrowUp]>
 						# fast-forward
-						# get node
-						a = @block.gotos.btnPN.1
-						# start
-						@lockType = 1
-						@fast null, a, true
+						a = if (a = B.gotos.btnPN).length
+							then a.1
+							else null
+						@fastGo null, a, true
 					default
 						return
 					# fulfil event
@@ -2125,7 +2177,7 @@ smBlocks = do ->
 					e.stopPropagation!
 				# }}}
 				@keyUp = (e) !~> # {{{
-					if @lock and @lockType == 1
+					if @lock.pending == 1
 						# fulfil event
 						e.preventDefault!
 						e.stopPropagation!
@@ -2157,91 +2209,99 @@ smBlocks = do ->
 					if e = e.currentTarget
 						e.classList.remove 'hovered'
 				# }}}
-				@wheel = (e) !~> # {{{
+				@goto = (e) !~> # {{{
+					# fulfil event
+					e.preventDefault!
+					e.stopPropagation!
 					# check
-					if @lock or @block.locked or not @block.range.mode
+					if @block.locked or @lock.pending
 						return
-					# fulfil event
-					e.preventDefault!
-					e.stopPropagation!
 					# prepare
-					a = state.data.0
-					if (b = state.data.1 - 1) == 0
+					console.log 'page.click'
+					B = @block
+					S = B.state
+					R = B.range
+					# determine goto variant
+					a = e.currentTarget.parentNode
+					b = a.classList
+					if b.contains 'page'
+						# absolute page number
+						a = R.nPages[R.pages.indexOf a] - 1
+						###
+					else if b.contains 'FL'
+						# absolute
+						if b.contains 'F'
+							# first
+							a = 0
+						else
+							# last
+							a = S.data.1 - 1
+						###
+					else if b.contains 'P'
+						# relative, previous
+						if (a = S.data.0 - 1) < 0
+							a = S.data.1 - 1
+					else
+						# relative, next
+						if (a = S.data.0 + 1) >= S.data.1
+							a = 0
+					# check
+					if a == S.data.0
 						return
-					# determine new index
-					a = a + 1*(Math.sign e.deltaY)
-					if a > b
-						a = 0
-					else if a < 0
-						a = b
-					# update state
-					state.data.0 = a
-					state.master.resolve state
-					for b in blocks
-						b.refresh!
+					# update
+					S.data.0 = a
+					S.change!
 					# done
-					@block.focus!
+					B.refresh!
+					R.focus!
 				# }}}
-				@fastForward = (e) !~> # {{{
+				@fastGoto = (e) ~>> # {{{
 					# fulfil event
 					e.preventDefault!
 					e.stopPropagation!
-					# check requirements
-					if @block.range.mode == 2 and \
-						not @lock and not @block.locked and \
-						e.isPrimary and not e.button
+					# check
+					if not @lock.pending and \
+					   e.isPrimary and not e.button and \
+					   not @block.locked and @block.range.mode == 2
 						###
-						@lockType = 0
-						@fast e.pointerId, e.currentTarget, true
-				# }}}
-				@fastBackward = (e) !~> # {{{
-					# fulfil event
-					e.preventDefault!
-					e.stopPropagation!
-					# check requirements
-					if @block.range.mode == 2 and \
-						not @lock and not @block.locked and \
-						e.isPrimary and not e.button
+						# determine direction
+						a = e.currentTarget
+						b = a == @block.gotos.btnPN.1
+						# start
+						console.log 'fast.start', b
+						@fastGo e, a, b
 						###
-						@lockType = 0
-						@fast e.pointerId, e.currentTarget, false
-				# }}}
-				@fastStop = (e) !~> # {{{
-					# fulfil event
-					e.preventDefault!
-					e.stopPropagation!
-					# unlock
-					if @lock and @lockType == 0
+					else if @lock.pending == 2
+						###
+						# stop
+						console.log 'fast.stop'
 						@lock.resolve!
+					# done
+					return true
 				# }}}
 				@dragStart = (e) ~>> # {{{
 					# fulfil event
 					e.preventDefault!
 					e.stopPropagation!
 					# check requirements
-					if @lock or @block.locked or @block.range.mode != 2 or \
-						not e.isPrimary or e.button or \
-						typeof e.offsetX != 'number'
+					if not e.isPrimary or e.button or typeof e.offsetX != 'number' or \
+					   not @block.locked and @block.range.mode == 2 and \
+					   @lock.pending
 						###
 						return true
-					# prepare
-					B = @block
-					R = B.range
-					# lock
-					@lock = newPromise!
-					@lockType = 2
-					@block.focus!
+					# create new lock
+					@lock = newPromise 3
 					# cooldown
 					await Promise.race [(newDelay 200), @lock]
+					# prevent collisions
 					if not @lock.pending
-						# prevent false startup
-						@lock = null
 						return true
-					# set capture
-					node = @block.range.box
-					node.classList.add 'active', 'drag'
-					if not node.hasPointerCapture e.pointerId
-						node.setPointerCapture e.pointerId
+					# prepare
+					(R = @block.range).focus!
+					# capture pointer
+					R.box.classList.add 'active', 'drag'
+					if not R.box.hasPointerCapture e.pointerId
+						R.box.setPointerCapture e.pointerId
 					# PIXEL PERFECT:
 					# calculate dragbox parameters
 					# {{{
@@ -2300,9 +2360,9 @@ smBlocks = do ->
 					@lockType = 3
 					await @lock
 					# release capture
-					if node.hasPointerCapture e.pointerId
-						node.releasePointerCapture e.pointerId
-					node.classList.remove 'active', 'drag'
+					if R.box.hasPointerCapture e.pointerId
+						R.box.releasePointerCapture e.pointerId
+					R.box.classList.remove 'active', 'drag'
 					# update global state
 					if not @block.locked and a != state.data.0
 						state.master.resolve state
@@ -2312,6 +2372,14 @@ smBlocks = do ->
 					@lock.resolve!
 					@lock = null
 					return true
+				# }}}
+				@dragStop = (e) !~> # {{{
+					# fulfil event
+					e.preventDefault!
+					e.stopPropagation!
+					# operate
+					if @lock.pending == 3
+						@lock.resolve!
 				# }}}
 				@drag = (e) !~> # {{{
 					# fulfil event
@@ -2359,61 +2427,33 @@ smBlocks = do ->
 					state.data.0 = a
 					@block.refresh!
 				# }}}
-				@dragStop = (e) !~> # {{{
+				@wheel = (e) !~> # {{{
+					# check
+					if @lock or @block.locked or not @block.range.mode
+						return
 					# fulfil event
 					e.preventDefault!
 					e.stopPropagation!
-					# unlock
-					if @lock and @lockType in [2 3]
-						@lock.resolve!
-				# }}}
-				@goto = (e) !~> # {{{
 					# prepare
-					B = @block
-					S = B.state
-					R = B.range
-					# fulfil event
-					e.preventDefault!
-					e.stopPropagation!
-					# check
-					if @lock or B.locked or not R.mode
+					a = state.data.0
+					if (b = state.data.1 - 1) == 0
 						return
-					# determine goto variant
-					a = e.currentTarget.parentNode
-					b = a.classList
-					if b.contains 'page'
-						# absolute page number
-						a = R.nPages[R.pages.indexOf a] - 1
-						###
-					else if b.contains 'FL'
-						# absolute
-						if b.contains 'F'
-							# first
-							a = 0
-						else
-							# last
-							a = S.data.1 - 1
-						###
-					else if b.contains 'P'
-						# relative, previous
-						if (a = S.data.0 - 1) < 0
-							a = S.data.1 - 1
-					else
-						# relative, next
-						if (a = S.data.0 + 1) >= S.data.1
-							a = 0
-					# check
-					if a == S.data.0
-						return
-					# update
-					S.data.0 = a
-					S.change!
+					# determine new index
+					a = a + 1*(Math.sign e.deltaY)
+					if a > b
+						a = 0
+					else if a < 0
+						a = b
+					# update state
+					state.data.0 = a
+					state.master.resolve state
+					for b in blocks
+						b.refresh!
 					# done
-					B.refresh!
-					B.focus!
+					@block.focus!
 				# }}}
 			###
-			Control.prototype = {
+			Control.prototype =
 				attach: !-> # {{{
 					# prepare
 					B = @block
@@ -2435,12 +2475,10 @@ smBlocks = do ->
 						a.1.addEventListener 'click', @goto
 					# prev-next
 					if a = B.gotos.btnPN
-						#a.0.addEventListener 'pointerdown', @fastBackward
-						#a.0.addEventListener 'pointerup', @fastStop
-						a.0.addEventListener 'click', @goto
-						#a.1.addEventListener 'pointerdown', @fastForward
-						#a.1.addEventListener 'pointerup', @fastStop
-						a.1.addEventListener 'click', @goto
+						a.0.addEventListener 'pointerdown', @fastGoto
+						a.0.addEventListener 'pointerup', @fastGoto
+						a.1.addEventListener 'pointerdown', @fastGoto
+						a.1.addEventListener 'pointerup', @fastGoto
 					# range
 					for a,b in R.pages
 						a.firstChild.addEventListener 'click', @goto
@@ -2454,132 +2492,104 @@ smBlocks = do ->
 				detach: !-> # {{{
 					true
 				# }}}
-				rangeGotoFunc: (e) !~> # {{{
-					# fulfil event
-					e.preventDefault!
-					e.stopPropagation!
-					# check
-					if @lock or @block.locked or not @block.range.mode
-						return
-					# determine page index
-					if @block.range.mode == 2
-						a = state.data.0 + i
-					else
-						a = if @block.range.first
-							then 1 + i + @block.range.index
-							else i + @block.range.index
-					# check
-					if a == state.data.0
-						return
-					# update state
-					state.data.0 = a
-					state.master.resolve state
-					blocks.forEach (b) -> b.refresh!
-					# done
-					@block.focus!
-				# }}}
-				fast: (id, node, forward) ->> # {{{
-					# get final index
-					if (a = state.data.1) == 1
+				fastGo: (event, btn, step) ->> # {{{
+					# prepare
+					B = @block
+					if (S = B.state).data.1 == 1
 						return false
-					# lock and suspend
-					# to prevent false startups
-					@lock = newPromise!
-					await Promise.race [(newDelay 200), @lock]
-					# calculate initial values
-					if forward
-						inc = 1
-						beg = 0
-						end = a
-					else
-						inc = -1
-						beg = a - 1
-						end = -1
-					a = state.data.0
-					b = inc
-					c = @brake
-					# check unlocked (false startup)
-					if not @lock.pending
-						# check interface type
-						if not id
-							# no pointer means keyboard,
-							# it should move index at least once
-							if (a = state.data.0 + b) == end
-								a = beg
-							# update global state
-							state.data.0 = a
-							state.master.resolve state
-							for b in blocks
-								b.refresh!
-						# release lock
-						@lock = null
-						# complete
-						@block.focus!
+					# create new lock
+					@lock = lock = newPromise if event
+						then 2 # pointer
+						else 1 # keyboard
+					# determine first index
+					step = (step > 0 and 1) or -1
+					if (first = S.data.0 + step) >= S.data.1
+						first = 0
+					else if first < 0
+						first = S.data.1 - 1
+					# goto first
+					S.data.0 = first
+					await @fastUpdate!
+					# cooldown
+					await Promise.race [(newDelay 200), lock]
+					# prevent collisions
+					if not lock.pending
+						S.change!
 						return true
-					# set capture
-					@block.focus!
-					@block.range.box.classList.add 'active'
-					node.parentNode.classList.add 'active'
-					if id != null and not node.hasPointerCapture id
-						node.setPointerCapture id
+					# activate style
+					B.range.box.classList.add 'active'
+					btn.parentNode.classList.add 'active'
+					# capture pointer
+					if event and not btn.hasPointerCapture event.pointerId
+						btn.setPointerCapture event.pointerId
 					# start
-					while @lock.pending
+					a = first
+					b = step
+					c = @fastCfg.1
+					if step > 0
+						beg = 0
+						end = S.data.1
+					else
+						beg = S.data.1 - 1
+						end = -1
+					while lock.pending
 						# increment
 						if (a = a + b) == end
-							# end reached, re-start
+							# range end reached, restart
 							a = beg
-							b = inc
-							c = @brake
-						# update local state
-						state.data.0 = a
-						await @refresh!
+							b = step
+							c = @fastCfg.1
+						# update
+						S.data.0 = a
+						await @fastUpdate!
 						# determine distance left
-						if (d = end - inc - inc*a) <= @brake
+						if (d = end - step - step*a) <= @fastCfg.1
 							# throttle
-							b = inc
+							b = step
 							d = 1000 / (1 + d)
-							await Promise.race [(newDelay d), @lock]
-						else if inc*b < @maxSpeed and --c == 0
+							await Promise.race [(newDelay d), lock]
+						else if step*b < @fastCfg.0 and --c == 0
 							# accelerate
-							b = b + inc
-							c = @brake
+							b = b + step
+							c = @fastCfg.1
+					# complete
 					# release capture
-					if id != null and node.hasPointerCapture id
-						node.releasePointerCapture id if id != null
-					node.parentNode.classList.remove 'active'
-					@block.range.box.classList.remove 'active'
+					if event and btn.hasPointerCapture event.pointerId
+						btn.releasePointerCapture event.pointerId
+					# deactivate style
+					btn.parentNode.classList.remove 'active'
+					B.range.box.classList.remove 'active'
 					# update global state
-					if not @block.locked
-						state.master.resolve state
-						for b in blocks when b != @block
-							b.refresh!
-					# release lock and complete
-					@lock.resolve!
-					await newDelay 60 # omit click event
-					@lock = null
+					if S.data.0 != first
+						S.change!
+					# done
 					return true
 				# }}}
-				refresh: -> # {{{
+				fastUpdate: -> # {{{
 					# prepare
 					a = newPromise!
 					b = @block
-					# compose render sequence
+					# start
 					requestAnimationFrame !->
 						b.refresh!
-						b.focus! if b.range.mode == 2
+						b.range.focus!
 						requestAnimationFrame !->
 							a.resolve!
 					# done
 					return a
 				# }}}
-			}
+				fastCfg:[
+					10,  # pages per second
+					15   # pages before slowdown
+				]
 			# }}}
 			Resizer = (block) !-> # {{{
 				# create object shape
 				@block     = block
 				@rootCS    = getComputedStyle block.root
 				@rootBoxCS = getComputedStyle block.rootBox
-				@rootPads  = [0, 0, 0, 0]
+				###
+				@pads      = [0,0] # container padding
 				@baseSz    = [ # initial
 					0, 0, # 0/1: root-x, root-y
 					0,    #   2: range-x
@@ -2587,159 +2597,146 @@ smBlocks = do ->
 				]
 				@currentSz = [ # calculated
 					0, 0, # 0/1: root-x, root-y
-					0, 0, # 2/3: current-page-x, page-x
-					0     #   4: optimal-page-x
+					0, 0  # 2/3: current-page-x, page-x
 				]
+				@factor    = 1 # relative dynamic axis size
+				###
 				@observer  = null # resize observer
 				@onChange  = null
-				@ready     = false
-				@resize    = (e) !~> # {{{
-					# check
-					if not @ready
-						return
+				@debounce  = newDelay!
+				@bounces   = 0
+				@resize    = (e) ~>> # {{{
+					# apply debounce algorithm
+					if @debounce.pending
+						@debounce.cancel (++@bounces == 3)
+					if not await (@debounce = newDelay 100)
+						return false
+					@bounces = 0
 					# prepare
 					B = @block
 					R = @block.range
-					###
-					# dynamic axis
-					# determine current container size
-					if e
-						# observed
-						w = e.0.contentRect.width
-					else
-						# forced
-						# get total axis padding
-						a = @rootPads
-						a = a.1 + a.3
-						# read style and calculate effective size
-						if (w = B.root.clientWidth - a) < 0
-							w = 0
-					# update
+					# get current container width
+					w = if e
+						then e.0.contentRect.width # observed
+						else B.root.clientWidth - @pads.0 # forced
+					# update dynamic axis size
 					@currentSz.0 = w
-					###
-					# static axis
-					# determine deviation from the base
-					e = w / @baseSz.0
-					# callback master
+					# determine deviation from the base (obey master)
+					e = if w > @baseSz.0
+						then 1
+						else w / @baseSz.0
 					e = @onChange e if @onChange
-					# update currents
-					b = @currentSz.1
-					@currentSz.1 = c = if e > 0.999
+					# update static axis state (none or reduced size)
+					@currentSz.1 = if e == 1
 						then 0
 						else e * @baseSz.1
-					# check
-					a = 0
-					if b and not c
-						# get back to normal
-						a = -1
-						@currentSz.2 = 0
-						@currentSz.3 = 0
-					else if c and (Math.abs (c - b)) > 0.1
-						# switch to calculated (reduced)
-						# to avoid layout reflows (by reading min-width),
-						# set sizes using base multiplier
-						a = 1
+					# compare dynamic axis size factors
+					if (Math.abs (@factor - e)) > 0.005
+						# update button sizes
 						@currentSz.2 = e * @baseSz.3
 						@currentSz.3 = e * @baseSz.4
-					# set style only if required
-					if a and not @onChange
-						b = B.root.style
-						c = '--sm-blocks-size-factor'
-						if ~a
-							b.setProperty c, e
-						else
-							b.removeProperty c
-					# check flexy dualgap mode and
-					# determine page-button size
-					if B.config.range == 2 and R.mode == 2
+						# update styles alone (no master)
+						if not @onChange
+							b = '--sm-blocks-factor'
+							if ~a
+								B.root.style.setProperty b, e
+							else
+								B.root.style.removeProperty b
+						# update value
+						@factor = e
+					###
+					# check initial and current range modes
+					if B.config.range == 2 and R.mode == 1 and e == 1
+						# flexy nogap (also draggable)
 						###
 						# the drag problem:
 						# when paginator has plenty of space at dynamic axis,
-						# the middle area (gaps) may fit all pages,
-						# especially when the count is low,
-						# which makes button's drag area bigger
-						# than the button size and it makes drag "jump",
-						# which looks and feels unnatural.
-						# that's why size of page-buttons must be controlled.
-						###
-						# determine current range size
-						# (it's proportional, because it may be
-						#  modified to preserve aspect ratio)
-						a = @baseSz.0 - @baseSz.2
-						a = if e > 0.999
-							then w - a
-							else w - e * a
-						# determine current, optimal page-button size
-						if (c = @currentSz).2
-							b = if c.3
-								then (c.3 + c.2) / 2
-								else c.2
-							c = c.4
-						else
-							b = @baseSz.3
-							c = c.4
-						# update value
-						if (d = a / B.current.1) <= b
-							d = 0
-						@currentSz.4 = d
-						# update style only if required
-						if c and not d
-							R.box.style.removeProperty '--page-size'
-						else if d and (Math.abs (d - b)) > 0.1
-							R.box.style.setProperty '--page-size', d+'px'
+						# the middle area (range) may fit all buttons,
+						# especially when the page count is low,
+						# buttons are enlarged for visual aesthetics and
+						# drag areas must correspond to that,
+						# if not, it will make drag "jumps" unnatural,
+						# and, because of that,
+						# determine optimal drag area sizes
+						a = (w - @baseSz.0 + @baseSz.3) / B.current.1
+						b = (w - @baseSz.0 + @baseSz.4) / B.current.1
+						# compare with current
+						if (Math.abs (a - @currentSz.2)) > 0.1
+							# update variables
+							@currentSz.2 = a
+							@currentSz.3 = b
+							c = '--page-size'
+							if (Math.abs (b - @baseSz.4)) > 0.1
+								R.box.style.setProperty c, b+'px'
+							else
+								R.box.style.removeProperty c
 					# done
+					return true
 				# }}}
 			###
-			Resizer.prototype = {
+			Resizer.prototype =
 				init: !-> # {{{
 					# prepare
+					B = @block
 					R = @block.range
+					# check block state
+					if ~B.locked
+						# reset container sizes to initial,
+						# remove constructed state
+						B.root.classList.remove 'v'
 					# determine container paddings
-					a = [
-						'padding-top'
-						'padding-right'
-						'padding-bottom'
-						'padding-left'
-					]
-					b = -1
-					while ++b < a.length
-						@rootPads[b] = parseInt (@rootCS.getPropertyValue a[b])
+					s    = @rootCS
+					a    = @pads
+					a.0  = parseInt (s.getPropertyValue 'padding-left')
+					a.0 += parseInt (s.getPropertyValue 'padding-right')
+					a.1  = parseInt (s.getPropertyValue 'padding-top')
+					a.1 += parseInt (s.getPropertyValue 'padding-bottom')
 					# determine base sizes
 					# containers
-					@baseSz.0 = parseFloat (@rootBoxCS.getPropertyValue 'width')
-					@baseSz.1 = parseFloat (@rootCS.getPropertyValue '--height-px')
-					@baseSz.2 = parseFloat (R.cs.getPropertyValue 'width')
-					# pages
-					c = 'min-width'
+					a = @block.rootBox.clientWidth - @pads.0
+					b = parseFloat (R.cs.getPropertyValue 'width')
+					c = parseFloat (R.cs.getPropertyValue 'max-width')
+					@baseSz.0 = a - b + c
+					@baseSz.1 = parseFloat (s.getPropertyValue '--sm-blocks-height')
+					@baseSz.2 = c
+					# selected page button
+					# get node
 					if ~R.current
-						# current and standard
-						a = getComputedStyle R.pages[R.current]
-						b = getComputedStyle if R.current
-							then R.pages.0
-							else R.pages.1
-						a = parseFloat (a.getPropertyValue c)
-						b = parseFloat (b.getPropertyValue c)
+						a = R.pages[R.current]
 					else
-						# standard only
-						a = getComputedStyle R.pages.0
-						a = b = parseFloat (a.getPropertyValue c)
-					# store
-					@baseSz.3 = a
-					@baseSz.4 = b
-					# done
-					@ready = true
+						# select standard
+						(a = R.pages.0).classList.add 'x'
+					# read value
+					b = getComputedStyle a
+					@baseSz.3 = parseFloat (b.getPropertyValue 'min-width')
+					if not ~R.current
+						# unselect
+						b.classList.remove 'x'
+					# standard page button
+					# get node style
+					a = getComputedStyle if R.current == 1
+						then R.pages.0
+						else R.pages.1
+					# read value
+					@baseSz.4 = parseFloat (a.getPropertyValue 'min-width')
+					# check block state
+					if ~B.locked
+						# for proper future resize,
+						# restore constructed state
+						B.root.classList.add 'v'
+					# force first resize
+					@resize!
 				# }}}
 				attach: !-> # {{{
 					@detatch! if @observer
-					@observer = o = new ResizeObserver @resize
-					o.observe @block.root
+					@observer = new ResizeObserver @resize
+					@observer.observe @block.root
 				# }}}
 				detach: !-> # {{{
 					if @observer
 						@observer.disconnect!
 						@observer = null
 				# }}}
-			}
 			# }}}
 			PageGoto = (block) !-> # {{{
 				@boxFL = a = querySelectorChildren block.rootBox, '.goto.FL'
@@ -2747,6 +2744,13 @@ smBlocks = do ->
 				@btnFL = queryFirstChildren a
 				@btnPN = queryFirstChildren b
 				@sepFL = querySelectorChildren block.rootBox, '.sep'
+				# initialize
+				# both first-previous/next-last present
+				if a.length and b.length
+					c = -1
+					while ++c < a.length
+						a[c].classList.add 'both'
+						b[c].classList.add 'both'
 			# }}}
 			PageRange = (block) !-> # {{{
 				# controls
@@ -2865,12 +2869,6 @@ smBlocks = do ->
 						if @mode == 1
 							a.remove 'nogap'
 						@mode = mode
-					# range capacity (page buttons count)
-					if count != @count
-						@box.style.setProperty '--count', count
-						@count = count
-						# re-calculate block size
-						@block.resize!
 					# pages
 					a = @nPages
 					for c,b in pages when a[b] != c
@@ -2912,7 +2910,22 @@ smBlocks = do ->
 						if ~last
 							@pages[last].classList.add 'L'
 						@pLast = last
+					# range capacity (page buttons count),
+					# this should be the last for proper resize
+					if count != @count
+						# set variables
+						@box.style.setProperty '--count', count
+						@count = count
+						# re-calculate block size
+						@block.resizer.init!
 					# done
+				# }}}
+				focus: !-> # {{{
+					# set focus to current page button
+					if ~@current
+						a = @pages[@current].firstChild
+						if a != document.activeElement
+							a.focus!
 				# }}}
 			# }}}
 			Block = (state, root) !-> # {{{
@@ -2948,16 +2961,19 @@ smBlocks = do ->
 				# }}}
 				lock: (level) ->> # {{{
 					###
+					current = @locked
+					@locked = level
 					c0 = @root.classList
 					c1 = @rootBox.classList
 					###
-					if level != @locked
+					if level != current
 						if ~level
 							if level
 								# lock
-								if ~@locked
-									# terminate activity
-									await a.spin! if a = @control.lock
+								if ~current
+									# wait activity terminated
+									if (a = @control.lock).pending
+										await a.spin!
 									# remove styles
 									c1.remove 'v'
 									if ~(a = @range.current)
@@ -2971,20 +2987,14 @@ smBlocks = do ->
 									@range.pages[a].classList.add 'x'
 						else
 							# initial lock
-							c1.remove 'v' if not @locked
+							c1.remove 'v' if not current
 							c0.remove 'v'
-						###
 					###
-					@locked = level
 					return true
 				# }}}
-				notify: -> # {{{
-					# refresh early
-					@refresh! if @state.pending
-					# prevent active
-					return if (a = @control.lock) and a.pending
-						then false
-						else true
+				notify: (level) -> # {{{
+					@refresh!
+					return not @control.lock.pending
 				# }}}
 				refresh: !-> # {{{
 					# prepare
@@ -2997,12 +3007,6 @@ smBlocks = do ->
 					@range.set b if @range
 					# sync
 					a[0 to 1] = b
-				# }}}
-				resize: !-> # {{{
-					@root.classList.remove 'v' if ~@locked
-					@resizer.init!
-					@resizer.resize!
-					@root.classList.add 'v' if ~@locked
 				# }}}
 				focus: !-> # {{{
 					# set focus to current
@@ -3232,7 +3236,8 @@ smBlocks = do ->
 			@offset   = 0
 			@limit    = 0
 		# }}}
-		Loader = (s) !-> # {{{
+		Loader = (s) !->
+			# {{{
 			@super = s     # s-supervisor
 			@dirty = -1    # resolved-in-process flag
 			@level = -1    # current priority (highest for the first)
@@ -3240,7 +3245,7 @@ smBlocks = do ->
 			@fetch = null  # request promise
 			@state = null
 			@data  = null
-		###
+			# }}}
 		Loader.prototype =
 			init: ->> # {{{
 				# prepare
@@ -3289,7 +3294,7 @@ smBlocks = do ->
 				for a,b in (await Promise.all a)
 					# check
 					if not a
-						consoleError 'failed to initialize a '+B[b].group+' block'
+						consoleError 'failed to initialize '+B[b].group+' block'
 						return false
 					# lock constructed
 					B[b].lock 1
@@ -3368,6 +3373,7 @@ smBlocks = do ->
 						D.offset = S.page.0 * D.limit
 					###
 					# complete
+					console.log 'group ', @name, 'resolved clean', p.pending, 'loader dirty', loader.dirty
 					if p.pending
 						# clean
 						p.pending = false
@@ -3380,40 +3386,47 @@ smBlocks = do ->
 					return true
 			# }}}
 			cycle: ->> # {{{
-				###
-				# wait for update
+				# wait for updates
 				if not (await @charge!)
 					return true
-				###
-				# manage blocks (high -> low)
+				# lock (lower -> higher)
+				console.log 'loader charged'
 				B = @super.blocks
-				a = B.length
-				while ~--a
-					if (b = B[a]).level < @level
-						# lock lower levels (dont wait)
-						b.lock 1
-					else
-						# notify higher levels (allow restart)
-						if not b.notify @level
-							return true
-				# check for restart
-				return true if @dirty
-				###
-				# execute fetcher
+				a = []
+				b = -1
+				while ++b < B.length
+					# only lower than current
+					if B[b].level < @level
+						console.log 'locking '+b.group
+						a[*] = B[b].lock 1
+				# notify (higher -> lower)
+				while ~--b
+					# higher or current only
+					if B[b].level >= @level and not B[b].notify @level
+						@dirty = 2 # delay restart
+				# wait locked
+				await Promise.all a if a.length
+				# check
+				if @dirty
+					return true
+				# start fetcher
 				R = await (@fetch = oFetch @data)
 				@fetch = null
 				# check
 				if R instanceof Error
-					return if R.id == 4
-						then true   # cancelled, restart
-						else false  # fatal failure
+					# cancelled?
+					if R.id == 4
+						return true
+					# fatal failure!
+					consoleError R.message
+					return false
 				# read metadata
 				if (a = await R.readInt!) == null
+					consoleError 'fetch stream failed'
 					R.cancel!
 					return false
-				###
-				# manage state
-				# update total records and page count
+				# update state
+				# total records and page count
 				@state.total  = a
 				@state.page.1 = Math.ceil (a / @data.limit)
 				# unlock and refresh blocks
@@ -3433,25 +3446,31 @@ smBlocks = do ->
 				###
 				# load records
 				if (B = @super.holders).length
-					# iterate projected count
-					a = -1
-					b = @data.limit
-					while ++a < b and not @dirty
+					# determine count
+					a = @data.limit
+					if (b = @data.offset + a - @state.total) > 0
+						a = a - b
+					# iterate
+					b = -1
+					while ++b < a and not @dirty
 						# read
 						if (c = await R.readJSON!) == null
+							consoleError 'fetch stream failed'
 							R.cancel!
 							return false
 						# load
 						d = -1
 						while ++d < B.length
-							B[d].load c, d
+							if not B[d].load c, b
+								consoleError 'failed to load '+B[d].group
+								return false
 					# satisfy chrome (2020-04) as it dumps error
 					await R.read!
 				# complete
 				R.cancel!
 				return true
 			# }}}
-		# }}}
+		###
 		return (s) -> new Loader s
 	# }}}
 	newResizer = do -> # {{{
@@ -3459,7 +3478,8 @@ smBlocks = do ->
 			@parent   = master
 			@node     = node
 			@blocks   = null
-			@state    = [1,null] # current,emitter block
+			@factor   = 1
+			@emitter  = null
 			@handler  = null
 		###
 		ResizeMaster = (selector, blocks) !->
@@ -3488,30 +3508,21 @@ smBlocks = do ->
 			# }}}
 		ResizeMaster.prototype =
 			handler: (s) -> (e) -> # {{{
-				# get current state
-				if not (c = s.state)
-					return e
 				# check
-				if c.0 > e or c.1 == @block
+				if s.factor > e or s.emitter == @block
 					# lower factor or higher self,
-					# change the current
-					c.1 = @block
-					c.0 = e = if e < 0.01
-						then 0
-						else if e > 0.99
-							then 1
-							else e
-					# update style
-					c = '--sm-blocks-size-factor'
+					# update state and styles
+					s.factor = e
+					c = '--sm-blocks-factor'
 					if e == 1
 						s.node.style.removeProperty c
+						s.emitter = null
 					else
 						s.node.style.setProperty c, e
-					###
+						s.emitter = @block
 				else
-					# higher another,
-					# no change
-					e = c.0
+					# higher another, use minimal
+					e = s.factor
 				# done
 				return e
 			# }}}
@@ -3519,7 +3530,7 @@ smBlocks = do ->
 		return (selector, blocks) ->
 			return new ResizeMaster selector, blocks
 	# }}}
-	newGroup = do -> # {{{
+	newGroup   = do -> # {{{
 		State = (slaves) !-> # {{{
 			# create object shape
 			@f       = slaves
@@ -3537,6 +3548,7 @@ smBlocks = do ->
 			@state   = state
 			# create state resolver
 			state.change = (data) !~>
+				console.log 'state.change'
 				state.data = data if arguments.length
 				state.pending = true
 				@resolve!

@@ -13,7 +13,10 @@ return [
       'max'   => 'max',
     ],
     'category' => [
-      'title' => 'Categories',
+      'Categories',
+    ],
+    'product' => [
+      'view',
     ],
   ],
   # }}}
@@ -30,7 +33,10 @@ return [
       'max'   => 'максимум',
     ],
     'category' => [
-      'title' => 'Категории',
+      'Категории',
+    ],
+    'product' => [
+      'посмотреть',
     ],
   ],
   # }}}

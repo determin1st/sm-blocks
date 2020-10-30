@@ -34,11 +34,15 @@ $o = <<<EOD
     <!-- :sm-blocks/category-filter {"baseCategory":"37"} /-->
   </div>
   <div class="b sm-blocks-resizer">
-    <h3>TEST</h3>
+    <div class="a">
+      <h3>sm-blocks</h3>
+    </div>
+    <div class="b"><hr /></div>
     <div class="c">
       <!-- wp:sm-blocks/paginator {"gotoMode":3} /-->
       <!-- wp:sm-blocks/orderer {$oo} /-->
     </div>
+    <div class="b"><hr /></div>
     <!-- wp:sm-blocks/products {
 
       "layout":"4:2:1:0"
