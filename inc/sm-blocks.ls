@@ -2146,8 +2146,11 @@ smBlocks = do ->
 				@block     = block
 				@lock      = newDelay! # common promise
 				@dragbox   = [
+					0,0,  # 0/1: first area size and runway
+					0,    #   2: middle area size
+					0,0,  # 3/4: last area runway and size
+					0,0,0 # 5-7: first,last,middle page counts
 				]
-				@fastLock  = null
 				@fastCfg   = @fastCfg
 				# handlers
 				@keyDown = (e) !~> # {{{
@@ -2262,7 +2265,7 @@ smBlocks = do ->
 					# check
 					if not @lock.pending and \
 					   e.isPrimary and not e.button and \
-					   not @block.locked and @block.range.mode == 2
+					   not @block.locked and @block.range.mode == 1
 						###
 						# determine direction
 						a = e.currentTarget
@@ -2283,94 +2286,44 @@ smBlocks = do ->
 					# fulfil event
 					e.preventDefault!
 					e.stopPropagation!
+					# prepare
+					B = @block
 					# check requirements
 					if not e.isPrimary or e.button or typeof e.offsetX != 'number' or \
-					   not @block.locked and @block.range.mode == 2 and \
-					   @lock.pending
+					   B.locked or not B.range.mode or \
+					   B.state.data.1 == 1 or @lock.pending
 						###
 						return true
-					# create new lock
-					@lock = newPromise 3
+					# create drag lock
+					@lock = lock = newPromise 3
 					# cooldown
-					await Promise.race [(newDelay 200), @lock]
+					await Promise.race [(newDelay 200), lock]
 					# prevent collisions
-					if not @lock.pending
+					if not lock.pending
 						return true
-					# prepare
-					(R = @block.range).focus!
+					# initialize dragbox
+					@initDragbox!
+					# save current page index
+					a = B.state.data.0
 					# capture pointer
+					(R = B.range).focus!
 					R.box.classList.add 'active', 'drag'
 					if not R.box.hasPointerCapture e.pointerId
 						R.box.setPointerCapture e.pointerId
-					# PIXEL PERFECT:
-					# calculate dragbox parameters
-					# {{{
-					# determine first-last page counts (excluding current)
-					if (c = R.pages.length) > 1
-						b = R.index
-						c = c - R.index - 1
-					else
-						b = 0
-					if R.first
-						b += 1
-						c += 1
-					# determine page-button sizes
-					if (a = @currentSz).4
-						# enlarged mode (optimal current)
-						d = a = a.4
-					else if a.3
-						# reduced mode (current)
-						d = a.3 # page-x
-						a = a.2 # current-page-x
-					else
-						# default (base)
-						d = @baseSz.4
-						a = @baseSz.3
-					# calculate offsets
-					# first
-					e = @dragbox
-					e.0 = a + b * d     # total space
-					e.1 = e.0 / (b + 1) # average size of the button
-					e.0 = e.0 - e.1     # size of the drag area
-					# last
-					e.4 = a + c * d
-					e.3 = e.4 / (c + 1)
-					e.4 = e.4 - e.3
-					# middle
-					e.2 = parseFloat R.cs.getPropertyValue 'width'
-					e.2 = e.2 - e.0 - e.4 # - e.1 - e.3
-					# determine first/last jump runways
-					if not @currentSz.4
-						# for proper drag granularity in the middle area,
-						# determine penetration quantifier
-						a = e.2 / (state.data.1 - (b + c))
-						d = e.1 / 2 # limit
-						if a < d
-							e.1 = d + a
-							e.3 = e.3 / 2 + a
-					# tune middle
-					e.2 = e.2 - e.1 - e.3
-					# page counts in the areas
-					e.5 = b
-					e.7 = c
-					e.6 = state.data.1 - e.5 - e.7 - 2 # >=0
-					# }}}
-					# wait released
-					a = state.data.0
-					@lockType = 3
-					await @lock
+					# to prevent dragging before capture,
+					# change promise value
+					lock.pending = 4
+					# wait dragging complete
+					await lock
 					# release capture
 					if R.box.hasPointerCapture e.pointerId
 						R.box.releasePointerCapture e.pointerId
 					R.box.classList.remove 'active', 'drag'
-					# update global state
-					if not @block.locked and a != state.data.0
-						state.master.resolve state
-						for a in blocks when a != @block
-							a.refresh!
+					# check changed
+					if not @block.locked and a != B.state.data.0
+						# update global state
+						B.state.change!
 					# done
-					@lock.resolve!
-					@lock = null
 					return true
 				# }}}
 				@dragStop = (e) !~> # {{{
@@ -2378,7 +2331,7 @@ smBlocks = do ->
 					e.preventDefault!
 					e.stopPropagation!
 					# operate
-					if @lock.pending == 3
+					if @lock.pending in [3,4]
 						@lock.resolve!
 				# }}}
 				@drag = (e) !~> # {{{
@@ -2386,46 +2339,42 @@ smBlocks = do ->
 					e.preventDefault!
 					e.stopPropagation!
 					# check
-					if not @lock or @lockType != 3
+					if @block.locked or @lock.pending != 4
 						return
 					# prepare
-					d = @dragbox # 0-1-2-3-4 | 5-6-7
-					c = state.data.1
-					# calculate page index
+					D = @dragbox # 0-1-2-3-4 | 5-6-7
+					S = @block.state.data
+					# determine current page index
 					if (b = e.offsetX) <= 0
 						# out of first
 						a = 0
-					else if b <= d.0
-						# first
-						a = (b*d.5 / d.0) .|. 0
-					else if (b -= d.0) <= d.1
-						# first-jump
-						a = d.5
-					else if (b -= d.1) <= d.2
+					else if b <= D.0
+						# first area
+						a = (b*D.5 / D.0) .|. 0
+					else if (b -= D.0) <= D.1
+						# first runway
+						a = D.5
+					else if (b -= D.1) <= D.2
 						# middle
-						# {{{
 						# determine relative offset and
 						# make value discrete
-						b = (b*d.6 / d.2) .|. 0
+						b = (b*D.6 / D.2) .|. 0
 						# add previous counts
 						# to determine exact page index
-						a = d.5 + 1 + b
-						# }}}
-					else if (b -= d.2) <= d.3
-						# last-jump
-						a = d.5 + d.6 + 1
-					else if (b -= d.3) <= d.4
-						# last
-						a = d.5 + d.6 + 2 + (b*d.7 / d.4) .|. 0
+						a = D.5 + 1 + b
+					else if (b -= D.2) <= D.3
+						# last runway
+						a = D.5 + D.6 + 1
+					else if (b -= D.3) <= D.4
+						# last area
+						a = D.5 + D.6 + 2 + (b*D.7 / D.4) .|. 0
 					else
 						# out of last
-						a = c - 1
-					# check same
-					if state.data.0 == a
-						return
+						a = S.1 - 1
 					# update local state
-					state.data.0 = a
-					@block.refresh!
+					if S.0 != a
+						S.0 = a
+						@block.refresh!
 				# }}}
 				@wheel = (e) !~> # {{{
 					# check
@@ -2484,10 +2433,10 @@ smBlocks = do ->
 						a.firstChild.addEventListener 'click', @goto
 					###
 					# drag
-					#a = R.pages[R.index].firstChild
-					#a.addEventListener 'pointerdown', @dragStart
-					#B.range.box.addEventListener 'pointermove', @drag
-					#B.range.box.addEventListener 'pointerup', @dragStop
+					a = R.pages[R.index].firstChild
+					a.addEventListener 'pointerdown', @dragStart
+					B.range.box.addEventListener 'pointermove', @drag
+					B.range.box.addEventListener 'pointerup', @dragStop
 				# }}}
 				detach: !-> # {{{
 					true
@@ -2578,6 +2527,53 @@ smBlocks = do ->
 					# done
 					return a
 				# }}}
+				initDragbox: !-> # {{{
+					# prepare
+					R = @block.range
+					S = @block.resizer
+					D = @dragbox
+					X = @block.state.data.1
+					# determine count of elements
+					# in the first and last areas (excluding current)
+					a = R.index
+					b = R.pages.length - a - 1
+					# get page-button sizes
+					c = S.currentSz.2 # current
+					d = S.currentSz.3 # standard
+					# calculate drag areas
+					# first
+					D.0 = c + a * d     # total space
+					D.1 = D.0 / (a + 1) # average size of the button (runway)
+					D.0 = D.0 - D.1     # size of the drag area
+					# last
+					D.4 = c + b * d
+					D.3 = D.4 / (b + 1)
+					D.4 = D.4 - D.3
+					# middle
+					D.2 = parseFloat (R.cs.getPropertyValue 'width')
+					D.2 = D.2 - D.0 - D.4 # - D.1 - D.3
+					# try to reduce first and last jump runways,
+					# the runway is a special area at the end of the first, and,
+					# at the beginning of the last drag areas..
+					# in a dualgap mode (when the middle is big enough),
+					# smaller runways make a "jump" to the middle more natural
+					if R.mode == 1
+						# determine space of a single page in the middle
+						c = D.2 / (X - a - b)
+						# determine penetration limit (half of the average page) and
+						# check it fits one mid-page
+						if (d = D.1 / 2) > c
+							# reduce runways
+							D.1 = c + d
+							D.3 = c + D.3 / 2
+					# correct middle
+					D.2 = D.2 - D.1 - D.3
+					# store page counts
+					D.5 = a
+					D.7 = b
+					D.6 = X - a - b - 2 # >= 0, always
+					# done
+				# }}}
 				fastCfg:[
 					10,  # pages per second
 					15   # pages before slowdown
@@ -2644,6 +2640,8 @@ smBlocks = do ->
 								B.root.style.removeProperty b
 						# update value
 						@factor = e
+					# TODO:
+					return true
 					###
 					# check initial and current range modes
 					if B.config.range == 2 and R.mode == 1 and e == 1
@@ -2701,24 +2699,27 @@ smBlocks = do ->
 					@baseSz.2 = c
 					# selected page button
 					# get node
-					if ~R.current
-						a = R.pages[R.current]
-					else
-						# select standard
-						(a = R.pages.0).classList.add 'x'
-					# read value
-					b = getComputedStyle a
-					@baseSz.3 = parseFloat (b.getPropertyValue 'min-width')
-					if not ~R.current
-						# unselect
-						b.classList.remove 'x'
+					a = if ~R.current
+						then R.pages[R.current] # probably selected
+						else R.pages.0 # standard, not selected
+					# check and set selected
+					if not (b = (a.classList.contains 'x'))
+						a.classList.add 'x'
+					# read size
+					c = getComputedStyle a
+					c = parseFloat (c.getPropertyValue 'min-width')
+					@baseSz.3 = @currentSz.2 = c
+					# rollback selection
+					if not b
+						a.classList.remove 'x'
 					# standard page button
 					# get node style
-					a = getComputedStyle if R.current == 1
+					a = getComputedStyle if not R.current
 						then R.pages.0
 						else R.pages.1
-					# read value
-					@baseSz.4 = parseFloat (a.getPropertyValue 'min-width')
+					# read size
+					b = parseFloat (a.getPropertyValue 'min-width')
+					@baseSz.4 = @currentSz.3 = b
 					# check block state
 					if ~B.locked
 						# for proper future resize,
@@ -2787,23 +2788,9 @@ smBlocks = do ->
 						count   = 0
 						gaps.0  = 100
 						# }}}
-					else if v.1 <= pages.length
-						# nogap (pages only) {{{
-						mode    = 1
-						current = v.0
-						count   = pages.length # justify
-						# set page numbers
-						a = -1
-						b = 0
-						while ++a < v.1
-							pages[a] = ++b
-						# set edge pages
-						first = 0
-						last  = a - 1
-						# }}}
-					else
+					else if v.1 > pages.length
 						# dualgap {{{
-						mode    = 2
+						mode    = 1
 						current = @index
 						count   = pages.length
 						# determine left side parameters
@@ -2855,6 +2842,20 @@ smBlocks = do ->
 						gaps.0 = a
 						gaps.1 = 100 - a
 						# }}}
+					else
+						# nogap (pages only) {{{
+						mode    = 2
+						current = v.0
+						count   = pages.length # justify
+						# set page numbers
+						a = -1
+						b = 0
+						while ++a < v.1
+							pages[a] = ++b
+						# set edge pages
+						first = 0
+						last  = a - 1
+						# }}}
 					###
 					# apply changes
 					# range mode
@@ -2862,11 +2863,11 @@ smBlocks = do ->
 						a = @box.classList
 						if not @mode
 							a.add 'v'
-						if mode == 1
+						if mode == 2
 							a.add 'nogap'
 						else if not mode
 							a.remove 'v'
-						if @mode == 1
+						if @mode == 2
 							a.remove 'nogap'
 						@mode = mode
 					# pages

@@ -27,27 +27,47 @@ $ocf = json_encode([ # category filter {{{
 # generate markup
 $o = <<<EOD
 
-<div id="sm-demo">
-  <div class="a">
-    <!-- wp:sm-blocks/price-filter {$opf} /-->
-    <!-- wp:sm-blocks/category-filter {$ocf} /-->
-    <!-- :sm-blocks/category-filter {"baseCategory":"37"} /-->
+<div id="sm-page">
+  <div class="head">
+    <h3>sm-blocks</h3>
   </div>
-  <div class="b sm-blocks-resizer">
-    <div class="a">
-      <h3>sm-blocks</h3>
+  <div class="sep"><hr /></div>
+  <div class="body">
+    <div class="panel">
+      <div class="title"><h3>...</h3></div>
+      <div class="sep"><hr /></div>
+      <div class="content">
+        <!-- wp:sm-blocks/price-filter {$opf} /-->
+        <!-- wp:sm-blocks/category-filter {$ocf} /-->
+        <!-- :sm-blocks/category-filter {"baseCategory":"37"} /-->
+      </div>
     </div>
-    <div class="b"><hr /></div>
-    <div class="c">
-      <!-- wp:sm-blocks/paginator {"gotoMode":3} /-->
-      <!-- wp:sm-blocks/orderer {$oo} /-->
+    <div class="content sm-blocks-resizer">
+      <div class="controls">
+        <div class="column">
+          <div class="sep h"><hr /></div>
+          <!-- :sm-blocks/base {"class":"panel-slider"} /-->
+          <div class="sep" style="width:0.5em;display:flex;align-items:center;padding:0 4px 0 4px;"><hr /></div>
+          <div class="sep h"><hr /></div>
+        </div>
+        <div class="lines">
+          <div>
+            <!-- :sm-blocks/base {"class":"limit-selector"} /-->
+          </div>
+          <div>
+            <!-- wp:sm-blocks/paginator {"gotoMode":3} /-->
+            <!-- wp:sm-blocks/orderer {$oo} /-->
+          </div>
+        </div>
+      </div>
+      <div class="sep"><hr /></div>
+      <!-- wp:sm-blocks/products {
+
+        "layout":"4:2:1:0"
+
+      } /-->
+      <div class="sep"><hr /></div>
     </div>
-    <div class="b"><hr /></div>
-    <!-- wp:sm-blocks/products {
-
-      "layout":"4:2:1:0"
-
-    } /-->
   </div>
 </div>
 

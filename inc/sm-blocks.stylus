@@ -131,13 +131,12 @@ WebSafeFontHeadline = Times, 'Times New Roman', serif
 	// root
 	width:  100%
 	height: auto
-	padding: 0 0 4px 0
 	// rootBox (first item)
 	> div.item
 		font-size: var(--height)
 		> .title
 			height: 1em
-			padding: 0.05em 0 0.05em 4px
+			padding: 0.05em 4px 0.05em 4px
 			> h3
 				order: 1
 				font-size: 0.7em
@@ -146,7 +145,7 @@ WebSafeFontHeadline = Times, 'Times New Roman', serif
 				min-width:  1.2em
 				padding: 0.1em 0.1em 0.1em 0.4em
 		> .section
-			padding: 0
+			padding: 4px 4px 4px 4px
 		> .sep
 			height: 3px
 			fill: gainsboro
@@ -202,6 +201,8 @@ WebSafeFontHeadline = Times, 'Times New Roman', serif
 			// }}}
 		// }}}
 		> .section // {{{
+			// shift child sections to the right
+			padding: 0 0 0 0.2em
 			min-height: 0
 			height:  0
 			opacity: 0
@@ -587,8 +588,7 @@ WebSafeFontHeadline = Times, 'Times New Roman', serif
 				min-width: 1em // exact base
 				padding: 0.035em 1px 0.035em 1px
 				> button
-					color: darkslategray
-					//font-size: 0.28em
+					color: transparent
 					font-size: var(--font-size)
 				// first-last pages
 				&.F
@@ -602,30 +602,13 @@ WebSafeFontHeadline = Times, 'Times New Roman', serif
 					padding-bottom: 0
 					> button
 						font-size: calc(1.25 * var(--font-size))
-						border-color: black
-						background-color: black
-						color: alpha(white, 1)
-						cursor: grab
-						&:hover
-							color: alpha(white, 0.5)
-						&:focus,
-						&:active
-							color: alpha(white, 1)
-							box-shadow: inset 0 0 0.1em 0.1em white
 			// range without gaps
 			&.nogap
 				// only page buttons
-				//--max-width: calc(var(--count) * 1em)
 				max-width: calc(1em * var(--count))
-				min-width: calc(1em + 1em * var(--count))
 				// dragging is not possible by default
 				> .page.x > button
 					cursor: default
-			/*===*
-			&.active.drag
-				// current page is being dragged
-				cursor: grabbing
-			/*===*/
 		// }}}
 	// constructed
 	&.v
@@ -666,6 +649,21 @@ WebSafeFontHeadline = Times, 'Times New Roman', serif
 				> .range
 					> .gap > svg
 						fill: silver
+					> .page > button
+						color: darkslategray
+					> .page.x > button
+						border-color: black
+						background-color: black
+						color: alpha(white, 1)
+						cursor: grab
+						&:hover
+							color: alpha(white, 0.5)
+						&:focus,
+						&:active
+							color: alpha(white, 1)
+							box-shadow: inset 0 0 0.1em 0.1em white
+					&.active.drag
+						cursor: grabbing
 				&.flexy
 					> .range > .gap > svg
 						fill: gainsboro
@@ -690,9 +688,6 @@ WebSafeFontHeadline = Times, 'Times New Roman', serif
 					border-radius: 2px
 					fill: transparent
 					stroke: transparent
-		> .section
-			// shift child sections to the right
-			padding: 0 0 0 0.2em
 		//===
 		&.v
 			//=== CLOSED {{{
@@ -757,21 +752,16 @@ WebSafeFontHeadline = Times, 'Times New Roman', serif
 						> h3
 							color: alpha(darkslateblue, 0.8)
 			// }}}
-	// rootBox
-	> div.item
-		> .section
-			padding: 2px 0 2px 4px
 // }}}
 .sm-blocks.price-filter // {{{
 	// root
 	width:  100%
-	height: calc(8px + var(--height))
-	padding: 4px 0 4px 0
+	//height: calc(8px + var(--height))
+	height: var(--height)
 	// rootBox
 	> div
 		width:  100%
 		height: 100%
-		padding: 0 4px 0 4px
 		display: flex
 		flex-direction: row
 		align-items: center

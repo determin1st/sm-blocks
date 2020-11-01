@@ -24,6 +24,18 @@ class StorefrontModernBlocks {
     $dir_data  = __DIR__.DIRECTORY_SEPARATOR.'data'.DIRECTORY_SEPARATOR,
     $dir_inc   = __DIR__.DIRECTORY_SEPARATOR.'inc'.DIRECTORY_SEPARATOR,
     $blocks    = [
+      'base' => [ # {{{
+        'render_callback' => [null, 'renderBase'],
+        'attributes'      => [
+          ### common
+          'customClass'   => [
+            'type'        => 'string',
+            'default'     => 'custom',
+          ],
+          ###
+        ],
+      ],
+      # }}}
       'products' => [ # {{{
         'render_callback' => [null, 'renderProducts'],
         'attributes'      => [
@@ -63,7 +75,7 @@ class StorefrontModernBlocks {
           ],
           'focusGreedy'   => [
             'type'        => 'boolean',
-            'default'     => true,
+            'default'     => false,
           ],
           ### section
           'sectionMode'   => [
@@ -152,7 +164,7 @@ class StorefrontModernBlocks {
           ],
           'focusGreedy'   => [
             'type'        => 'boolean',
-            'default'     => true,
+            'default'     => false,
           ],
           ###
           'sectionMode'   => [
@@ -180,6 +192,15 @@ class StorefrontModernBlocks {
       # }}}
     ],
     $templates = [
+      'base' => [ # {{{
+        'root' => '
+        <div class="sm-blocks {{name}} {{custom}}">
+          <div data-cfg=\'{{cfg}}\'></div>
+          {{placeholder}}
+        </div>
+        ',
+      ],
+      # }}}
       'products' => [ # {{{
         'main' => '
         <div class="sm-blocks products {{custom}}">
@@ -584,6 +605,39 @@ class StorefrontModernBlocks {
   }
   # }}}
   # ssr (rendering)
+  # base {{{
+  public function renderBase($attr, $content)
+  {
+    # prepare
+    $T = $this->templates['base'];
+    # create filter variant
+    switch ($attr['baseUI']) {
+    default:
+      $content = $this->parseTemplate($T['textInputs'], $T, [
+        'submitButton' => ($attr['submitButton'] !== 0),
+      ]);
+      break;
+    }
+    # compose widget
+    $content = $this->parseTemplate($T['main'], $T, [
+      'custom'  => $attr['customClass'],
+      'content' => $content,
+      'placeholder' => $this->templates['svg']['placeholder'],
+      'cfg' => json_encode([
+        'sectionSwitch' => $attr['sectionSwitch'],
+      ]),
+    ]);
+    # create a 0-section
+    return $this->renderSection([
+      'mode'      => $attr['sectionMode'],
+      'autofocus' => $attr['focusGreedy'],
+      'extraMain' => '',
+      'extra'     => '',
+      'items'     => $content,
+      'opened'    => true,
+    ]);
+  }
+  # }}}
   # products {{{
   public function renderProducts($attr, $content)
   {

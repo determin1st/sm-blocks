@@ -1958,8 +1958,7 @@ smBlocks = function(){
         var this$ = this;
         this.block = block;
         this.lock = newDelay();
-        this.dragbox = [];
-        this.fastLock = null;
+        this.dragbox = [0, 0, 0, 0, 0, 0, 0, 0];
         this.fastCfg = this.fastCfg;
         this.keyDown = function(e){
           var B, a;
@@ -2052,7 +2051,7 @@ smBlocks = function(){
           var a, b;
           e.preventDefault();
           e.stopPropagation();
-          if (!this$.lock.pending && e.isPrimary && !e.button && !this$.block.locked && this$.block.range.mode === 2) {
+          if (!this$.lock.pending && e.isPrimary && !e.button && !this$.block.locked && this$.block.range.mode === 1) {
             a = e.currentTarget;
             b = a === this$.block.gotos.btnPN[1];
             console.log('fast.start', b);
@@ -2064,119 +2063,73 @@ smBlocks = function(){
           return true;
         };
         this.dragStart = async function(e){
-          var R, c, b, a, d, i$, ref$, len$;
+          var B, lock, a, R;
           e.preventDefault();
           e.stopPropagation();
-          if (!e.isPrimary || e.button || typeof e.offsetX !== 'number' || !this$.block.locked && this$.block.range.mode === 2 && this$.lock.pending) {
+          B = this$.block;
+          if (!e.isPrimary || e.button || typeof e.offsetX !== 'number' || B.locked || !B.range.mode || B.state.data[1] === 1 || this$.lock.pending) {
             return true;
           }
-          this$.lock = newPromise(3);
-          (await Promise.race([newDelay(200), this$.lock]));
-          if (!this$.lock.pending) {
+          this$.lock = lock = newPromise(3);
+          (await Promise.race([newDelay(200), lock]));
+          if (!lock.pending) {
             return true;
           }
-          (R = this$.block.range).focus();
+          this$.initDragbox();
+          a = B.state.data[0];
+          (R = B.range).focus();
           R.box.classList.add('active', 'drag');
           if (!R.box.hasPointerCapture(e.pointerId)) {
             R.box.setPointerCapture(e.pointerId);
           }
-          if ((c = R.pages.length) > 1) {
-            b = R.index;
-            c = c - R.index - 1;
-          } else {
-            b = 0;
-          }
-          if (R.first) {
-            b += 1;
-            c += 1;
-          }
-          if ((a = this$.currentSz)[4]) {
-            d = a = a[4];
-          } else if (a[3]) {
-            d = a[3];
-            a = a[2];
-          } else {
-            d = this$.baseSz[4];
-            a = this$.baseSz[3];
-          }
-          e = this$.dragbox;
-          e[0] = a + b * d;
-          e[1] = e[0] / (b + 1);
-          e[0] = e[0] - e[1];
-          e[4] = a + c * d;
-          e[3] = e[4] / (c + 1);
-          e[4] = e[4] - e[3];
-          e[2] = parseFloat(R.cs.getPropertyValue('width'));
-          e[2] = e[2] - e[0] - e[4];
-          if (!this$.currentSz[4]) {
-            a = e[2] / (state.data[1] - (b + c));
-            d = e[1] / 2;
-            if (a < d) {
-              e[1] = d + a;
-              e[3] = e[3] / 2 + a;
-            }
-          }
-          e[2] = e[2] - e[1] - e[3];
-          e[5] = b;
-          e[7] = c;
-          e[6] = state.data[1] - e[5] - e[7] - 2;
-          a = state.data[0];
-          this$.lockType = 3;
-          (await this$.lock);
+          lock.pending = 4;
+          (await lock);
           if (R.box.hasPointerCapture(e.pointerId)) {
             R.box.releasePointerCapture(e.pointerId);
           }
           R.box.classList.remove('active', 'drag');
-          if (!this$.block.locked && a !== state.data[0]) {
-            state.master.resolve(state);
-            for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
-              a = ref$[i$];
-              if (a !== this$.block) {
-                a.refresh();
-              }
-            }
+          if (!this$.block.locked && a !== B.state.data[0]) {
+            B.state.change();
           }
-          this$.lock.resolve();
-          this$.lock = null;
           return true;
         };
         this.dragStop = function(e){
+          var ref$;
           e.preventDefault();
           e.stopPropagation();
-          if (this$.lock.pending === 3) {
+          if ((ref$ = this$.lock.pending) === 3 || ref$ === 4) {
             this$.lock.resolve();
           }
         };
         this.drag = function(e){
-          var d, c, b, a;
+          var D, S, b, a;
           e.preventDefault();
           e.stopPropagation();
-          if (!this$.lock || this$.lockType !== 3) {
+          if (this$.block.locked || this$.lock.pending !== 4) {
             return;
           }
-          d = this$.dragbox;
-          c = state.data[1];
+          D = this$.dragbox;
+          S = this$.block.state.data;
           if ((b = e.offsetX) <= 0) {
             a = 0;
-          } else if (b <= d[0]) {
-            a = b * d[5] / d[0] | 0;
-          } else if ((b -= d[0]) <= d[1]) {
-            a = d[5];
-          } else if ((b -= d[1]) <= d[2]) {
-            b = b * d[6] / d[2] | 0;
-            a = d[5] + 1 + b;
-          } else if ((b -= d[2]) <= d[3]) {
-            a = d[5] + d[6] + 1;
-          } else if ((b -= d[3]) <= d[4]) {
-            a = d[5] + d[6] + 2 + b * d[7] / d[4] | 0;
+          } else if (b <= D[0]) {
+            a = b * D[5] / D[0] | 0;
+          } else if ((b -= D[0]) <= D[1]) {
+            a = D[5];
+          } else if ((b -= D[1]) <= D[2]) {
+            b = b * D[6] / D[2] | 0;
+            a = D[5] + 1 + b;
+          } else if ((b -= D[2]) <= D[3]) {
+            a = D[5] + D[6] + 1;
+          } else if ((b -= D[3]) <= D[4]) {
+            a = D[5] + D[6] + 2 + b * D[7] / D[4] | 0;
           } else {
-            a = c - 1;
+            a = S[1] - 1;
           }
-          if (state.data[0] === a) {
-            return;
+          if (S[0] !== a) {
+            S[0] = a;
+            this$.block.refresh();
           }
-          state.data[0] = a;
-          this$.block.refresh();
         };
         this.wheel = function(e){
           var a, b, i$, ref$, len$;
@@ -2230,6 +2183,10 @@ smBlocks = function(){
             a = ref$[i$];
             a.firstChild.addEventListener('click', this.goto);
           }
+          a = R.pages[R.index].firstChild;
+          a.addEventListener('pointerdown', this.dragStart);
+          B.range.box.addEventListener('pointermove', this.drag);
+          B.range.box.addEventListener('pointerup', this.dragStop);
         },
         detach: function(){
           true;
@@ -2309,6 +2266,36 @@ smBlocks = function(){
           });
           return a;
         },
+        initDragbox: function(){
+          var R, S, D, X, a, b, c, d;
+          R = this.block.range;
+          S = this.block.resizer;
+          D = this.dragbox;
+          X = this.block.state.data[1];
+          a = R.index;
+          b = R.pages.length - a - 1;
+          c = S.currentSz[2];
+          d = S.currentSz[3];
+          D[0] = c + a * d;
+          D[1] = D[0] / (a + 1);
+          D[0] = D[0] - D[1];
+          D[4] = c + b * d;
+          D[3] = D[4] / (b + 1);
+          D[4] = D[4] - D[3];
+          D[2] = parseFloat(R.cs.getPropertyValue('width'));
+          D[2] = D[2] - D[0] - D[4];
+          if (R.mode === 1) {
+            c = D[2] / (X - a - b);
+            if ((d = D[1] / 2) > c) {
+              D[1] = c + d;
+              D[3] = c + D[3] / 2;
+            }
+          }
+          D[2] = D[2] - D[1] - D[3];
+          D[5] = a;
+          D[7] = b;
+          D[6] = X - a - b - 2;
+        },
         fastCfg: [10, 15]
       };
       Resizer = function(block){
@@ -2361,6 +2348,7 @@ smBlocks = function(){
             }
             this$.factor = e;
           }
+          return true;
           if (B.config.range === 2 && R.mode === 1 && e === 1) {
             a = (w - this$.baseSz[0] + this$.baseSz[3]) / B.current[1];
             b = (w - this$.baseSz[0] + this$.baseSz[4]) / B.current[1];
@@ -2398,20 +2386,23 @@ smBlocks = function(){
           this.baseSz[0] = a - b + c;
           this.baseSz[1] = parseFloat(s.getPropertyValue('--sm-blocks-height'));
           this.baseSz[2] = c;
-          if (~R.current) {
-            a = R.pages[R.current];
-          } else {
-            (a = R.pages[0]).classList.add('x');
+          a = ~R.current
+            ? R.pages[R.current]
+            : R.pages[0];
+          if (!(b = a.classList.contains('x'))) {
+            a.classList.add('x');
           }
-          b = getComputedStyle(a);
-          this.baseSz[3] = parseFloat(b.getPropertyValue('min-width'));
-          if (!~R.current) {
-            b.classList.remove('x');
+          c = getComputedStyle(a);
+          c = parseFloat(c.getPropertyValue('min-width'));
+          this.baseSz[3] = this.currentSz[2] = c;
+          if (!b) {
+            a.classList.remove('x');
           }
-          a = getComputedStyle(R.current === 1
+          a = getComputedStyle(!R.current
             ? R.pages[0]
             : R.pages[1]);
-          this.baseSz[4] = parseFloat(a.getPropertyValue('min-width'));
+          b = parseFloat(a.getPropertyValue('min-width'));
+          this.baseSz[4] = this.currentSz[3] = b;
           if (~B.locked) {
             B.root.classList.add('v');
           }
@@ -2475,19 +2466,8 @@ smBlocks = function(){
             current = -1;
             count = 0;
             gaps[0] = 100;
-          } else if (v[1] <= pages.length) {
+          } else if (v[1] > pages.length) {
             mode = 1;
-            current = v[0];
-            count = pages.length;
-            a = -1;
-            b = 0;
-            while (++a < v[1]) {
-              pages[a] = ++b;
-            }
-            first = 0;
-            last = a - 1;
-          } else {
-            mode = 2;
             current = this.index;
             count = pages.length;
             if ((a = this.index - v[0] - 1) < 0) {
@@ -2528,18 +2508,29 @@ smBlocks = function(){
             }
             gaps[0] = a;
             gaps[1] = 100 - a;
+          } else {
+            mode = 2;
+            current = v[0];
+            count = pages.length;
+            a = -1;
+            b = 0;
+            while (++a < v[1]) {
+              pages[a] = ++b;
+            }
+            first = 0;
+            last = a - 1;
           }
           if (mode !== this.mode) {
             a = this.box.classList;
             if (!this.mode) {
               a.add('v');
             }
-            if (mode === 1) {
+            if (mode === 2) {
               a.add('nogap');
             } else if (!mode) {
               a.remove('v');
             }
-            if (this.mode === 1) {
+            if (this.mode === 2) {
               a.remove('nogap');
             }
             this.mode = mode;

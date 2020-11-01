@@ -1,50 +1,122 @@
 /**
-* demo
+* modern classic layout
 */
-#sm-demo {
-  display: flex;
-  padding: 0 8px 0 8px;
+@font-face {
+  font-family: 'TradeWinds';
+  font-display: fallback;
+  src: local('Trade Winds'), url("TradeWinds.woff2") format('woff2'), url("TradeWinds.woff") format('woff'), url("TradeWinds.ttf") format('truetype');
 }
-#sm-demo > .a {
-  flex: 1 1 0;
-  max-width: 320px;
-  padding-right: 8px;
-}
-#sm-demo > .b {
-  flex: 1 1 0;
+#sm-page {
+  width: 100%;
   font-size: calc(var(--sm-blocks-height) * var(--sm-blocks-factor));
+  padding: 0 4px 0 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
 }
-#sm-demo > .b > .a {
-  height: 1em;
-  padding: 4px 0 4px 0;
-}
-#sm-demo > .b > .a > h3 {
-  font-size: 0.8em;
-  font-weight: bold;
-  font-family: monospace;
-  padding: 0;
-  margin: 0;
-  color: #2f4f4f;
-}
-#sm-demo > .b > .b > hr {
+#sm-page .sep > hr {
+  width: 100%;
   height: 3px;
-  padding: 0;
   margin: 0;
+  padding: 0;
   border: 0;
   border-radius: 1px;
   background-color: rgba(192,192,192,0.2);
 }
-#sm-demo > .b > .c {
+#sm-page .sep.h > hr {
+  width: 3px;
+  height: 100%;
+}
+#sm-page > .head {
+  height: 1em;
+  padding: 4px 0 4px 0;
+}
+#sm-page > .head > h3 {
+  font-size: 0.95em;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  font-family: TradeWinds, sans-serif;
+  line-height: 1;
+  letter-spacing: 1px;
+  color: #708090;
+  user-select: none;
+}
+#sm-page > .body {
   display: flex;
   flex-direction: row;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+#sm-page > .body > .panel {
+  flex: 0 0 auto;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+#sm-page > .body > .panel > .title {
+  flex: 0 0 auto;
+  height: calc(2em + 16px);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+}
+#sm-page > .body > .panel > .title > h3 {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+}
+#sm-page > .body > .panel > .content {
+  flex: 1 1 auto;
+}
+#sm-page > .body > .content {
+  flex: 1 1 0;
+}
+#sm-page > .body > .content > .controls {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+#sm-page > .body > .content > .controls > .column {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+#sm-page > .body > .content > .controls > .column > .sep.h {
+  padding: 4px 0 4px 0;
+}
+#sm-page > .body > .content > .controls > .lines {
+  flex: 1 1 auto;
+  padding: 0 4px 0 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+#sm-page > .body > .content > .controls > .lines > div {
+  height: calc(1em + 8px);
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
   justify-content: flex-start;
   gap: 4px;
 }
-#sm-demo > .b > .c > .orderer {
+#sm-page > .body > .content > .controls > .lines > div > .orderer {
   flex: 1 3 0;
   max-width: 220px;
 }
-#sm-demo > .b > .c > .paginator {
+#sm-page > .body > .content > .controls > .lines > div > .paginator {
   flex: 3 1 0;
   justify-content: flex-end;
 }
