@@ -52,7 +52,7 @@ $o = <<<EOD
         </div>
         <div class="lines">
           <div>
-            <!-- :sm-blocks/base {"class":"limit-selector"} /-->
+            <!-- wp:sm-blocks/view-modifier {} /-->
           </div>
           <div>
             <!-- wp:sm-blocks/paginator {"gotoMode":3} /-->

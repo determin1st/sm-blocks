@@ -1026,3 +1026,22 @@ WebSafeFontHeadline = Times, 'Times New Roman', serif
 				border-color: darkslategray
 		// }}}
 // }}}
+.sm-blocks.view-modifier // {{{
+	// root (horizontal block)
+	width:  100%
+	height: calc(8px + var(--height))
+	padding: 4px 0 4px 0
+	// rootBox
+	> div
+		width:  100%
+		height: 100%
+		display: flex
+		flex-direction: row
+		align-items: stretch
+		justify-content: flex-start
+		> select
+			order: 1
+			flex: 1 1 auto
+		///
+	////
+// }}}

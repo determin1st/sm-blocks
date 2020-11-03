@@ -2349,7 +2349,8 @@ smBlocks = function(){
             this$.factor = e;
           }
           return true;
-          if (B.config.range === 2 && R.mode === 1 && e === 1) {
+          if (B.config.range && R.mode === 1 && e === 1) {
+            debugger;
             a = (w - this$.baseSz[0] + this$.baseSz[3]) / B.current[1];
             b = (w - this$.baseSz[0] + this$.baseSz[4]) / B.current[1];
             if (Math.abs(a - this$.currentSz[2]) > 0.1) {
@@ -2886,6 +2887,48 @@ smBlocks = function(){
             }
             b[1] = a[1];
           }
+        }
+      };
+      return Block;
+    }(),
+    'view-modifier': function(){
+      var Control, Block;
+      Control = function(block){
+        this.block = block;
+      };
+      Control.prototype = {
+        attach: function(){
+          true;
+        },
+        detach: function(){
+          true;
+        }
+      };
+      Block = function(state, root){
+        var box;
+        this.state = state;
+        this.root = root;
+        this.rootBox = box = root.firstChild;
+        debugger;
+        this.config = JSON.parse(box.dataset.cfg);
+        this.locked = -1;
+        this.current = -1;
+      };
+      Block.prototype = {
+        group: 'view',
+        level: 2,
+        init: function(cfg){
+          return true;
+        },
+        lock: async function(level){
+          this.locked = level;
+          return true;
+        },
+        notify: function(){
+          return true;
+        },
+        refresh: function(){
+          true;
         }
       };
       return Block;

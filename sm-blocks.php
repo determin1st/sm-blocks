@@ -23,19 +23,12 @@ class StorefrontModernBlocks {
     $unique_id = 0,
     $dir_data  = __DIR__.DIRECTORY_SEPARATOR.'data'.DIRECTORY_SEPARATOR,
     $dir_inc   = __DIR__.DIRECTORY_SEPARATOR.'inc'.DIRECTORY_SEPARATOR,
+    $base_attr = [
+      'class',
+      'customClass',
+      'focusGreedy',
+    ],
     $blocks    = [
-      'base' => [ # {{{
-        'render_callback' => [null, 'renderBase'],
-        'attributes'      => [
-          ### common
-          'customClass'   => [
-            'type'        => 'string',
-            'default'     => 'custom',
-          ],
-          ###
-        ],
-      ],
-      # }}}
       'products' => [ # {{{
         'render_callback' => [null, 'renderProducts'],
         'attributes'      => [
@@ -190,11 +183,43 @@ class StorefrontModernBlocks {
         ],
       ],
       # }}}
+      'view-modifier' => [ # {{{
+        'render_callback' => [null, 'renderBase'],
+        'attributes'      => [
+          ### common
+          'class'         => [
+            'type'        => 'string',
+            'default'     => 'view-modifier',
+          ],
+          'customClass'   => [
+            'type'        => 'string',
+            'default'     => 'custom',
+          ],
+          ### config
+          'ui'            => [
+            'type'        => 'number',
+            'default'     => 1|2|4, # 1=limit, 2=mode, 4=size
+          ],
+          'limits'        => [
+            'type'        => 'string',
+            'default'     => '16,32,64', # card/line counts
+          ],
+          'mode'          => [
+            'type'        => 'number',
+            'default'     => 0, # 0=cards, 1=lines
+          ],
+          'size'          => [
+            'type'        => 'number',
+            'default'     => 1, # multiplier
+          ],
+        ],
+      ],
+      # }}}
     ],
     $templates = [
       'base' => [ # {{{
         'root' => '
-        <div class="sm-blocks {{name}} {{custom}}">
+        <div class="sm-blocks {{class}} {{custom}}">
           <div data-cfg=\'{{cfg}}\'></div>
           {{placeholder}}
         </div>
@@ -495,7 +520,7 @@ class StorefrontModernBlocks {
       'purgeTimeout'   => 86400,
     ];
   # }}}
-  # constructor {{{
+  # construction {{{
   private function __construct()
   {
     global $wpdb;
@@ -604,40 +629,30 @@ class StorefrontModernBlocks {
     return self::$ref;
   }
   # }}}
-  # ssr (rendering)
+  # csr rendering
   # base {{{
   public function renderBase($attr, $content)
   {
     # prepare
     $T = $this->templates['base'];
-    # create filter variant
-    switch ($attr['baseUI']) {
-    default:
-      $content = $this->parseTemplate($T['textInputs'], $T, [
-        'submitButton' => ($attr['submitButton'] !== 0),
-      ]);
-      break;
+    $C = [];
+    foreach ($attr as $a => $b)
+    {
+      if (!in_array($a, $this->base_attr)) {
+        $C[$a] = $b;
+      }
     }
-    # compose widget
-    $content = $this->parseTemplate($T['main'], $T, [
-      'custom'  => $attr['customClass'],
-      'content' => $content,
+    $C = json_encode($C, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+    # compose
+    return $this->parseTemplate($T['root'], $T, [
+      'class'  => $attr['class'],
+      'custom' => $attr['customClass'],
+      'cfg'    => $C,
       'placeholder' => $this->templates['svg']['placeholder'],
-      'cfg' => json_encode([
-        'sectionSwitch' => $attr['sectionSwitch'],
-      ]),
-    ]);
-    # create a 0-section
-    return $this->renderSection([
-      'mode'      => $attr['sectionMode'],
-      'autofocus' => $attr['focusGreedy'],
-      'extraMain' => '',
-      'extra'     => '',
-      'items'     => $content,
-      'opened'    => true,
     ]);
   }
   # }}}
+  # ssr rendering
   # products {{{
   public function renderProducts($attr, $content)
   {
@@ -1142,7 +1157,7 @@ class StorefrontModernBlocks {
     }
   }
   # }}}
-  # helpers
+  # model helpers
   # parsers {{{
   private function parseTemplate($template, $data, $attr = [])
   {

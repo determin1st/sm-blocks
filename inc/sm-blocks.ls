@@ -2640,12 +2640,10 @@ smBlocks = do ->
 								B.root.style.removeProperty b
 						# update value
 						@factor = e
-					# TODO:
+					# check range mode
 					return true
-					###
-					# check initial and current range modes
-					if B.config.range == 2 and R.mode == 1 and e == 1
-						# flexy nogap (also draggable)
+					if B.config.range and R.mode == 1 and e == 1
+						# fully-sized dualgap
 						###
 						# the drag problem:
 						# when paginator has plenty of space at dynamic axis,
@@ -2656,6 +2654,7 @@ smBlocks = do ->
 						# if not, it will make drag "jumps" unnatural,
 						# and, because of that,
 						# determine optimal drag area sizes
+						debugger
 						a = (w - @baseSz.0 + @baseSz.3) / B.current.1
 						b = (w - @baseSz.0 + @baseSz.4) / B.current.1
 						# compare with current
@@ -3213,6 +3212,53 @@ smBlocks = do ->
 								d.classList.add c
 						# store
 						b.1 = a.1
+				# }}}
+			# }}}
+			return Block
+		# }}}
+		'view-modifier': do -> # {{{
+			Control = (block) !-> # {{{
+				@block = block
+			###
+			Control.prototype = {
+				attach: !-> # {{{
+					true
+				# }}}
+				detach: !-> # {{{
+					true
+				# }}}
+			}
+			# }}}
+			Block = (state, root) !-> # {{{
+				# base
+				@state   = state
+				@root    = root
+				@rootBox = box = root.firstChild
+				debugger
+				@config  = JSON.parse box.dataset.cfg
+				# controls
+				# ...
+				# state
+				@locked  = -1
+				@current = -1
+			###
+			Block.prototype =
+				group: 'view'
+				level: 2
+				init: (cfg) -> # {{{
+					return true
+				# }}}
+				lock: (level) ->> # {{{
+					###
+					###
+					@locked = level
+					return true
+				# }}}
+				notify: -> # {{{
+					return true
+				# }}}
+				refresh: !-> # {{{
+					true
 				# }}}
 			# }}}
 			return Block
