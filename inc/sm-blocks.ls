@@ -505,7 +505,7 @@ smBlocks = do ->
 		productCard: do -> # {{{
 			init  = newPromise!
 			sizes = null # dimensions of card elements
-			template = !-> # {{{
+			template = parseTemplate !-> # {{{
 				/*
 				<div>
 					<div class="section a">
@@ -880,9 +880,6 @@ smBlocks = do ->
 				# }}}
 			# }}}
 			return (m) ->
-				# initialize first
-				if init.pending
-					template := parseTemplate template
 				# create
 				m = new Block m
 				# attach to the master
@@ -3217,30 +3214,75 @@ smBlocks = do ->
 			return Block
 		# }}}
 		'view-modifier': do -> # {{{
-			Control = (block) !-> # {{{
-				@block = block
-			###
-			Control.prototype = {
-				attach: !-> # {{{
-					true
+			template = parseTemplate !-> # {{{
+				/*
+				<div class="limit">
+					<select></select>
+				</div>
+				<div class="mode">
+				</div>
+				<div class="size">
+				</div>
+				*/
+			# }}}
+			Items = (block) !-> # {{{
+				# {{{
+				# construct
+				block.rootBox.innerHTML = template
+				# create object shape
+				a = block.config.ui
+				@limit = ((a .&. 1) and new @limit block) or null
+				@mode  = ((a .&. 2) and new @mode block) or null
+				@size  = ((a .&. 4) and new @size block) or null
+				# initialize
+				# ...
+				debugger
 				# }}}
-				detach: !-> # {{{
-					true
+			Items.prototype =
+				limit: do -> # {{{
+					Item = (block) !->
+						@block = block
+						@box   = box = block.rootBox.querySelector '.limit'
+					###
+					Item.prototype =
+						set: (data) !-> # {{{
+							true
+						# }}}
+					###
+					return Item
 				# }}}
-			}
+				mode: do -> # {{{
+					Item = (block) !->
+						@block = block
+						@box   = box = block.rootBox.querySelector '.mode'
+					###
+					Item.prototype =
+						set: (data) !-> # {{{
+							true
+						# }}}
+					###
+					return Item
+				# }}}
+				size: do -> # {{{
+					Item = (block) !->
+						@block = block
+						@box   = box = block.rootBox.querySelector '.size'
+					###
+					Item.prototype =
+						set: (data) !-> # {{{
+							true
+						# }}}
+					###
+					return Item
+				# }}}
 			# }}}
 			Block = (state, root) !-> # {{{
-				# base
 				@state   = state
 				@root    = root
 				@rootBox = box = root.firstChild
-				debugger
 				@config  = JSON.parse box.dataset.cfg
-				# controls
-				# ...
-				# state
+				@items   = new Items @
 				@locked  = -1
-				@current = -1
 			###
 			Block.prototype =
 				group: 'view'

@@ -476,7 +476,7 @@ smBlocks = function(){
       var init, sizes, template, Items, Block;
       init = newPromise();
       sizes = null;
-      template = function(){
+      template = parseTemplate(function(){
         /*
         <div>
         	<div class="section a">
@@ -513,7 +513,7 @@ smBlocks = function(){
         	</div>
         </div>
         */
-      };
+      });
       Items = function(block){
         var this$ = this;
         this.image = new this.image(block);
@@ -804,9 +804,6 @@ smBlocks = function(){
       };
       return function(m){
         var s, a, b;
-        if (init.pending) {
-          template = parseTemplate(template);
-        }
         m = new Block(m);
         m.master.rootBox.appendChild(m.root);
         if (init.pending) {
@@ -2892,27 +2889,79 @@ smBlocks = function(){
       return Block;
     }(),
     'view-modifier': function(){
-      var Control, Block;
-      Control = function(block){
-        this.block = block;
+      var template, Items, Block;
+      template = parseTemplate(function(){
+        /*
+        <div class="limit">
+        	<select></select>
+        </div>
+        <div class="mode">
+        </div>
+        <div class="size">
+        </div>
+        */
+      });
+      Items = function(block){
+        var a;
+        block.rootBox.innerHTML = template;
+        a = block.config.ui;
+        this.limit = (a & 1 && new this.limit(block)) || null;
+        this.mode = (a & 2 && new this.mode(block)) || null;
+        this.size = (a & 4 && new this.size(block)) || null;
+        debugger;
       };
-      Control.prototype = {
-        attach: function(){
-          true;
-        },
-        detach: function(){
-          true;
-        }
+      Items.prototype = {
+        limit: function(){
+          var Item;
+          Item = function(block){
+            var box;
+            this.block = block;
+            this.box = box = block.rootBox.querySelector('.limit');
+          };
+          Item.prototype = {
+            set: function(data){
+              true;
+            }
+          };
+          return Item;
+        }(),
+        mode: function(){
+          var Item;
+          Item = function(block){
+            var box;
+            this.block = block;
+            this.box = box = block.rootBox.querySelector('.mode');
+          };
+          Item.prototype = {
+            set: function(data){
+              true;
+            }
+          };
+          return Item;
+        }(),
+        size: function(){
+          var Item;
+          Item = function(block){
+            var box;
+            this.block = block;
+            this.box = box = block.rootBox.querySelector('.size');
+          };
+          Item.prototype = {
+            set: function(data){
+              true;
+            }
+          };
+          return Item;
+        }()
       };
       Block = function(state, root){
         var box;
         this.state = state;
         this.root = root;
         this.rootBox = box = root.firstChild;
-        debugger;
         this.config = JSON.parse(box.dataset.cfg);
+        this.items = new Items(this);
         this.locked = -1;
-        this.current = -1;
       };
       Block.prototype = {
         group: 'view',

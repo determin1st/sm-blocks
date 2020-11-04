@@ -201,8 +201,8 @@ class StorefrontModernBlocks {
             'default'     => 1|2|4, # 1=limit, 2=mode, 4=size
           ],
           'limits'        => [
-            'type'        => 'string',
-            'default'     => '16,32,64', # card/line counts
+            'type'        => 'array',
+            'default'     => [16,32,64], # card/line counts
           ],
           'mode'          => [
             'type'        => 'number',
