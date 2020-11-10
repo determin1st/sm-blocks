@@ -46,13 +46,13 @@ $o = <<<EOD
       <div class="controls">
         <div class="column">
           <div class="sep h"><hr /></div>
-          <!-- :sm-blocks/base {"class":"panel-slider"} /-->
+          <!-- :sm-blocks/panel-slider {} /-->
           <div class="sep" style="width:0.5em;display:flex;align-items:center;padding:0 4px 0 4px;"><hr /></div>
           <div class="sep h"><hr /></div>
         </div>
         <div class="lines">
           <div>
-            <!-- wp:sm-blocks/view-modifier {} /-->
+            <!-- wp:sm-blocks/limit-selector {} /-->
           </div>
           <div>
             <!-- wp:sm-blocks/paginator {"gotoMode":3} /-->

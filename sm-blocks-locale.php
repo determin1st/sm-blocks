@@ -12,10 +12,11 @@ return [
       'min'   => 'min',
       'max'   => 'max',
     ],
-    'category' => [
+    'title' => [
       'Categories',
     ],
-    'product' => [
+    'label' => [
+      'auto',
       'view',
     ],
   ],
@@ -32,10 +33,11 @@ return [
       'min'   => 'минимум',
       'max'   => 'максимум',
     ],
-    'category' => [
+    'title' => [
       'Категории',
     ],
-    'product' => [
+    'label' => [
+      'авто',
       'посмотреть',
     ],
   ],

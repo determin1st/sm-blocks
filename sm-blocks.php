@@ -24,9 +24,9 @@ class StorefrontModernBlocks {
     $dir_data  = __DIR__.DIRECTORY_SEPARATOR.'data'.DIRECTORY_SEPARATOR,
     $dir_inc   = __DIR__.DIRECTORY_SEPARATOR.'inc'.DIRECTORY_SEPARATOR,
     $base_attr = [
-      'class',
       'customClass',
-      'focusGreedy',
+      'class',
+      'style',
     ],
     $blocks    = [
       'products' => [ # {{{
@@ -46,14 +46,14 @@ class StorefrontModernBlocks {
             'type'        => 'string',
             'default'     => '0:0',# [width:height]
           ],
-          ### records order
-          'orderOptions'  => [
-            'type'        => 'string',
-            'default'     => 'featured,new,price',
+          ### records ordering
+          'options'  => [
+            'type'        => 'array',
+            'default'     => ['featured','new','price'],
           ],
-          'orderTag'      => [
-            'type'        => 'string',
-            'default'     => 'price:asc',
+          'order'         => [
+            'type'        => 'array',
+            'default'     => ['price',0],
           ],
         ],
       ],
@@ -183,34 +183,17 @@ class StorefrontModernBlocks {
         ],
       ],
       # }}}
-      'view-modifier' => [ # {{{
+      'limit-selector' => [ # {{{
         'render_callback' => [null, 'renderBase'],
         'attributes'      => [
-          ### common
-          'class'         => [
-            'type'        => 'string',
-            'default'     => 'view-modifier',
-          ],
-          'customClass'   => [
-            'type'        => 'string',
-            'default'     => 'custom',
-          ],
           ### config
-          'ui'            => [
-            'type'        => 'number',
-            'default'     => 1|2|4, # 1=limit, 2=mode, 4=size
-          ],
-          'limits'        => [
+          'list'          => [
             'type'        => 'array',
-            'default'     => [16,32,64], # card/line counts
+            'default'     => [16,32,64],
           ],
-          'mode'          => [
+          'index'         => [
             'type'        => 'number',
-            'default'     => 0, # 0=cards, 1=lines
-          ],
-          'size'          => [
-            'type'        => 'number',
-            'default'     => 1, # multiplier
+            'default'     => -1, # -1=auto
           ],
         ],
       ],
@@ -219,8 +202,8 @@ class StorefrontModernBlocks {
     $templates = [
       'base' => [ # {{{
         'root' => '
-        <div class="sm-blocks {{class}} {{custom}}">
-          <div data-cfg=\'{{cfg}}\'></div>
+        <div class="{{name}}">
+          <div class="{{class}}" style="{{style}}" data-cfg=\'{{cfg}}\'></div>
           {{placeholder}}
         </div>
         ',
@@ -383,7 +366,7 @@ class StorefrontModernBlocks {
       'orderer' => [ # {{{
         'main' => '
         <div class="sm-blocks orderer {{custom}}">
-          <div>
+          <div class="sm-buttons">
             {{variantLeft}}
             <select class="{{class}}"></select>
             {{variantRight}}
@@ -631,23 +614,38 @@ class StorefrontModernBlocks {
   # }}}
   # csr rendering
   # base {{{
-  public function renderBase($attr, $content)
+  public function renderBase($attr, $content, $block)
   {
     # prepare
     $T = $this->templates['base'];
-    $C = [];
+    ###
+    $name = str_replace('/', ' ', $block->name);
+    if (array_key_exists('customClass', $attr) && ($a = $attr['customClass'])) {
+      $name = $name.' '.$a;
+    }
+    else {
+      $name = $name.' custom';
+    }
+    ###
+    $class = (array_key_exists('class', $attr) && $attr['class'])
+      ? $attr['class'] : '';
+    $style = (array_key_exists('style', $attr) && $attr['style'])
+      ? $attr['style'] : '';
+    ###
+    $cfg = [];
     foreach ($attr as $a => $b)
     {
       if (!in_array($a, $this->base_attr)) {
-        $C[$a] = $b;
+        $cfg[$a] = $b;
       }
     }
-    $C = json_encode($C, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+    $cfg = json_encode($cfg, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
     # compose
     return $this->parseTemplate($T['root'], $T, [
-      'class'  => $attr['class'],
-      'custom' => $attr['customClass'],
-      'cfg'    => $C,
+      'name'   => $name,
+      'class'  => $class,
+      'style'  => $style,
+      'cfg'    => $cfg,
       'placeholder' => $this->templates['svg']['placeholder'],
     ]);
   }
@@ -675,23 +673,15 @@ class StorefrontModernBlocks {
         $style .= "--item-height:{$b}px;";
       }
     }
-    # determine configuration
-    # these are client-controller side options which serve
-    # to the content displayed, without direct effect on styles..
-    $a = explode(':', $attr['orderTag']);
-    $a[1] = count($a) === 2
-      ? ($a[1] === 'desc' ? 2 : 1)
-      : 0;
-    $cfg = json_encode([
-      'layout'       => $layout,
-      'orderOptions' => explode(',', $attr['orderOptions']),
-      'orderTag'     => $a,
-    ]);
     # compose
     return $this->parseTemplate($T['main'], $T, [
       'custom' => $attr['customClass'],
       'style'  => $style,
-      'cfg'    => $cfg,
+      'cfg'    => json_encode([
+        'layout'  => $layout,
+        'order'   => $attr['order'],
+        'options' => $attr['options'],
+      ]),
       'placeholder' => $this->templates['svg']['placeholder'],
     ]);
   }
@@ -943,8 +933,7 @@ class StorefrontModernBlocks {
     # check defaults
     $a = [
       'func','lang',
-      'category','price','order',
-      'limit','offset',
+      'range','order','category','price',
     ];
     foreach ($a as $b) {
       if (!array_key_exists($b, $P)) {
@@ -973,15 +962,13 @@ class StorefrontModernBlocks {
     if (!is_array($a) || !is_string($a[0]) || !is_int($a[1])) {
       $P['order'] = null;
     }
-    # offset and limit
-    $a = intval($P['offset']);
-    $P['offset'] = ($a < 0)
-      ? 0
-      : $a;
-    $a = intval($P['limit']);
-    $P['limit'] = ($a < 0 || $a > 200)
-      ? 0
-      : $a;
+    # range [offset,limit,total]
+    $a = $P['range'];
+    if (!is_array($a) || count($a) !== 3 ||
+        !is_int($a[0]) || !is_int($a[1]) || !is_int($a[2]))
+    {
+      $this->apiFail(400, 'incorrect range');
+    }
     # }}}
     # operate {{{
     switch ($P['func']) {
@@ -1001,22 +988,24 @@ class StorefrontModernBlocks {
   # }}}
   private function apiConfig($p) # {{{
   {
-    # check
-    if ($p['limit'] <= 0) {
-      $this->apiFail(400, 'incorrect limit');
+    # prepare
+    $range = $p['range'];
+    if ($range[1] <= 0 || $range[1] > 128) {
+      $this->apiFail(400, 'incorrect range limit');
     }
     # query products (thin parameters)
     $q = [
-      'order'    => null,
       'category' => $p['category'],
       'price'    => null,
+      'order'    => null,
     ];
     if (($q = $this->db_Products($q)) === null) {
       $this->apiFail(500, 'failed to get products map');
     }
-    # determine count of records and page range
-    $count = count($q);
-    $page  = [0, ceil($count / $p['limit'])];
+    # determine ranges
+    $range[2] = count($q);
+    $page     = [0, ceil($range[2] / $range[1])];
+    $range[0] = $page[0] * $range[1];
     # determine language specific data
     $locale = __DIR__.DIRECTORY_SEPARATOR.$this->name.'-locale.php';
     $locale = (include $locale);
@@ -1025,11 +1014,10 @@ class StorefrontModernBlocks {
       : $locale['en'];
     # encode result
     $q = json_encode([
-      'total'     => $count,
+      'range'     => $range,
       'page'      => $page,
       'category'  => $p['category'],
       'price'     => $this->db_PriceFilter($q),
-      'order'     => $p['order'],
       'currency'  => $this->db_Currency(),
       'cart'      => $this->db_Cart(),
       'locale'    => $locale,
@@ -1057,10 +1045,10 @@ class StorefrontModernBlocks {
     if (($ids = $this->db_Products($ids)) === null) {
       $this->apiFail(500, 'failed to get products map');
     }
-    # determine total count
-    $total = count($ids);
-    # check overflow
-    if ($total && $p['offset'] >= $total) {
+    # determine range
+    $range    = $p['range'];
+    $range[2] = count($ids);
+    if ($range[0] >= $range[2]) {
       $this->apiFail(400, 'incorrect offset, too large');
     }
     # }}}
@@ -1074,10 +1062,10 @@ class StorefrontModernBlocks {
     }
     header('content-type: application/octet-stream');
     # send
-    $this->sendInt($total);
+    $this->sendInt($range[2]);
     # }}}
     # send items {{{
-    $ids = array_slice($ids, $p['offset'], $p['limit']);
+    $ids = array_slice($ids, $range[0], $range[1]);
     foreach ($ids as $id)
     {
       # get product
@@ -1407,7 +1395,7 @@ EOD;
               mPrice.meta_key = '_price'
 EOD;
       }
-      $order = ($order[1] === 2)
+      $order = ($order[1] === 1)
         ? ' DESC'
         : '';
       $order = 'CAST(mPrice.meta_value AS SIGNED)'.$order;
