@@ -2,7 +2,7 @@
 "use strict";
 var smBlocks, slice$ = [].slice, arrayFrom$ = Array.from || function(x){return slice$.call(x);};
 smBlocks = function(){
-  var consoleError, consoleInfo, newPromise, newDelay, querySelectorChildren, querySelectorChild, queryFirstChildren, parseTemplate, soFetch, oFetch, S, TODO, M, State, Loader, RequestData, Group, newResizer, SUPERVISOR;
+  var consoleError, consoleInfo, newPromise, newDelay, querySelectorChildren, querySelectorChild, queryFirstChildren, parseTemplate, soFetch, oFetch, S, TODO, M, Config, State, Loader, Group, newResizer, SUPERVISOR;
   consoleError = function(msg){
     var a;
     a = '%csm-blocks: %c' + msg;
@@ -22,6 +22,9 @@ smBlocks = function(){
     });
     p.pending = id;
     p.resolve = function(data){
+      if (!arguments.length) {
+        data = p.pending;
+      }
       p.pending = 0;
       r(data);
     };
@@ -35,23 +38,24 @@ smBlocks = function(){
     };
     return p;
   };
-  newDelay = function(ms){
+  newDelay = function(ms, id){
     var p, r, t;
     ms == null && (ms = 0);
-    p = newPromise();
+    id == null && (id = -1);
+    p = newPromise(id);
     r = p.resolve;
     t = setTimeout(function(){
-      r(true);
+      r(p.pending);
     }, ms);
     p.resolve = function(flag){
-      flag == null && (flag = true);
       clearTimeout(t);
-      r(flag);
+      r(arguments.length
+        ? flag
+        : p.pending);
     };
     p.cancel = function(flag){
-      flag == null && (flag = false);
       clearTimeout(t);
-      r(flag);
+      r(arguments.length ? flag : 0);
     };
     return p;
   };
@@ -515,20 +519,32 @@ smBlocks = function(){
         */
       });
       Items = function(block){
-        var this$ = this;
         this.image = new this.image(block);
         this.title = new this.title(block);
         this.price = new this.price(block);
         this.actions = new this.actions(block);
-        (async function(){
-          (await init);
-          if (sizes[0] < 1) {
-            this$.image.box.classList.add('h');
-          } else {
-            this$.image.box.classList.add('w');
-          }
-          return this$.image.ready.resolve();
-        })();
+        /***
+        # initialize
+        do ~>>
+        	# wait variables initialized
+        	await init
+        	# check container's aspect ratio,
+        	# assuming that image item takes all,
+        	# first section's space (gaps doesn't break ration), and
+        	# determine optimal display variant (class)
+        	if sizes.0 < 1
+        		# vertical is smaller than horizontal,
+        		# limit image by max-[h]eight and
+        		# unleash automatic browser's width calculation
+        		@image.box.classList.add 'h'
+        	else
+        		# vertical is bigger than horizontal,
+        		# stretch image by [w]idth and
+        		# unleash automatic browser's height calculation
+        		@image.box.classList.add 'w'
+        	# now, loaded image (if any) may show up
+        	@image.ready.resolve!
+        /***/
       };
       Items.prototype = {
         image: function(){
@@ -538,14 +554,21 @@ smBlocks = function(){
             this.block = block;
             this.box = box = block.rootBox.querySelector('.image');
             this.image = box.firstChild;
-            this.ready = newPromise();
             this.loaded = false;
             this.load = async function(){
-              if (this$.image.complete && this$.image.naturalWidth >= 1 && this$.image.naturalHeight >= 1) {
-                (await this$.ready);
-                this$.box.classList.add('v');
-                this$.loaded = true;
+              var w, h;
+              if (!this$.image.complete || (w = this$.image.naturalWidth) < 2 || (h = this$.image.naturalHeight) < 2) {
+                return false;
               }
+              (await init);
+              debugger;
+              if (sizes[0] < 1) {
+                this$.box.classList.add('h');
+              } else {
+                this$.box.classList.add('w');
+              }
+              this$.box.classList.add('v');
+              this$.loaded = true;
               return true;
             };
           };
@@ -1121,10 +1144,6 @@ smBlocks = function(){
           this.group.data[this.index] = [];
           return true;
         },
-        lock: async function(level){
-          (await this.section.lock(level));
-          return true;
-        },
         refresh: function(list){
           var i$, len$, a, b, d, c;
           if (list) {
@@ -1146,7 +1165,7 @@ smBlocks = function(){
             }
           }
           if (this.index < 0) {
-            return;
+            return true;
           }
           a = this.checks.getCheckedIds();
           b = this.group.data[this.index];
@@ -1165,6 +1184,11 @@ smBlocks = function(){
             }
             this.group.update();
           }
+          return true;
+        },
+        lock: async function(level){
+          (await this.section.lock(level));
+          return true;
         }
       };
       return Block;
@@ -1583,14 +1607,12 @@ smBlocks = function(){
         this.config = JSON.parse(root.dataset.cfg);
         /***
         # controls
-        # {{{
         # determine UI mode
         mode = if box.classList.contains 'text'
         	then 0
         	else 1
         @inputs  = I = new TextInputs @, box
         @section = S = state.f.section root.parentNode.parentNode.parentNode
-        # }}}
         /***/
         this.locked = -1;
         this.mode = mode;
@@ -1660,11 +1682,6 @@ smBlocks = function(){
           this.inputs.attach();
           return true;
         },
-        lock: async function(level){
-          this.inputs.lock(level);
-          this.section.lock(level);
-          return true;
-        },
         refresh: function(){
           var a, b;
           a = this.group.data;
@@ -1677,6 +1694,12 @@ smBlocks = function(){
             this.inputs.set(a[1], a[2]);
           }
           b[0] = a[0], b[1] = a[1], b[2] = a[2], b[3] = a[3], b[4] = a[4];
+          return true;
+        },
+        lock: async function(level){
+          this.inputs.lock(level);
+          this.section.lock(level);
+          return true;
         },
         submit: function(){
           var p;
@@ -1852,6 +1875,7 @@ smBlocks = function(){
             }
             b[1] = a[1];
           }
+          return true;
         }
       };
       return Block;
@@ -1864,67 +1888,241 @@ smBlocks = function(){
         var this$ = this;
         this.block = block;
         this.style = getComputedStyle(block.rootBox);
-        this.pads = [0, 0];
-        this.layout = [0, 0];
+        this.pads = [0, 0, 0];
         this.gaps = [0, 0];
         this.sizes = [0, 0, 0];
+        this.layout = [0, 0];
         this.factor = 1;
-        this.observer = null;
+        this.ready = newPromise();
+        this.i_opt = {
+          root: null,
+          rootMargin: '0px',
+          threshold: [0, 0, 1]
+        };
+        this.s_opt = [
+          -1, {
+            behavior: 'smooth',
+            top: 0
+          }, {
+            behavior: 'auto',
+            top: 0
+          }
+        ];
         this.onChange = null;
+        this.observer = null;
+        this.intense = newDelay();
+        this.dot = newPromise();
         this.debounce = newDelay();
         this.bounces = 0;
         this.resize = async function(e){
           var w, ref$, a, b, c;
-          if (this$.debounce.pending) {
-            this$.debounce.cancel(++this$.bounces === 3);
+          if (e) {
+            if (this$.debounce.pending) {
+              this$.debounce.cancel(++this$.bounces === 3);
+            }
+            if (!(await (this$.debounce = newDelay(100)))) {
+              return false;
+            }
+            this$.bounces = 0;
+            w = e[0].contentRect.width;
+          } else {
+            w = this$.block.root.clientWidth - this$.pads[0];
           }
-          if (!(await (this$.debounce = newDelay(100)))) {
+          ref$ = this$.getCols(w, 1), a = ref$[0], b = ref$[1];
+          e = c = b > w ? w / b : 1;
+          if (this$.onChange) {
+            if ((e = this$.onChange(e)) < c) {
+              ref$ = this$.getCols(w, e), a = ref$[0], b = ref$[1];
+            }
+          } else if (Math.abs(this$.factor - e) > 0.005) {
+            this$.factor = e;
+            b = '--sm-blocks-factor';
+            c = this$.block.root.style;
+            if (e === 1) {
+              c.removeProperty(b);
+            } else {
+              c.setProperty(b, e);
+            }
+          }
+          if ((c = this$.layout)[0] !== a) {
+            this$.block.root.style.setProperty('--columns', c[0] = a);
+            c[1] && this$.block.setCount(a * c[1]);
+          }
+          return true;
+        };
+        this.intersect = async function(e){
+          var a, c, o, b, w, v, h, y, z, x, i;
+          a = this$.block.config.layout;
+          if ((c = this$.block.rows) || (c = a[1]) === a[3]) {
+            if ((a = this$.layout)[1] !== c) {
+              this$.block.root.style.setProperty('--rows', a[1] = c);
+              a[0] && this$.block.setCount(a[0] * c);
+            }
+            return true;
+          }
+          if (this$.dot.pending || !e) {
+            console.log('intersect skip');
+            return true;
+          }
+          e = e[0].intersectionRatio;
+          o = this$.layout;
+          c = o[1];
+          b = a[3];
+          a = a[1];
+          if (!(w = v = this$.i_opt.root)) {
+            w = window;
+            v = document.documentElement;
+          }
+          h = v.clientHeight;
+          y = (this$.gaps[1] + this$.sizes[1]) * this$.factor;
+          z = this$.sizes[2] * this$.factor;
+          x = z * (1 - this$.i_opt.threshold[1] - 0.01) | 0;
+          if (b) {
+            return true;
+          }
+          b = v.scrollHeight;
+          if (e && b < h + z) {
+            e = Math.ceil((b - c * y - z) / y);
+            c += e;
+            b += y * e;
+            this$.block.root.style.setProperty('--rows', o[1] = c);
+            if (o[0] && this$.block.setCount(o[0] * c) && this$.ready.pending) {
+              this$.ready.resolve();
+            }
+            this$.s_opt[0] = v.scrollTop;
+            this$.s_opt[1].top = b - h - x;
+            this$.s_opt[2].top = b - h - z;
+            (await (this$.dot = newPromise(-1)));
+            this$.observer[1].disconnect();
+            this$.observer[1].observe(this$.block.dot);
+            return true;
+          }
+          while (e) {
+            this$.s_opt[1].top = b - h - x;
+            this$.s_opt[2].top = b - h - z;
+            if (e > 0) {
+              w.scrollTo(this$.s_opt[1]);
+            } else if (this$.s_opt[0] === -2) {
+              w.scrollTo(this$.s_opt[2]);
+            }
+            i = this$.s_opt[1].top - y - this$.pads[2];
+            if (!(e = (await (this$.dot = newPromise(i))))) {
+              break;
+            }
+            if (e === 1) {
+              c += 1;
+              b += y;
+            } else {
+              i = 1 + (i - v.scrollTop) / y;
+              e = -(i | 0);
+              console.log('decrement', e);
+              c += e;
+              b += y * e;
+              while (c < a || b < h + z) {
+                c += 1;
+                b += y;
+                i -= 1;
+                e = 0;
+              }
+              if (c === o[1]) {
+                console.log('decrement exhausted');
+                break;
+              }
+              if (e && b - y < h + z && b - z > h + v.scrollTop) {
+                e = 0;
+              }
+              if ((i - (i | 0)) * y < z - x + 1) {
+                if (e) {
+                  console.log('scroll alignment');
+                  this$.s_opt[0] = -2;
+                } else {
+                  console.log('scroll alignment last');
+                  w.scrollTo(this$.s_opt[2]);
+                }
+              }
+            }
+            this$.block.root.style.setProperty('--rows', o[1] = c);
+            if (o[0] && this$.block.setCount(o[0] * c) && this$.ready.pending) {
+              this$.ready.resolve();
+            }
+          }
+          return true;
+        };
+        this.scroll = async function(e){
+          var a, c, d, b, i;
+          if (!(a = this$.dot.pending)) {
+            console.log('scroll skip');
+            return true;
+          }
+          if (this$.intense.pending) {
+            this$.intense.pending += 1;
             return false;
           }
-          this$.bounces = 0;
-          w = e
-            ? e[0].contentRect.width
-            : this$.block.root.clientWidth - this$.pads[0];
-          ref$ = this$.calculateLayout(w, 1), a = ref$[0], b = ref$[1], c = ref$[2];
-          e = c > w ? w / c : 1;
-          if (this$.onChange) {
-            c = e;
-            if ((e = this$.onChange(e)) < c) {
-              ref$ = this$.calculateLayout(w, e), a = ref$[0], b = ref$[1];
+          c = this$.s_opt[2].top;
+          d = this$.s_opt[1].top;
+          if ((b = this$.s_opt[0]) < 0) {
+            console.log('first scroll skip');
+            this$.s_opt[0] = ~b ? c : d;
+            return false;
+          }
+          e = this$.i_opt.root || document.documentElement;
+          i = e.scrollTop > b ? 60 : 100;
+          while ((await (this$.intense = newDelay(i, 1))) > 1) {
+            true;
+          }
+          e = e.scrollTop;
+          if (Math.abs(e - b) < 0.2) {
+            console.log('small scroll skip');
+            return true;
+          }
+          this$.s_opt[0] = e;
+          console.log('reposition?', e, b, c, d);
+          if (b > c + 1 && e < b && e > c - 1) {
+            this$.s_opt[0] = -2;
+            if (!(a = this$.i_opt.root)) {
+              a = window;
             }
+            a.scrollTo(this$.s_opt[2]);
+            console.log('exit', this$.s_opt[2].top);
+            return true;
           }
-          if (this$.layout[0] !== a) {
-            this$.layout[0] = a;
-            this$.block.rootBox.style.setProperty('--columns', a);
-          }
-          if (this$.layout[1] !== b) {
-            this$.layout[1] = b;
-            this$.block.rootBox.style.setProperty('--rows', b);
-          }
-          if (!this$.onChange && Math.abs(this$.factor - e) > 0.005) {
-            a = this$.block.root.style;
-            b = '--sm-blocks-factor';
-            if ((this$.factor = e) === 1) {
-              a.removeProperty(b);
-            } else {
-              a.setProperty(b, e);
+          if (b < d - 1 && e > b && e > c) {
+            this$.s_opt[0] = -1;
+            if (!(a = this$.i_opt.root)) {
+              a = window;
             }
+            a.scrollTo(this$.s_opt[1]);
+            console.log('enter', this$.s_opt[1].top);
+            return true;
+          }
+          if (e > d) {
+            console.log('increment');
+            this$.s_opt[0] = -1;
+            this$.dot.resolve(1);
+            return true;
+          }
+          if (a < 0) {
+            console.log('cancelled');
+            this$.s_opt[0] = -1;
+            this$.dot.resolve(0);
+            return true;
+          }
+          if (e < a) {
+            this$.dot.resolve(-1);
           }
           return true;
         };
       };
       Resizer.prototype = {
-        init: function(){
-          var a, s;
-          a = this.block.config.layout;
-          this.layout[0] = a[0];
-          this.layout[1] = a[1];
+        attach: function(){
+          var s, a;
           s = getComputedStyle(this.block.root);
           a = this.pads;
           a[0] = parseInt(s.getPropertyValue('padding-left'));
           a[0] += parseInt(s.getPropertyValue('padding-right'));
           a[1] = parseInt(s.getPropertyValue('padding-top'));
-          a[1] += parseInt(s.getPropertyValue('padding-bottom'));
+          a[2] = parseInt(s.getPropertyValue('padding-bottom'));
+          a[1] += a[2];
           s = this.style;
           a = this.gaps;
           a[0] = parseInt(s.getPropertyValue('--column-gap'));
@@ -1932,143 +2130,152 @@ smBlocks = function(){
           a = this.sizes;
           a[0] = parseInt(s.getPropertyValue('--item-width'));
           a[1] = parseInt(s.getPropertyValue('--item-height'));
-          a[2] = a[1] / a[0];
+          a[2] = a[1] + this.gaps[1];
+          a = parseFloat(s.getPropertyValue('--foot-size'));
+          this.i_opt.threshold[1] = a / 100;
+          a = this.block.config.layout;
+          this.layout[0] = a[0];
+          this.layout[1] = a[1];
+          this.observer = a = [new ResizeObserver(this.resize), new IntersectionObserver(this.intersect, this.i_opt)];
+          a[0].observe(this.block.root);
+          a[1].observe(this.block.dot);
+          a = this.i_opt.root || window;
+          a.addEventListener('scroll', this.scroll);
+          this.dot.resolve(0);
         },
-        attach: function(){
-          if (this.observer) {
-            this.detach();
-          }
-          this.init();
-          this.observer = new ResizeObserver(this.resize);
-          this.observer.observe(this.block.root);
-        },
-        detach: function(){
-          if (this.observer) {
-            this.observer.disconnect();
-            this.observer = null;
-          }
-        },
-        calculateLayout: function(w, e){
+        getCols: function(w, e){
           var C, a, b, c, d;
           C = this.block.config.layout;
-          a = C[2];
-          b = e * this.sizes[0];
-          c = e * this.gaps[0];
-          if (a && a < C[0]) {
-            while ((d = a * b + (a - 1) * c) <= w && a < C[0]) {
-              ++a;
-            }
-            if (d > w && a > C[2]) {
-              --a;
-              d = a * b + (a - 1) * c;
-            }
-            if (!(b = C[3])) {
-              if ((c = this.block.size / a) !== (b = c | 0)) {
-                ++b;
-              }
-            }
+          a = e * this.sizes[0];
+          b = e * this.gaps[0];
+          if ((c = C[0]) === C[2] || !C[2]) {
+            d = c * a + (c - 1) * b;
           } else {
-            a = C[0];
-            b = C[1];
-            d = a * b + (a - 1) * c;
+            while ((d = c * a + (c - 1) * b) > w && c > C[2]) {
+              --c;
+            }
           }
-          return [a, b, d];
+          return [c, d];
+        },
+        refresh: async function(){
+          (await this.resize());
+          (await this.intersect());
+          return true;
+        },
+        detach: function(){
+          var o;
+          if (o = this.observer) {
+            this.observer = null;
+            o[0].disconnect();
+            o[1].disconnect();
+          }
+          this.ready = newPromise();
         }
       };
       Block = function(root){
-        var box, c;
+        var box, cfg;
         this.group = 'range';
         this.root = root;
         this.rootBox = box = root.firstChild;
-        this.config = c = JSON.parse(box.dataset.cfg);
+        this.config = cfg = JSON.parse(box.dataset.cfg);
+        this.dot = querySelectorChild(root, 'hr');
         this.items = [];
         this.resizer = new Resizer(this);
-        this.size = c.layout[0] * c.layout[1];
-        this.offset = 0;
-        this.loaded = 0;
+        this.range = [0, 0, 0, 0, 0];
+        this.rows = -1;
+        this.count = 0;
+        this.page = 0;
+        this.rec_a = [];
+        this.rec_b = [];
         this.locked = -1;
       };
       Block.prototype = {
-        level: 0,
-        configure: function(s){
-          s.range[1] = this.size;
-          s.order = this.config.order;
-        },
-        init: function(s){
-          var a, b, ref$;
-          this.offset = this.group.data[0];
-          a = this.config.layout;
-          b = this.rootBox.style;
-          b.setProperty('--columns', a[0]);
-          b.setProperty('--rows', a[1]);
-          a = -1;
-          while (++a < this.size) {
-            (ref$ = this.items)[ref$.length] = this.group.f.productCard(this);
+        level: 1,
+        configure: function(s){},
+        init: function(s, c){
+          var a, b;
+          if (a = this.config.order) {
+            s.order = a;
           }
+          s.range = this.range;
+          c.count = 0;
+          c.rows = this.config.layout[1];
           this.resizer.attach();
-          while (~--a) {
-            this.items[a].root.classList.add('v');
-          }
-          this.resizer.resize();
-          return true;
-        },
-        refresh: function(){
-          var a, b, c;
-          if ((a = this.group.data[1]) !== (b = this.size)) {
-            c = this.items;
-            while (c.length < a) {
-              c[c.length] = this.group.f.productCard(this);
-            }
-            if (a > b) {
-              while (b < a) {
-                c[b].root.classList.add('v');
-                ++b;
-              }
+          s = window.screen;
+          s = (a = s.availWidth) > (b = s.availHeight) ? a : b;
+          s = Math.ceil(s / this.resizer.sizes[1]);
+          a = this.config.layout;
+          this.page = 5 * a[0] * s;
+          this.setCount(a[0] * a[1]);
+          a = this.range;
+          a[0] = 0;
+          a[1] = a[0];
+          if (a[1] + this.page > c.total) {
+            a[2] = c.total;
+            a[3] = a[2] - 1;
+            a[4] = 0;
+          } else {
+            a[2] = this.page;
+            if ((a[3] = a[0] - this.page) < 0) {
+              a[3] = c.total + a[3];
+              a[4] = c.total - a[3];
             } else {
-              while (--a <= b) {
-                c[b].root.classList.remove('v');
-              }
+              a[4] = a[0] - a[3];
             }
-            this.size = a;
-            this.resizer.resize();
-            console.log('products.refresh');
           }
-          debugger;
-        },
-        notify: function(s){
           return true;
         },
-        load: function(record, index){
-          var D, I;
-          if (this.locked) {
+        refresh: async function(){
+          var a;
+          if (this.rows !== (a = this.group.config.rows)) {
+            if (this.rows && !a) {
+              this.dot.classList.add('v');
+            } else if (!this.rows && a) {
+              this.dot.classList.remove('v');
+            }
+            this.rows = a;
+            (await this.resizer.refresh());
+          }
+          return true;
+        },
+        setCount: function(count){
+          var a, c, b;
+          if (this.count === count) {
             return false;
           }
-          D = this.group.data;
-          I = this.items;
-          if (index === 0 && this.loaded) {
-            debugger;
-          }
-          if (this.offset + this.loaded === D[0] + index && I.length >= this.size + this.loaded) {
-            index += this.loaded;
-            if (!I[index].set(record)) {
-              return false;
+          a = this.items;
+          if (!a.length || count / a.length > 0.8) {
+            c = a.length + this.page;
+            while (a.length < c) {
+              a[a.length] = this.group.f.productCard(this);
             }
-            ++this.loaded;
-            return true;
           }
-          if (this.offset <= D[0] && this.offset + this.loaded > D[0] + this.size) {
-            index = this.offset - D[0] + index;
-            while (this.loaded > index + 1) {
-              I[--this.loaded].clear();
+          b = this.rec_a;
+          c = this.count - 1;
+          while (++c < count) {
+            a[c].root.classList.add('v');
+            if (c < b.length && a[c].id !== b[c].id) {
+              a[c].set(b[c]);
             }
-            return I[index].set(record);
           }
-          this.offset = D[0];
-          while (this.loaded > index + 1) {
-            I[--this.loaded].clear();
+          while (c > count) {
+            a[--c].root.classList.remove('v');
           }
-          ++this.loaded;
-          return I[index].set(record);
+          this.count = c;
+          return true;
+        },
+        load: function(i, record){
+          var j;
+          if ((j = i - this.range[2]) < 0) {
+            this.rec_a[i] = record;
+            j = this.range[1] - this.range[0] + i;
+            if (j < this.count) {
+              this.items[j].set(record);
+            }
+          } else {
+            this.rec_b[j] = record;
+          }
+          return true;
         }
       };
       return Block;
@@ -2746,7 +2953,7 @@ smBlocks = function(){
       };
       Block.prototype = {
         level: 1,
-        init: function(s){
+        init: function(){
           var a;
           a = this.rootBox.classList;
           if (this.config.range === 2) {
@@ -2755,9 +2962,25 @@ smBlocks = function(){
           if (!this.gotos.sepFL) {
             a.add('nosep');
           }
-          this.refresh();
           this.control.attach();
           this.resizer.attach();
+          return true;
+        },
+        refresh: function(){
+          var a, b, c;
+          if ((a = this.group.config).count) {
+            b = Math.round(this.group.data[0] / a.count) | 0;
+            c = Math.ceil(a.total / a.count);
+          } else {
+            b = 0;
+            c = 0;
+          }
+          if ((a = this.current)[0] === b && a[1] === c) {
+            return true;
+          }
+          a[0] = b;
+          a[1] = c;
+          this.range.refresh();
           return true;
         },
         lock: async function(level){
@@ -2776,28 +2999,13 @@ smBlocks = function(){
           }
           return true;
         },
-        notify: function(s){
-          this.refresh();
-          return !this.control.lock.pending;
-        },
-        refresh: function(){
-          var a, b, c;
-          a = this.group.data;
-          if ((b = a[2] / a[1]) !== (c = b | 0)) {
-            ++c;
-          }
-          b = a[2] / a[0] | 0;
-          a = this.current;
-          if (a[0] === b && a[1] === c) {
-            return;
-          }
-          a[0] = b;
-          a[1] = c;
-          this.range.refresh();
-        },
         submit: function(){
           this.group.data[0] = this.current[0] * this.group.data[1];
           this.group.update(this);
+        },
+        notify: function(s){
+          this.refresh();
+          return !this.control.lock.pending;
         },
         focus: function(){
           var a;
@@ -2808,7 +3016,7 @@ smBlocks = function(){
       };
       return Block;
     }(),
-    'limit-selector': function(){
+    'rows-selector': function(){
       var template, Block;
       template = parseTemplate(function(){
         /*
@@ -2833,7 +3041,6 @@ smBlocks = function(){
         this.hovered = false;
         this.focused = false;
         this.active = false;
-        this.current = -1;
         this.locked = -1;
         this.hover = function(e){
           e.preventDefault();
@@ -2878,38 +3085,48 @@ smBlocks = function(){
         };
       };
       Block.prototype = {
-        level: 2,
-        configure: function(s){
-          var a;
-          if (~(a = this.config.index)) {
-            s.range[1] = this.config.list[a];
-          }
-        },
-        init: function(s){
-          var a, i$, ref$, len$, b;
-          if (!~this.config.index) {
-            a = document.createElement('option');
-            a.text = s.config.locale.label[0];
-            this.select.add(a);
-          }
+        level: 0,
+        init: function(s, c){
+          var i$, ref$, len$, a;
+          c.rows = this.config.list[this.config.index];
+          c = this.group.config.locale;
           for (i$ = 0, len$ = (ref$ = this.config.list).length; i$ < len$; ++i$) {
-            b = ref$[i$];
+            s = ref$[i$];
             a = document.createElement('option');
-            a.text = b;
+            a.text = s === -1
+              ? c.label[2]
+              : s
+                ? 'x' + s
+                : c.label[0];
             this.select.add(a);
           }
-          this.select.selectedIndex = -1;
-          this.refresh();
+          this.select.selectedIndex = this.config.index;
+          this.attach();
+          return true;
+        },
+        refresh: function(){
+          var a, b;
+          a = this.config.list[this.select.selectedIndex];
+          if (a !== (b = this.group.config.rows)) {
+            a = this.config.list.indexOf(b);
+            this.select.selectedIndex = a;
+            a = !!b && !this.locked;
+            this.rootBox.classList.toggle('active', a);
+          }
           return true;
         },
         lock: function(level){
           if (level) {
             this.select.disabled = true;
-            this.detach();
           } else {
             this.select.disabled = false;
-            this.attach();
           }
+        },
+        submit: function(){
+          var a;
+          a = this.config.list[this.select.selectedIndex];
+          this.group.config.rows = a;
+          this.group.refresh(this);
         },
         attach: function(){
           this.rootBox.addEventListener('pointerenter', this.hover);
@@ -2924,148 +3141,80 @@ smBlocks = function(){
           this.select.removeEventListener('focusin', this.focus);
           this.select.removeEventListener('focusout', this.unfocus);
           this.select.removeEventListener('input', this.input);
-          this.unfocus();
-          this.unhover();
-          if (this.active) {
-            this.rootBox.classList.remove('active');
-          }
-          this.select.selectedIndex = -1;
-        },
-        refresh: function(){
-          var a, b, c, d;
-          console.log('limit-selector.refresh');
-          if ((a = this.get()) === (b = this.group.data[1])) {
-            return;
-          }
-          c = this.config;
-          if (!~(d = c.list.indexOf(b))) {
-            d = 0;
-          } else if (!~c.index) {
-            d = d + 1;
-          }
-          if (d === this.select.selectedIndex) {
-            return;
-          }
-          console.log('limit-selector.refreshed');
-          this.select.selectedIndex = d;
-          this.rootBox.classList.toggle('active', ~this.get());
-        },
-        submit: function(){
-          var D, a;
-          D = this.group.data;
-          a = this.select.selectedIndex;
-          D[1] = ~this.config.index
-            ? this.config.list[a]
-            : a
-              ? this.config.list[a - 1]
-              : -1;
-          if (~D[1]) {
-            D[0] = D[0] / D[1] | 0;
-          }
-          this.group.update(this);
-        },
-        get: function(){
-          var a;
-          return !~(a = this.select.selectedIndex)
-            ? -2
-            : ~this.config.index
-              ? this.config.list[a]
-              : a
-                ? this.config.list[a - 1]
-                : -1;
         }
       };
       return Block;
     }()
   };
+  Config = function(){
+    this.locale = null;
+    this.currency = null;
+    this.cart = null;
+    this.price = null;
+    this.total = 0;
+    this.count = 0;
+    this.rows = 0;
+  };
   State = function(){
-    this.config = {};
-    this.range = [0, 0, 0];
+    this.lang = '';
+    this.range = null;
+    this.order = null;
     this.category = null;
     this.price = null;
-    this.order = null;
-  };
-  State.prototype = {
-    resolver: function(loader, group){
-      var this$ = this;
-      return function(){
-        if (loader.level > group.pending) {
-          return false;
-        } else if (loader.level < group.pending) {
-          loader.level = group.pending;
-        }
-        switch (group.name) {
-        case 'category':
-          this$.range[0] = 0;
-          break;
-        case 'price':
-          this$.range[0] = 0;
-        }
-        loader.charge();
-        console.log('resolved group ', group.name, 'loader dirty', loader.dirty);
-        return true;
-      };
-    }
   };
   Loader = function(s){
     this['super'] = s;
-    this.dirty = -1;
     this.lock = null;
+    this.dirty = -1;
     this.level = -1;
     this.fetch = null;
-    this.data = new RequestData(s.state);
-  };
-  RequestData = function(s){
-    this.func = 'config';
-    this.lang = '';
-    this.range = s.range;
-    this.category = s.category;
-    this.price = null;
-    this.order = null;
   };
   Loader.prototype = {
     init: async function(){
-      var T, D, S, B, i$, len$, a, cfg, b, ref$;
+      var T, S, i$, ref$, len$, a, c, b;
       T = window.performance.now();
-      D = this.data;
-      S = this['super'].state;
-      B = this['super'].blocks;
-      for (i$ = 0, len$ = B.length; i$ < len$; ++i$) {
-        a = B[i$];
+      S = this['super'];
+      for (i$ = 0, len$ = (ref$ = S.blocks).length; i$ < len$; ++i$) {
+        a = ref$[i$];
         if (a.configure) {
-          a.configure(S);
+          a.configure(S.state);
         }
       }
-      if ((cfg = (await soFetch(D))) instanceof Error) {
-        consoleError(cfg.message);
+      if ((c = (await soFetch(S.state))) instanceof Error) {
+        consoleError(c.message);
         return false;
       }
-      for (a in cfg) {
-        if (S.hasOwnProperty(a)) {
-          S[a] = cfg[a];
-        } else {
-          S.config[a] = cfg[a];
+      for (a in c) {
+        if (S.config.hasOwnProperty(a)) {
+          S.config[a] = c[a];
         }
       }
-      for (a in D) {
-        if (S.hasOwnProperty(a)) {
-          D[a] = S[a];
-        }
-      }
-      D.func = 'data';
       a = [];
-      for (b in B = this['super'].groups) {
-        a[a.length] = B[b].init(S);
+      for (i$ = 0, len$ = (ref$ = b = Object.getOwnPropertyNames(S.groups)).length; i$ < len$; ++i$) {
+        c = ref$[i$];
+        a[a.length] = S.groups[c].init();
       }
       for (i$ = 0, len$ = (ref$ = (await Promise.all(a))).length; i$ < len$; ++i$) {
+        c = i$;
         a = ref$[i$];
         if (!a) {
-          consoleError('failed to initialize');
+          consoleError('failed to initialize ' + S.groups[c].name);
           return false;
         }
       }
+      for (i$ = 0, len$ = b.length; i$ < len$; ++i$) {
+        a = b[i$];
+        (await S.groups[a].refresh());
+      }
+      for (i$ = 0, len$ = (ref$ = S.blocks).length; i$ < len$; ++i$) {
+        a = ref$[i$];
+        if (a.locked === -1) {
+          a.root.classList.add('v');
+          a.locked = 1;
+        }
+      }
       T = window.performance.now() - T | 0;
-      consoleInfo('state initialized in ' + T + 'ms');
+      consoleInfo('initialized in ' + T + 'ms');
       return true;
     },
     finit: function(){
@@ -3077,20 +3226,26 @@ smBlocks = function(){
       }
       this.dirty = this.level = -1;
       this.lock = this.fetch = null;
-      this.data = new RequestData();
     },
-    charge: function(){
+    charge: function(group){
+      if (this.level > group.level) {
+        return false;
+      }
+      if (this.level < group.level) {
+        this.level = group.pending;
+      }
       if (this.lock.pending) {
-        return this.lock.resolve(this.lock.pending === 1);
+        this.lock.resolve(this.lock.pending === 1);
       } else {
         this.dirty = 1;
         if (this.fetch) {
-          return this.fetch.cancel();
+          this.fetch.cancel();
         }
       }
+      return true;
     },
     enter: async function(){
-      var S, B, G, a, b, c, d, R, i$, ref$, len$;
+      var S, a, i$, ref$, len$, b, F;
       this.lock = this.dirty
         ? newDelay(~this.dirty && 400)
         : newPromise(1);
@@ -3098,28 +3253,26 @@ smBlocks = function(){
         return true;
       }
       this.dirty = 0;
-      S = this['super'].state;
-      B = this['super'].blocks;
-      G = this['super'].groups;
       console.log('loader charged');
+      S = this['super'];
       if (~this.level) {
         a = [];
-        b = -1;
-        while (++b < B.length) {
-          if ((c = B[b]).level < this.level && (d = c.locked) !== 1) {
-            console.log('locking ' + c.group.name);
-            c.locked = 1;
-            if (c.lock) {
-              a[a.length] = c.lock(1);
+        for (i$ = 0, len$ = (ref$ = S.blocks).length; i$ < len$; ++i$) {
+          b = ref$[i$];
+          if (b.level < this.level && !b.locked) {
+            b.locked = 1;
+            if (b.lock) {
+              a[a.length] = b.lock();
             }
-            c.rootBox.classList.remove('v');
+            b.rootBox.classList.remove('v');
           }
         }
         if (a.length) {
           (await Promise.all(a));
         }
+        b = S.blocks.length;
         while (~--b) {
-          if ((c = B[b]).notify && !c.notify(S)) {
+          if ((a = S.blocks[b]).notify && !a.notify(S.state)) {
             this.dirty = 2;
           }
         }
@@ -3127,76 +3280,65 @@ smBlocks = function(){
           return true;
         }
       }
-      R = (await (this.fetch = oFetch(this.data)));
+      F = (await (this.fetch = oFetch(S.state)));
       this.fetch = null;
-      if (R instanceof Error) {
-        if (R.id === 4) {
+      if (F instanceof Error) {
+        if (F.id === 4) {
           return true;
         }
-        consoleError(R.message);
+        consoleError(F.message);
         return false;
       }
-      if ((a = (await R.readInt())) === null) {
+      if ((a = (await F.readInt())) === null) {
         consoleError('fetch stream failed');
-        R.cancel();
+        F.cancel();
         return false;
       }
-      if (S.range[2] !== a) {
-        S.range[2] = a;
-        if (G.range) {
-          for (i$ = 0, len$ = (ref$ = G.range.masters).length; i$ < len$; ++i$) {
-            a = ref$[i$];
-            a.refresh();
-          }
-        }
+      if (S.config.total !== a) {
+        S.config.total = a;
+        S.groups.range.refresh();
       }
-      for (i$ = 0, len$ = B.length; i$ < len$; ++i$) {
-        b = B[i$];
+      for (i$ = 0, len$ = (ref$ = S.blocks).length; i$ < len$; ++i$) {
+        b = ref$[i$];
         if (b.locked) {
           b.locked = 0;
           if (b.lock) {
-            b.lock(0);
+            b.lock();
           }
           b.rootBox.classList.add('v');
         }
       }
       this.level = 0;
-      for (a in G) {
-        a = G[a];
-        if (a.pending) {
-          a.pending = 0;
+      for (a in ref$ = S.groups) {
+        a = ref$[a];
+        if (a.level) {
+          a.level = 0;
         }
       }
-      if (B = this['super'].receiver) {
-        a = (b = S.range[0] + S.range[1] - S.range[2]) > 0
-          ? S.range[1] - b
-          : S.range[1];
-        b = -1;
-        while (++b < a && !this.dirty) {
-          if ((c = (await R.readJSON())) === null) {
-            consoleError('fetch stream failed');
-            R.cancel();
+      if (S.receiver) {
+        a = -1;
+        while (b = (await F.readJSON())) {
+          if (b instanceof Error) {
+            consoleError('fetch stream failed, ' + b.message);
             return false;
           }
-          if (!B.load(c, b)) {
-            consoleError('failed to load');
-            return false;
+          if (this.dirty || !S.receiver.load(++a, b)) {
+            break;
           }
         }
-        (await R.read());
       }
-      R.cancel();
+      F.cancel();
       return true;
     }
   };
-  Group = function(sup, blocks){
-    this.masters = blocks;
+  Group = function(sup, name, blocks){
+    this['super'] = sup;
     this.f = sup.slaves;
-    this.name = blocks[0].group;
-    this.config = null;
+    this.name = name;
+    this.blocks = blocks;
+    this.config = sup.config;
     this.data = null;
-    this.resolve = sup.state.resolver(sup.loader, this);
-    this.pending = 0;
+    this.level = 0;
     blocks.sort(function(a, b){
       return a.level < b.level
         ? -1
@@ -3204,41 +3346,43 @@ smBlocks = function(){
     });
   };
   Group.prototype = {
-    init: async function(s){
-      var a, i$, ref$, len$, m;
-      this.config = s.config;
-      this.data = s.hasOwnProperty(this.name) ? s[this.name] : null;
+    init: async function(){
+      var s, a, i$, ref$, len$, b;
+      s = this['super'];
       a = [];
-      for (i$ = 0, len$ = (ref$ = this.masters).length; i$ < len$; ++i$) {
-        m = ref$[i$];
-        m.group = this;
-        a[a.length] = m.init(s);
+      for (i$ = 0, len$ = (ref$ = this.blocks).length; i$ < len$; ++i$) {
+        b = ref$[i$];
+        b.group = this;
+        a[a.length] = b.init(s.state, s.config);
       }
-      s = true;
+      this.data = s.state[this.name];
       for (i$ = 0, len$ = (ref$ = (await Promise.all(a))).length; i$ < len$; ++i$) {
-        m = i$;
         a = ref$[i$];
-        if (a) {
-          this.masters[m].root.classList.add('v');
-        } else {
-          s = false;
+        if (!a) {
+          return false;
         }
       }
-      return s;
+      return true;
     },
-    update: function(b){
+    refresh: async function(block){
       var i$, ref$, len$, a;
-      console.log('group.update');
-      for (i$ = 0, len$ = (ref$ = this.masters).length; i$ < len$; ++i$) {
+      for (i$ = 0, len$ = (ref$ = this.blocks).length; i$ < len$; ++i$) {
         a = ref$[i$];
-        if (a !== b) {
-          a.refresh();
+        if (a !== block && !(await a.refresh())) {
+          return false;
         }
       }
-      this.pending = b
-        ? b.level
-        : this.masters[0].level;
-      this.resolve(this);
+      return true;
+    },
+    update: function(block){
+      this.submit();
+    },
+    submit: function(block){
+      this.level = block
+        ? block.level
+        : this.blocks[0].level;
+      this.refresh(block);
+      this['super'].loader.charge(this);
     }
   };
   newResizer = function(){
@@ -3309,10 +3453,11 @@ smBlocks = function(){
     this.masters = m;
     this.slaves = s;
     this.root = null;
-    this.blocks = [];
+    this.blocks = null;
     this.groups = null;
     this.receiver = null;
     this.counter = 0;
+    this.config = null;
     this.state = null;
     this.loader = null;
     this.resizer = null;
@@ -3321,7 +3466,7 @@ smBlocks = function(){
   };
   SUPERVISOR.prototype = {
     attach: async function(root, base){
-      var B, A, b, ref$, a, i$, ref1$, len$, c;
+      var B, G, b, ref$, a, i$, ref1$, len$, c;
       base == null && (base = '.sm-blocks');
       if (!root) {
         return false;
@@ -3335,11 +3480,12 @@ smBlocks = function(){
       }
       this.root = root;
       this.blocks = B = [];
-      this.groups = A = {};
       this.receiver = null;
       this.counter = 0;
+      this.config = new Config();
       this.state = new State();
       this.loader = new Loader(this);
+      G = {};
       for (b in ref$ = this.masters) {
         a = ref$[b];
         for (i$ = 0, len$ = (ref1$ = arrayFrom$(root.querySelectorAll(base + '.' + b))).length; i$ < len$; ++i$) {
@@ -3349,14 +3495,15 @@ smBlocks = function(){
           if (a.load) {
             this.receiver = a;
           }
-          if (b = A[a.group]) {
+          if (b = G[a.group]) {
             b[b.length] = a;
           } else {
-            A[a.group] = [a];
+            G[a.group] = [a];
           }
         }
       }
-      if (!B.length) {
+      if (!B.length || !G.range) {
+        consoleError('nothing to attach');
         return false;
       }
       B.sort(function(a, b){
@@ -3364,9 +3511,12 @@ smBlocks = function(){
           ? -1
           : a.level === b.level ? 0 : 1;
       });
-      for (a in A) {
-        b = A[a];
-        A[a] = new Group(this, b);
+      this.groups = c = {};
+      for (i$ = 0, len$ = (ref$ = Object.getOwnPropertyNames(this.state)).length; i$ < len$; ++i$) {
+        a = ref$[i$];
+        if (G[a]) {
+          c[a] = new Group(this, a, G[a]);
+        }
       }
       this.resizer = newResizer(base + '-resizer', B);
       if (!(await this.loader.init())) {

@@ -8,10 +8,6 @@ get_header('shop');
 $og  = json_encode([ # products grid {{{
 ]);
 # }}}
-$oo  = json_encode([ # orderer {{{
-  "switchMode" => 1,
-]);
-# }}}
 $opf = json_encode([ # price filter {{{
   'sectionMode' => 1|2|4|8|16,
 ]);
@@ -42,7 +38,7 @@ $o = <<<EOD
         <!-- :sm-blocks/category-filter {"baseCategory":"37"} /-->
       </div>
     </div>
-    <div class="content sm-blocks-resizer">
+    <div class="content">
       <div class="controls">
         <div class="column">
           <div class="sep h"><hr /></div>
@@ -52,11 +48,13 @@ $o = <<<EOD
         </div>
         <div class="lines">
           <div>
-            <!-- wp:sm-blocks/limit-selector {} /-->
+            <!-- wp:sm-blocks/rows-selector {} /-->
           </div>
           <div>
             <!-- wp:sm-blocks/paginator {"gotoMode":3} /-->
-            <!-- wp:sm-blocks/orderer {$oo} /-->
+            <!-- wp:sm-blocks/orderer {
+              "switchMode":1
+            } /-->
           </div>
         </div>
       </div>
@@ -68,6 +66,10 @@ $o = <<<EOD
       } /-->
       <div class="sep"><hr /></div>
     </div>
+  </div>
+  <div class="foot">
+    <div class="sep"><hr /></div>
+    <div class="box"></div>
   </div>
 </div>
 

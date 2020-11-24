@@ -6,6 +6,9 @@
   font-display: fallback;
   src: local('Trade Winds'), url("TradeWinds.woff2") format('woff2'), url("TradeWinds.woff") format('woff'), url("TradeWinds.ttf") format('truetype');
 }
+html {
+  scroll-behavior: smooth;
+}
 #sm-page {
   width: 100%;
   font-size: calc(var(--sm-blocks-height) * var(--sm-blocks-factor));
@@ -21,7 +24,7 @@
   margin: 0;
   padding: 0;
   border: 0;
-  border-radius: 1px;
+  border-radius: 2px;
   background-color: rgba(192,192,192,0.2);
 }
 #sm-page .sep.h > hr {
@@ -118,6 +121,15 @@
 }
 #sm-page > .body > .content > .controls > .lines > div > .paginator {
   flex: 3 1 0;
+  justify-content: flex-end;
+}
+#sm-page > .foot {
+  padding: 2px 0 2px 0;
+}
+#sm-page > .foot > .box {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
   justify-content: flex-end;
 }
 /***/

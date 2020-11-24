@@ -27,6 +27,8 @@ smBlocks = do ->
 		# create resolver
 		p.pending = id
 		p.resolve = (data) !->
+			if not arguments.length
+				data = p.pending
 			p.pending = 0
 			r data
 		# create spinner
@@ -42,22 +44,26 @@ smBlocks = do ->
 		# done
 		return p
 	# }}}
-	newDelay = (ms = 0) -> # {{{
+	newDelay = (ms = 0, id = -1) -> # {{{
 		# create custom promise
-		p = newPromise!
+		p = newPromise id
 		r = p.resolve
 		# start timer
 		t = setTimeout !->
-			r true
+			r p.pending
 		, ms
 		# replace resolver
-		p.resolve = (flag = true) !->
+		p.resolve = (flag) !->
 			clearTimeout t
-			r flag
+			r if arguments.length
+				then flag
+				else p.pending
 		# create cancellator
-		p.cancel = (flag = false) !->
+		p.cancel = (flag) !->
 			clearTimeout t
-			r flag
+			r if arguments.length
+				then flag
+				else 0
 		# done
 		return p
 	# }}}
@@ -550,6 +556,7 @@ smBlocks = do ->
 				@title   = new @title block
 				@price   = new @price block
 				@actions = new @actions block
+				/***
 				# initialize
 				do ~>>
 					# wait variables initialized
@@ -560,7 +567,7 @@ smBlocks = do ->
 					# determine optimal display variant (class)
 					if sizes.0 < 1
 						# vertical is smaller than horizontal,
-						# stretch image by [h]eight and
+						# limit image by max-[h]eight and
 						# unleash automatic browser's width calculation
 						@image.box.classList.add 'h'
 					else
@@ -570,26 +577,42 @@ smBlocks = do ->
 						@image.box.classList.add 'w'
 					# now, loaded image (if any) may show up
 					@image.ready.resolve!
+				/***/
 				# }}}
 			Items.prototype =
-				### a
 				image: do -> # {{{
 					Item = (block) !->
 						@block  = block
 						@box    = box = block.rootBox.querySelector '.image'
 						@image  = box.firstChild
-						@ready  = newPromise!
 						@loaded = false
 						@load   = ~>> # {{{
 							# check image successfully loaded and valid
-							if @image.complete and \
-							   @image.naturalWidth >= 1 and \
-							   @image.naturalHeight >= 1
+							if not @image.complete or \
+							   (w = @image.naturalWidth) < 2 or \
+							   (h = @image.naturalHeight) < 2
 								###
-								await @ready
-								@box.classList.add 'v'
-								@loaded = true
+								return false
+							# wait variables initialized
+							await init
+							# check container's aspect ratio,
+							# assuming that image item takes all,
+							# first section's space (gaps doesn't break ration), and
+							# determine optimal display variant (class)
+							debugger
+							if sizes.0 < 1
+								# vertical is smaller than horizontal,
+								# limit image by max-[h]eight and
+								# unleash automatic browser's width calculation
+								@box.classList.add 'h'
+							else
+								# vertical is bigger than horizontal,
+								# stretch image by [w]idth and
+								# unleash automatic browser's height calculation
+								@box.classList.add 'w'
 							# done
+							@box.classList.add 'v'
+							@loaded = true
 							return true
 						# }}}
 					###
@@ -617,7 +640,6 @@ smBlocks = do ->
 					###
 					return Item
 				# }}}
-				### b
 				title: do -> # {{{
 					Item = (block) !->
 						@block = block
@@ -723,7 +745,6 @@ smBlocks = do ->
 					###
 					return Item
 				# }}}
-				### c
 				actions: do -> # {{{
 					Item = (block) !->
 						@block   = block
@@ -879,7 +900,7 @@ smBlocks = do ->
 				# }}}
 			# }}}
 			return (m) ->
-				# create
+				# consruct
 				m = new Block m
 				# attach to the master
 				m.master.rootBox.appendChild m.root
@@ -1236,11 +1257,7 @@ smBlocks = do ->
 					# done
 					return true
 				# }}}
-				lock: (level) ->> # {{{
-					await @section.lock level
-					return true
-				# }}}
-				refresh: (list) !-> # {{{
+				refresh: (list) -> # {{{
 					# it's assumed that categories doesn't intersect
 					# in the attached UI root, so there may be
 					# only one originator and the refresh is
@@ -1261,7 +1278,7 @@ smBlocks = do ->
 								b.remove 'checked', 'c1', 'c2'
 					# check
 					if @index < 0
-						return
+						return true
 					# determine current filter
 					a = @checks.getCheckedIds!
 					b = @group.data[@index]
@@ -1280,6 +1297,11 @@ smBlocks = do ->
 						# change the filter
 						@group.update!
 					# done
+					return true
+				# }}}
+				lock: (level) ->> # {{{
+					await @section.lock level
+					return true
 				# }}}
 			# }}}
 			return Block
@@ -1737,14 +1759,12 @@ smBlocks = do ->
 				@config  = JSON.parse root.dataset.cfg
 				/***
 				# controls
-				# {{{
 				# determine UI mode
 				mode = if box.classList.contains 'text'
 					then 0
 					else 1
 				@inputs  = I = new TextInputs @, box
 				@section = S = state.f.section root.parentNode.parentNode.parentNode
-				# }}}
 				/***/
 				# state
 				@locked  = -1
@@ -1818,12 +1838,7 @@ smBlocks = do ->
 					# done
 					return true
 				# }}}
-				lock: (level) ->> # {{{
-					@inputs.lock level
-					@section.lock level
-					return true
-				# }}}
-				refresh: !-> # {{{
+				refresh: -> # {{{
 					# prepare
 					a = @group.data # source
 					b = @current    # destination
@@ -1836,6 +1851,12 @@ smBlocks = do ->
 						@inputs.set a.1, a.2
 					# sync
 					b[0 to 4] = a
+					return true
+				# }}}
+				lock: (level) ->> # {{{
+					@inputs.lock level
+					@section.lock level
+					return true
 				# }}}
 				submit: do -> # {{{
 					p = newDelay 0
@@ -1997,7 +2018,7 @@ smBlocks = do ->
 					@ctrl.attach!
 					return true
 				# }}}
-				refresh: !-> # {{{
+				refresh: -> # {{{
 					# get data
 					a = @group.data
 					b = @current
@@ -2025,6 +2046,8 @@ smBlocks = do ->
 								d.classList.add c
 						# store
 						b.1 = a.1
+					# done
+					return true
 				# }}}
 			# }}}
 			return Block
@@ -2036,72 +2059,283 @@ smBlocks = do ->
 				@block    = block
 				@style    = getComputedStyle block.rootBox
 				###
-				@pads     = [0,0]   # container padding
-				@layout   = [0,0]   # current column-count,row-count
+				@pads     = [0,0,0] # container padding [left+right,top+bottom,bottom]
 				@gaps     = [0,0]   # column,row
-				@sizes    = [0,0,0] # item's width,height,aspect-ratio
+				@sizes    = [0,0,0] # item's width,height,dot-height
+				@layout   = [0,0]   # current columns,rows
 				@factor   = 1       # current size factor
+				@ready    = newPromise! # current state promise
+				@i_opt    = {       # intersection options
+					root: null        # window
+					rootMargin: '0px' # no margin
+					threshold: [0,0,1]# middle will be determined
+				}
+				@s_opt    = [
+					-1 # previous scroll position, -1=foot start, -2=foot end
+					{behavior: 'smooth', top: 0} # foot end
+					{behavior: 'auto', top: 0} # foot start
+				]
 				###
-				@observer = null    # resize observer
-				@onChange = null    # resize controller callback
+				@onChange = null    # master resizer callback
+				@observer = null    # [resize,intersect]
+				@intense  = newDelay! # scroll throttler
+				@dot      = newPromise! # intersect promise
 				@debounce = newDelay!
-				@bounces  = 0
-				@resize   = (e) ~>> # {{{
-					# apply debounce algorithm
-					if @debounce.pending
-						@debounce.cancel (++@bounces == 3)
-					if not await (@debounce = newDelay 100)
-						return false
-					@bounces = 0
-					# get current width of the grid
-					w = if e
-						then e.0.contentRect.width
-						else @block.root.clientWidth - @pads.0
+				@bounces  = 0       # for more gradual control
+				@resize = (e) ~>> # {{{
+					# check mode
+					if e
+						# observed,
+						# apply debounce algorithm
+						if @debounce.pending
+							@debounce.cancel (++@bounces == 3)
+						if not await (@debounce = newDelay 100)
+							return false
+						@bounces = 0
+						# get width of the grid
+						w = e.0.contentRect.width
+					else
+						# forced,
+						# determine width of the grid
+						w = @block.root.clientWidth - @pads.0
 					# assuming no size factor applied,
-					# determine current layout
-					[a,b,c] = @calculateLayout w, 1
-					# determine size factor
-					e = if c > w
-						then w / c # overflow
+					# determine column count and space they take
+					[a,b] = @getCols w, 1
+					# calculate size factor
+					e = c = if b > w
+						then w / b # reduced
 						else 1     # normal
-					# callback master
+					# check master control
 					if @onChange
-						c = e
+						# callback master
 						if (e = @onChange e) < c
-							[a,b] = @calculateLayout w, e
-					# update layout
-					if @layout.0 != a
-						@layout.0 = a
-						@block.rootBox.style.setProperty '--columns', a
-					if @layout.1 != b
-						@layout.1 = b
-						@block.rootBox.style.setProperty '--rows', b
-					# update size factor
-					if not @onChange and (Math.abs (@factor - e)) > 0.005
-						a = @block.root.style
+							# in case a smaller factor given,
+							# re-calculate columns
+							[a,b] = @getCols w, e
+					else if (Math.abs (@factor - e)) > 0.005
+						# update
+						@factor = e
+						# set inline style
 						b = '--sm-blocks-factor'
-						if (@factor = e) == 1
-							a.removeProperty b
+						c = @block.root.style
+						if e == 1
+							c.removeProperty b
 						else
-							a.setProperty b, e
+							c.setProperty b, e
+					# update layout
+					if (c = @layout).0 != a
+						@block.root.style.setProperty '--columns', (c.0 = a)
+						c.1 and @block.setCount (a * c.1)
+					# done
+					return true
+				# }}}
+				@intersect = (e) ~>> # {{{
+					# fixed rows
+					# {{{
+					a = @block.config.layout
+					if (c = @block.rows) or (c = a.1) == a.3
+						# update
+						if (a = @layout).1 != c
+							@block.root.style.setProperty '--rows', (a.1 = c)
+							a.0 and @block.setCount (a.0 * c)
+						# done
+						return true
+					# }}}
+					# dynamic rows
+					# check locked
+					if @dot.pending or not e
+						console.log 'intersect skip'
+						return true
+					# prepare
+					e = e.0.intersectionRatio
+					o = @layout
+					c = o.1
+					b = a.3
+					a = a.1
+					# get scrollable container (aka viewport)
+					if not (w = v = @i_opt.root)
+						w = window
+						v = document.documentElement
+					# get viewport, row and dot heights
+					h = v.clientHeight
+					y = (@gaps.1 + @sizes.1) * @factor
+					z = (@sizes.2 * @factor)
+					# determine scroll parking point (dot offset),
+					# which must be smaller than threshold trigger
+					x = z * (1 - @i_opt.threshold.1 - 0.01) .|. 0
+					# handle finite scroll
+					# {{{
+					if b
+						# ...
+						return true
+					# }}}
+					# handle infinite scroll
+					# {{{
+					# fill the viewport (extend scroll height)
+					b = v.scrollHeight
+					if e and b < h + z
+						# determine exact minimum
+						e  = Math.ceil ((b - c*y - z) / y)
+						c += e
+						b += y*e
+						# update
+						@block.root.style.setProperty '--rows', (o.1 = c)
+						if o.0 and @block.setCount (o.0 * c) and @ready.pending
+							@ready.resolve!
+						# adjust scroll position
+						@s_opt.0 = v.scrollTop
+						@s_opt.1.top = b - h - x
+						@s_opt.2.top = b - h - z
+						# wait repositions (should be cancelled)
+						await (@dot = newPromise -1)
+						@observer.1.disconnect!
+						@observer.1.observe @block.dot
+						# done
+						return true
+					# adjust the viewport
+					while e
+						# determine scroll options and
+						# set scroll (after increment)
+						@s_opt.1.top = b - h - x
+						@s_opt.2.top = b - h - z
+						if e > 0
+							w.scrollTo @s_opt.1
+						else if @s_opt.0 == -2
+							w.scrollTo @s_opt.2
+						# determine decrement's trigger point
+						i = @s_opt.1.top - y - @pads.2
+						# wait triggered
+						if not (e = await (@dot = newPromise i))
+							break
+						# check
+						if e == 1
+							# increment,
+							# TODO: uncontrolled?
+							c += 1
+							b += y
+						else
+							# decrement,
+							# determine intensity value
+							i = 1 + (i - v.scrollTop) / y
+							e = -(i .|. 0)
+							console.log 'decrement', e
+							# apply intensity
+							c += e
+							b += y*e
+							# apply limits
+							while c < a or b < h + z
+								c += 1
+								b += y
+								i -= 1
+								e  = 0 # sneaky escape (after update)
+							# check exhausted
+							if c == o.1
+								console.log 'decrement exhausted'
+								break
+							# check last decrement
+							if e and b - y < h + z and b - z > h + v.scrollTop
+								e = 0
+							# apply scroll adjustment (dot start)
+							if (i - (i .|. 0))*y < (z - x + 1)
+								if e
+									console.log 'scroll alignment'
+									@s_opt.0 = -2
+								else
+									console.log 'scroll alignment last'
+									w.scrollTo @s_opt.2
+						# update
+						@block.root.style.setProperty '--rows', (o.1 = c)
+						if o.0 and @block.setCount (o.0 * c) and @ready.pending
+							@ready.resolve!
+						# continue..
+					# }}}
+					# done
+					return true
+				# }}}
+				@scroll = (e) ~>> # {{{
+					# check intersection locked (upper limit determined)
+					if not (a = @dot.pending)
+						console.log 'scroll skip'
+						return true
+					# increase intensity
+					if @intense.pending
+						@intense.pending += 1
+						return false
+					# skip first scroll (programmatic)
+					c = @s_opt.2.top
+					d = @s_opt.1.top
+					if (b = @s_opt.0) < 0
+						console.log 'first scroll skip'
+						@s_opt.0 = if ~b
+							then c
+							else d
+						return false
+					# get scrollable container (aka viewport)
+					e = @i_opt.root or document.documentElement
+					i = if e.scrollTop > b
+						then 60  # increase
+						else 100 # decrease
+					# throttle (lock and accumulate)
+					while (await (@intense = newDelay i, 1)) > 1
+						true
+					# get current position
+					e = e.scrollTop
+					# check changed
+					if (Math.abs (e - b)) < 0.2
+						console.log 'small scroll skip'
+						return true
+					# save position
+					@s_opt.0 = e
+					# reposition?
+					console.log 'reposition?', e, b, c, d
+					if b > c + 1 and e < b and e > c - 1
+						# exit (dot start)
+						@s_opt.0 = -2
+						a = window if not (a = @i_opt.root)
+						a.scrollTo @s_opt.2
+						console.log 'exit', @s_opt.2.top
+						return true
+					if b < d - 1 and e > b and e > c
+						# enter (dot trigger)
+						@s_opt.0 = -1
+						a = window if not (a = @i_opt.root)
+						a.scrollTo @s_opt.1
+						console.log 'enter', @s_opt.1.top
+						return true
+					# increment?
+					if e > d
+						# reset and resolve positive
+						console.log 'increment'
+						@s_opt.0 = -1
+						@dot.resolve 1
+						return true
+					# cancellation?
+					if a < 0
+						# negative upper limit means decrement is not possible
+						# reset and cancel scroll observations
+						console.log 'cancelled'
+						@s_opt.0 = -1
+						@dot.resolve 0
+						return true
+					# decrement?
+					if e < a
+						# resolve negative
+						@dot.resolve -1
 					# done
 					return true
 				# }}}
 			###
 			Resizer.prototype =
-				init: !-> # {{{
+				attach: !-> # {{{
 					# prepare
-					# determine initial layout (max-min)
-					a = @block.config.layout
-					@layout.0 = a.0
-					@layout.1 = a.1
-					# determine container padding
+					# determine container paddings
 					s    = getComputedStyle @block.root
 					a    = @pads
 					a.0  = parseInt (s.getPropertyValue 'padding-left')
 					a.0 += parseInt (s.getPropertyValue 'padding-right')
 					a.1  = parseInt (s.getPropertyValue 'padding-top')
-					a.1 += parseInt (s.getPropertyValue 'padding-bottom')
+					a.2  = parseInt (s.getPropertyValue 'padding-bottom')
+					a.1 += a.2
 					# determine gaps
 					s   = @style
 					a   = @gaps
@@ -2111,51 +2345,62 @@ smBlocks = do ->
 					a   = @sizes
 					a.0 = parseInt (s.getPropertyValue '--item-width')
 					a.1 = parseInt (s.getPropertyValue '--item-height')
-					a.2 = a.1 / a.0
-					# done
+					a.2 = a.1 + @gaps.1
+					# determine dot intersection threshold
+					a = parseFloat (s.getPropertyValue '--foot-size')
+					@i_opt.threshold.1 = a / 100
+					# initialize
+					# set default layout
+					a = @block.config.layout
+					@layout.0 = a.0 # max
+					@layout.1 = a.1 # min
+					# create observers
+					@observer = a = [
+						new ResizeObserver @resize
+						new IntersectionObserver @intersect, @i_opt
+					]
+					a.0.observe @block.root
+					a.1.observe @block.dot
+					# set scroll handler
+					a = @i_opt.root or window
+					a.addEventListener 'scroll', @scroll
+					# dot must be resolved
+					@dot.resolve 0
 				# }}}
-				attach: !-> # {{{
-					@detach! if @observer
-					@init!
-					@observer = new ResizeObserver @resize
-					@observer.observe @block.root
+				getCols: (w, e) -> # {{{
+					# parameters: available (w)idth, siz(e) factor
+					# prepare
+					C = @block.config.layout
+					a = e * @sizes.0
+					b = e * @gaps.0
+					# check
+					if (c = C.0) == C.2 or not C.2
+						# fixed,
+						# calculate horizontal size with gaps
+						d = c*a + (c - 1)*b
+					else
+						# dynamic,
+						# decrement until minimum reached
+						while (d = c*a + (c - 1)*b) > w and c > C.2
+							--c
+					# done
+					return [c,d]
+				# }}}
+				refresh: ->> # {{{
+					# update layout
+					await @resize! # columns
+					await @intersect! # rows
+					# done
+					return true
 				# }}}
 				detach: !-> # {{{
-					if @observer
-						@observer.disconnect!
+					# remove observers
+					if o = @observer
 						@observer = null
-				# }}}
-				calculateLayout: (w, e) -> # {{{
-					# determine current layout
-					# columns
-					C = @block.config.layout
-					a = C.2
-					b = e * @sizes.0
-					c = e * @gaps.0
-					# check dynamic
-					if a and a < C.0
-						# determine optimal
-						while (d = a*b + (a - 1)*c) <= w and a < C.0
-							++a
-						# check overflow
-						if d > w and a > C.2
-							# decrease and re-calculate
-							--a
-							d = a*b + (a - 1)*c
-						# rows
-						# checkout fixed
-						if not (b = C.3)
-							# determine dynamic
-							if (c = @block.size / a) != (b = c .|. 0)
-								# transform remainder to whole
-								++b
-					else
-						# fixed columns/rows
-						a = C.0
-						b = C.1
-						d = a*b + (a - 1)*c
-					# done
-					return [a,b,d]
+						o.0.disconnect!
+						o.1.disconnect!
+					# reset
+					@ready = newPromise!
 				# }}}
 			# }}}
 			Block = (root) !-> # {{{
@@ -2163,84 +2408,129 @@ smBlocks = do ->
 				@group   = 'range'
 				@root    = root
 				@rootBox = box = root.firstChild
-				@config  = c = JSON.parse box.dataset.cfg
+				@config  = cfg = JSON.parse box.dataset.cfg
 				# controls
-				@items   = []
+				@dot     = querySelectorChild root, 'hr'
+				@items   = [] # product cards
 				@resizer = new Resizer @
 				# state
-				@size    = c.layout.0 * c.layout.1
-				@offset  = 0
-				@loaded  = 0
+				@range   = [
+					0,   # primary offset
+					0,0, # forward range: offset,count
+					0,0  # backward range
+				]
+				@rows    = -1 # fixed number of rows, 0=auto, -1=init
+				@count   = 0  # items displayed
+				@page    = 0  # approximated number of items in the viewport
+				@rec_a   = [] # forward range records
+				@rec_b   = [] # backward
 				@locked  = -1
 			###
 			Block.prototype =
-				level: 0
+				level: 1
 				configure: (s) !-> # {{{
-					s.range.1 = @size
-					s.order   = @config.order
 				# }}}
-				init: (s) -> # {{{
-					# set initial offset
-					@offset = @group.data.0
-					# set grid parameters
-					a = @config.layout
-					b = @rootBox.style
-					b.setProperty '--columns', a.0
-					b.setProperty '--rows', a.1
-					# create items
-					a = -1
-					while ++a < @size
-						@items[*] = @group.f.productCard @
+				init: (s, c) -> # {{{
+					# set state and config
+					s.order = a if a = @config.order
+					s.range = @range
+					c.count = 0
+					c.rows  = @config.layout.1 # refresh guarantee
 					# activate resizer
 					@resizer.attach!
-					# show items
-					while ~--a
-						@items[a].root.classList.add 'v'
-					# forse first resize
-					@resizer.resize!
+					# approximate maximal viewport capacity (page)
+					s = window.screen
+					s = if (a = s.availWidth) > (b = s.availHeight)
+						then a
+						else b
+					s = Math.ceil (s / @resizer.sizes.1)
+					a = @config.layout
+					@page = 5 * a.0 * s # x5 zoom factor (x4=25% considered max)
+					# set minimal items count
+					@setCount (a.0 * a.1)
+					# set initial range
+					a   = @range
+					a.0 = 0
+					a.1 = a.0
+					if a.1 + @page > c.total
+						a.2 = c.total
+						a.3 = a.2 - 1
+						a.4 = 0
+					else
+						a.2 = @page
+						if (a.3 = a.0 - @page) < 0
+							a.3 = c.total + a.3
+							a.4 = c.total - a.3
+						else
+							a.4 = a.0 - a.3
 					# done
 					return true
 				# }}}
-				refresh: !-> # {{{
-					# check query limit changed
-					if (a = @group.data.1) != (b = @size)
-						# create more items (if required)
-						c = @items
-						while c.length < a
-							c[*] = @group.f.productCard @
-						# update items display
-						if a > b
-							# show additional
-							while b < a
-								c[b].root.classList.add 'v'
-								++b
-						else
-							# hide excessive
-							while --a <= b
-								c[b].root.classList.remove 'v'
-						# update value and force the resize
-						@size = a
-						@resizer.resize!
-						console.log 'products.refresh'
-					debugger
-					###
+				refresh: ->> # {{{
+					# check rows mode
+					if @rows != (a = @group.config.rows)
+						# set dot display
+						if @rows and not a
+							@dot.classList.add 'v'
+						else if not @rows and a
+							@dot.classList.remove 'v'
+						# update value and refresh layout
+						@rows = a
+						await @resizer.refresh!
 					# done
+					return true
 				# }}}
-				notify: (s) -> # {{{
-					# check
+				setCount: (count) -> # {{{
+					# check equal
+					if @count == count
+						return false
+					# check items buffer
+					a = @items
+					if not a.length or (count / a.length) > 0.8
+						# create more items (add page)
+						c = a.length + @page
+						while a.length < c
+							a[*] = @group.f.productCard @
+					# show more
+					b = @rec_a
+					c = @count - 1
+					while ++c < count
+						# set constructed
+						a[c].root.classList.add 'v'
+						# set data
+						if c < b.length and a[c].id != b[c].id
+							a[c].set b[c]
+					# show less
+					while c > count
+						a[--c].root.classList.remove 'v'
+					# update value
+					@count = c
+					# check range
 					# ...
 					# done
 					return true
 				# }}}
-				load: (record, index) -> # {{{
-					# check locked
-					if @locked
-						return false
+				load: (i, record) -> # {{{
+					# check destination
+					if (j = i - @range.2) < 0
+						# forward,
+						# store
+						@rec_a[i] = record
+						# determine item offset
+						j = @range.1 - @range.0 + i
+						# set item (if displayed)
+						if j < @count
+							@items[j].set record
+					else
+						# backward,
+						# store only
+						@rec_b[j] = record
+					# done
+					return true
+					/***
 					# prepare
 					D = @group.data
 					I = @items
-					if index == 0 and @loaded
-						debugger
 					# check continuation
 					if (@offset + @loaded) == (D.0 + index) and \
 					   I.length >= @size + @loaded
@@ -2276,6 +2566,7 @@ smBlocks = do ->
 					# complete
 					++@loaded
 					return I[index].set record
+					/***/
 				# }}}
 			# }}}
 			return Block
@@ -3083,17 +3374,33 @@ smBlocks = do ->
 			###
 			Block.prototype =
 				level: 1
-				init: (s) -> # {{{
-					# set classes
+				init: -> # {{{
+					# set control classes
 					a = @rootBox.classList
 					if @config.range == 2
 						a.add 'flexy'
 					if not @gotos.sepFL
 						a.add 'nosep'
-					###
-					@refresh!
+					# set event handlers
 					@control.attach!
 					@resizer.attach!
+					return true
+				# }}}
+				refresh: -> # {{{
+					# determine current page index and count
+					if (a = @group.config).count
+						b = (Math.round (@group.data.0 / a.count)) .|. 0
+						c = Math.ceil (a.total / a.count)
+					else
+						b = 0
+						c = 0
+					# check changed
+					if (a = @current).0 == b and a.1 == c
+						return true
+					# update
+					a.0 = b
+					a.1 = c
+					@range.refresh!
 					return true
 				# }}}
 				lock: (level) ->> # {{{
@@ -3111,29 +3418,14 @@ smBlocks = do ->
 					# done
 					return true
 				# }}}
-				notify: (s) -> # {{{
-					@refresh!
-					return not @control.lock.pending
-				# }}}
-				refresh: !-> # {{{
-					# determine current
-					a = @group.data
-					if (b = a.2 / a.1) != (c = b .|. 0)
-						++c
-					b = a.2 / a.0 .|. 0
-					# check changed
-					a = @current
-					if a.0 == b and a.1 == c
-						return
-					# update
-					a.0 = b
-					a.1 = c
-					@range.refresh!
-				# }}}
 				submit: !-> # {{{
 					# set records offset (page*limit)
 					@group.data.0 = @current.0 * @group.data.1
 					@group.update @
+				# }}}
+				notify: (s) -> # {{{
+					@refresh!
+					return not @control.lock.pending
 				# }}}
 				focus: !-> # {{{
 					# set focus to current
@@ -3145,7 +3437,7 @@ smBlocks = do ->
 			# }}}
 			return Block
 		# }}}
-		'limit-selector': do -> # {{{
+		'rows-selector': do -> # {{{
 			template = parseTemplate !-> # {{{
 				/*
 				<select></select>
@@ -3171,8 +3463,7 @@ smBlocks = do ->
 				@hovered = false
 				@focused = false
 				@active  = false
-				@current = -1 # auto
-				@locked  = -1 # initial
+				@locked  = -1
 				# handlers
 				@hover = (e) !~> # {{{
 					# fulfil event
@@ -3220,35 +3511,53 @@ smBlocks = do ->
 					@submit!
 				# }}}
 			Block.prototype =
-				level: 2
-				configure: (s) !-> # {{{
-					# force fixed value
-					if ~(a = @config.index)
-						s.range.1 = @config.list[a]
-				# }}}
-				init: (s) -> # {{{
-					# add auto value
-					if not ~@config.index
+				level: 0
+				init: (s, c) -> # {{{
+					# set config
+					c.rows = @config.list[@config.index]
+					# create options
+					c = @group.config.locale
+					for s in @config.list
 						a = document.createElement 'option'
-						a.text = s.config.locale.label.0
+						a.text = if s == -1
+							then c.label.2
+							else if s
+								then 'x'+s
+								else c.label.0
 						@select.add a
-					# add fixed values
-					for b in @config.list
-						a = document.createElement 'option'
-						a.text = b
-						@select.add a
+					# set current
+					@select.selectedIndex = @config.index
+					# set event handlers
+					@attach!
 					# done
-					@select.selectedIndex = -1
-					@refresh!
+					return true
+				# }}}
+				refresh: -> # {{{
+					# get current value
+					a = @config.list[@select.selectedIndex]
+					# check changed
+					if a != (b = @group.config.rows)
+						# update
+						a = @config.list.indexOf b
+						@select.selectedIndex = a
+						# set style
+						a = !!b and not @locked
+						@rootBox.classList.toggle 'active', a
+					# done
 					return true
 				# }}}
 				lock: (level) !-> # {{{
 					if level
 						@select.disabled = true
-						@detach!
 					else
 						@select.disabled = false
-						@attach!
+				# }}}
+				submit: !-> # {{{
+					# get current value
+					a = @config.list[@select.selectedIndex]
+					# refresh group
+					@group.config.rows = a
+					@group.refresh @
 				# }}}
 				attach: !-> # {{{
 					@rootBox.addEventListener 'pointerenter', @hover
@@ -3256,7 +3565,6 @@ smBlocks = do ->
 					@select.addEventListener 'focusin', @focus
 					@select.addEventListener 'focusout', @unfocus
 					@select.addEventListener 'input', @input
-					###
 				# }}}
 				detach: !-> # {{{
 					@rootBox.removeEventListener 'pointerenter', @hover
@@ -3264,150 +3572,68 @@ smBlocks = do ->
 					@select.removeEventListener 'focusin', @focus
 					@select.removeEventListener 'focusout', @unfocus
 					@select.removeEventListener 'input', @input
-					###
-					@unfocus!
-					@unhover!
-					@rootBox.classList.remove 'active' if @active
-					@select.selectedIndex = -1
-				# }}}
-				refresh: !-> # {{{
-					# check changed
-					console.log 'limit-selector.refresh'
-					if (a = @get!) == (b = @group.data.1)
-						return
-					# determine new index
-					c = @config
-					if not ~(d = c.list.indexOf b)
-						d = 0
-					else if not ~c.index
-						d = d + 1
-					# check changed
-					if d == @select.selectedIndex
-						return
-					# update
-					console.log 'limit-selector.refreshed'
-					@select.selectedIndex = d
-					@rootBox.classList.toggle 'active', ~@get!
-				# }}}
-				submit: !-> # {{{
-					# prepare
-					D = @group.data
-					a = @select.selectedIndex
-					# determine limit
-					D.1 = if ~@config.index
-						then @config.list[a]
-						else if a
-							then @config.list[a - 1]
-							else -1
-					# to preserve correct page/offset clamping,
-					# determine offset for a fixed limit
-					D.0 = D.0 / D.1 .|. 0 if ~D.1
-					# complete
-					@group.update @
-				# }}}
-				get: !-> # {{{
-					return if not ~(a = @select.selectedIndex)
-						then -2 # not selected
-						else if ~@config.index
-							then @config.list[a] # fixed
-							else if a
-								then @config.list[a - 1] # fixed
-								else -1 # auto
 				# }}}
 			# }}}
 			return Block
 		# }}}
 	# controllers
+	Config = !-> # {{{
+		@locale   = null  # interface labels, titles, etc
+		@currency = null  # [symbol,decimal_sep,thousand_sep,decimal_cnt]
+		@cart     = null  # shopping cart contents
+		@price    = null  # price range [min,max]
+		@total    = 0     # ..records in the result
+		@count    = 0     # ..of items displayed
+		@rows     = 0     # rows in the grid (0=auto, -1=infinite)
+	# }}}
 	State = !-> # {{{
-		# managed data
-		@config   = {}      # shared store
-		@range    = [0,0,0] # records [offset,limit,total]
-		@category = null    # [[id1..N],[..],..]
-		@price    = null    # [enabled, a, b, aMin, bMax]
-		@order    = null    # [tag, variant]
-	###
-	State.prototype =
-		resolver: (loader, group) -> ~>
-			# check update priority
-			if loader.level > group.pending
-				# deny lower levels
-				return false
-			else if loader.level < group.pending
-				# rise current
-				loader.level = group.pending
-			# operate
-			switch group.name
-			case 'category'
-				# it's assumed that filter combinations
-				# does not interset.. so, always
-				# reset query offset & page index
-				@range.0 = 0
-			case 'price'
-				# TODO: price range may limit the same
-				# set of items (be ineffective),
-				# which means that page index should not
-				# reset for better optimization & integrity,
-				# but for the sake of dev speed,
-				# let's reset it for now..
-				@range.0 = 0
-			# unleash the loader
-			loader.charge!
-			# done
-			console.log 'resolved group ', group.name, 'loader dirty', loader.dirty
-			return true
+		@lang     = ''    # two-byte language code
+		@range    = null  # [offset,limit,o1,o2,o3,o4]
+		@order    = null  # [tag,variant]
+		@category = null  # [[id-1..N],[..],..]
+		@price    = null  # [min,max]
 	# }}}
 	Loader = (s) !-> # {{{
-		# {{{
 		@super = s     # s-supervisor
+		@lock  = null  # loader promise
 		@dirty = -1    # resolved-in-process flag
-		@lock  = null  # load promise
 		@level = -1    # update priority
-		@fetch = null  # request promise
-		@data  = new RequestData s.state
-	RequestData = (s) !->
-		@func     = 'config'
-		@lang     = ''
-		@range    = s.range
-		@category = s.category
-		@price    = null
-		@order    = null
-		# }}}
+		@fetch = null  # fetcher promise
+	###
 	Loader.prototype =
 		init: ->> # {{{
 			# prepare
 			T = window.performance.now!
-			D = @data
-			S = @super.state
-			B = @super.blocks
-			# set block configuration (low -> high)
-			for a in B when a.configure
-				a.configure S
-			# get remote configuration
-			if (cfg = await soFetch D) instanceof Error
-				consoleError cfg.message
+			S = @super
+			# configure request (low -> high)
+			for a in S.blocks when a.configure
+				a.configure S.state
+			# request configuration
+			if (c = await soFetch S.state) instanceof Error
+				consoleError c.message
 				return false
-			# set it
-			for a of cfg
-				if S.hasOwnProperty a
-					S[a] = cfg[a]
-				else
-					S.config[a] = cfg[a]
-			# link request data to state
-			for a of D when S.hasOwnProperty a
-				D[a] = S[a]
-			# switch request mode
-			D.func = 'data'
-			# initialize groups
+			# store
+			for a of c when S.config.hasOwnProperty a
+				S.config[a] = c[a]
+			# initialize (ordered)
 			a = []
-			for b of B = @super.groups
-				a[*] = B[b].init S
-			# wait complete
-			for a in (await Promise.all a) when not a
-				consoleError 'failed to initialize'
+			for c in (b = Object.getOwnPropertyNames S.groups)
+				a[*] = S.groups[c].init!
+			# wait completed and
+			# check the results
+			for a,c in (await Promise.all a) when not a
+				consoleError 'failed to initialize '+S.groups[c].name
 				return false
+			# refresh (ordered)
+			for a in b
+				await S.groups[a].refresh!
+			# set constructed class
+			for a in S.blocks when a.locked == -1
+				a.root.classList.add 'v'
+				a.locked = 1
 			# done
 			T = (window.performance.now! - T) .|. 0
-			consoleInfo 'state initialized in '+T+'ms'
+			consoleInfo 'initialized in '+T+'ms'
 			return true
 		# }}}
 		finit: !-> # {{{
@@ -3417,9 +3643,16 @@ smBlocks = do ->
 			# reset
 			@dirty = @level = -1
 			@lock  = @fetch = null
-			@data  = new RequestData!
 		# }}}
-		charge: -> # {{{
+		charge: (group) -> # {{{
+			# check priority
+			# deny lower levels
+			if @level > group.level
+				return false
+			# rise current
+			if @level < group.level
+				@level = group.pending
+			# operate
 			if @lock.pending
 				# clean, start or restart
 				@lock.resolve (@lock.pending == 1)
@@ -3427,6 +3660,8 @@ smBlocks = do ->
 				# dirty, restart
 				@dirty = 1
 				@fetch.cancel! if @fetch
+			# done
+			return true
 		# }}}
 		enter: ->> # {{{
 			# create new lock
@@ -3442,105 +3677,87 @@ smBlocks = do ->
 			# reset dirty
 			@dirty = 0
 			# prepare
-			S = @super.state
-			B = @super.blocks
-			G = @super.groups
 			console.log 'loader charged'
+			S = @super
 			if ~@level
 				# lock blocks (lower -> higher)
 				a = []
-				b = -1
-				while ++b < B.length
-					# only lower than current
-					if (c = B[b]).level < @level and \
-						(d = c.locked) != 1
-						###
-						# update value
-						console.log 'locking '+c.group.name
-						c.locked = 1
-						# callback
-						if c.lock
-							a[*] = c.lock 1
+				for b in S.blocks
+					if b.level < @level and not b.locked
+						# update and callback
+						b.locked = 1
+						a[*] = b.lock! if b.lock
 						# remove availability class
-						c.rootBox.classList.remove 'v'
+						b.rootBox.classList.remove 'v'
 				# wait locked
 				await Promise.all a if a.length
 				# notify blocks (higher -> lower)
+				b = S.blocks.length
 				while ~--b
-					if (c = B[b]).notify and not c.notify S
+					if (a = S.blocks[b]).notify and not a.notify S.state
 						@dirty = 2 # delay restart
 				# check
 				if @dirty
 					return true
 			# start fetcher
-			R = await (@fetch = oFetch @data)
+			# {{{
+			F = await (@fetch = oFetch S.state)
 			@fetch = null
 			# check
-			if R instanceof Error
+			if F instanceof Error
 				# cancelled?
-				if R.id == 4
+				if F.id == 4
 					return true
 				# fatal failure!
-				consoleError R.message
+				consoleError F.message
 				return false
 			# get total records
-			if (a = await R.readInt!) == null
+			if (a = await F.readInt!) == null
 				consoleError 'fetch stream failed'
-				R.cancel!
+				F.cancel!
 				return false
-			# set total and refresh range group
-			if S.range.2 != a
-				S.range.2 = a
-				if G.range
-					for a in G.range.masters
-						a.refresh!
+			# update config and refresh range group
+			if S.config.total != a
+				S.config.total = a
+				S.groups.range.refresh!
+			# }}}
 			# unlock blocks
-			for b in B when b.locked
+			for b in S.blocks when b.locked
 				# update value and callback
 				b.locked = 0
-				b.lock 0 if b.lock
+				b.lock! if b.lock
 				# restore availability class
 				b.rootBox.classList.add 'v'
 			# reset update priority
 			@level = 0
-			for a,a of G when a.pending
-				a.pending = 0
-			###
-			# load records into receiver
-			if B = @super.receiver
-				# determine count
-				a = if (b = S.range.0 + S.range.1 - S.range.2) > 0
-					then S.range.1 - b
-					else S.range.1
-				# iterate
-				b = -1
-				while ++b < a and not @dirty
-					# read
-					if (c = await R.readJSON!) == null
-						consoleError 'fetch stream failed'
-						R.cancel!
+			for a,a of S.groups when a.level
+				a.level = 0
+			# load records
+			if S.receiver
+				a = -1
+				while b = await F.readJSON!
+					# check
+					if b instanceof Error
+						consoleError 'fetch stream failed, '+b.message
 						return false
 					# load
-					if not B.load c, b
-						consoleError 'failed to load'
-						return false
-				# satisfy chrome (2020-04) as it dumps error
-				await R.read!
+					if @dirty or not S.receiver.load ++a, b
+						break
 			# complete
-			R.cancel!
+			F.cancel!
 			return true
 		# }}}
 	# }}}
-	Group = (sup, blocks) !-> # {{{
+	Group = (sup, name, blocks) !-> # {{{
 		# {{{
-		@masters = blocks
+		@super   = sup
 		@f       = sup.slaves # factory
-		@name    = blocks.0.group
-		@config  = null # state.config
+		@name    = name
+		@blocks  = blocks
+		@config  = sup.config
 		@data    = null # state[name]
-		@resolve = sup.state.resolver sup.loader, @
-		@pending = 0
-		# order masters by priority level (ascending)
+		@level   = 0
+		# order blocks by priority level (ascending)
 		blocks.sort (a, b) ->
 			return if a.level < b.level
 				then -1
@@ -3549,39 +3766,42 @@ smBlocks = do ->
 					else 1
 		# }}}
 	Group.prototype =
-		init: (s) ->> # {{{
-			# set shortcuts
-			@config = s.config
-			@data   = if s.hasOwnProperty @name
-				then s[@name]
-				else null
-			# initialize master blocks
+		init: ->> # {{{
+			# initialize blocks, state and config
+			s = @super
 			a = []
-			for m in @masters
-				m.group = @
-				a[*] = m.init s
-			# wait complete and check results
-			s = true
-			for a,m in (await Promise.all a)
-				if a
-					# constructed
-					@masters[m].root.classList.add 'v'
-				else
-					# failed
-					s = false
+			for b in @blocks
+				b.group = @
+				a[*] = b.init s.state, s.config
+			# set data shortcut (should setle early)
+			@data = s.state[@name]
+			# wait completed and
+			# check the results
+			for a in (await Promise.all a) when not a
+				return false
 			# done
-			return s
+			return true
 		# }}}
-		update: (b) !-> # {{{
-			# refresh group blocks (exclude initiator)
-			console.log 'group.update'
-			for a in @masters when a != b
-				a.refresh!
-			# initiate resolution
-			@pending = if b
-				then b.level # exact
-				else @masters.0.level # minimal
-			@resolve @
+		refresh: (block) ->> # {{{
+			# refresh group blocks (exclude option)
+			for a in @blocks
+				if a != block and not (await a.refresh!)
+					return false
+			# done
+			return true
+		# }}}
+		update: (block) !-> # DELETE ME {{{
+			@submit!
+		# }}}
+		submit: (block) !-> # {{{
+			# determine update priority
+			@level = if block
+				then block.level     # exact
+				else @blocks.0.level # group minimal
+			# refresh group early
+			@refresh block
+			# unleash the loader
+			@super.loader.charge @
 		# }}}
 	# }}}
 	newResizer = do -> # {{{
@@ -3655,12 +3875,13 @@ smBlocks = do ->
 		@masters  = m     # constructors
 		@slaves   = s     # factories
 		@root     = null  # attachment point
-		@blocks   = []    # master blocks
+		@blocks   = null  # master blocks
 		@groups   = null  # name:group
 		@receiver = null
 		# data
 		@counter  = 0     # user actions
-		@state    = null  # object
+		@config   = null
+		@state    = null
 		# controllers
 		@loader   = null
 		@resizer  = null
@@ -3684,28 +3905,28 @@ smBlocks = do ->
 			# prepare
 			@root     = root
 			@blocks   = B = []
-			@groups   = A = {}
 			@receiver = null
 			@counter  = 0
+			@config   = new Config!
 			@state    = new State!
 			@loader   = new Loader @
 			# create master blocks
+			G = {}
 			for b,a of @masters
-				# iterate DOM nodes
+				# get and iterate DOM nodes
 				for b,c in [...(root.querySelectorAll base+'.'+b)]
-					# construct block
+					# construct
 					B[*] = a = new a b,c
 					# set receiver
 					@receiver = a if a.load
-					# assemble group
-					if b = A[a.group]
-						# collect
+					# set group
+					if b = G[a.group]
 						b[*] = a
 					else
-						# create
-						A[a.group] = [a]
+						G[a.group] = [a]
 			# check
-			if not B.length
+			if not B.length or not G.range
+				consoleError 'nothing to attach'
 				return false
 			# sort by priority level (ascending)
 			B.sort (a, b) ->
@@ -3714,9 +3935,10 @@ smBlocks = do ->
 					else if a.level == b.level
 						then 0
 						else 1
-			# create groups
-			for a,b of A
-				A[a] = new Group @, b
+			# create groups (enforce state order)
+			@groups = c = {}
+			for a in (Object.getOwnPropertyNames @state) when G[a]
+				c[a] = new Group @, a, G[a]
 			# create resizer
 			@resizer = newResizer base+'-resizer', B
 			# initialize

@@ -53,7 +53,7 @@ class StorefrontModernBlocks {
           ],
           'order'         => [
             'type'        => 'array',
-            'default'     => ['price',0],
+            'default'     => ['price',1],
           ],
         ],
       ],
@@ -183,17 +183,17 @@ class StorefrontModernBlocks {
         ],
       ],
       # }}}
-      'limit-selector' => [ # {{{
+      'rows-selector' => [ # {{{
         'render_callback' => [null, 'renderBase'],
         'attributes'      => [
           ### config
           'list'          => [
             'type'        => 'array',
-            'default'     => [16,32,64],
+            'default'     => [0,2,4,8,16,32,64], # 0=auto
           ],
           'index'         => [
             'type'        => 'number',
-            'default'     => -1, # -1=auto
+            'default'     => 1,
           ],
         ],
       ],
@@ -211,9 +211,10 @@ class StorefrontModernBlocks {
       # }}}
       'products' => [ # {{{
         'main' => '
-        <div class="sm-blocks products {{custom}}">
-          <div style="{{style}}" data-cfg=\'{{cfg}}\'></div>
+        <div class="sm-blocks products {{custom}}" style="{{style}}">
+          <div data-cfg=\'{{cfg}}\'></div>
           {{placeholder}}
+          <hr>
         </div>
         ',
         # icons
@@ -923,195 +924,146 @@ class StorefrontModernBlocks {
   }
   # }}}
   # rest api
-  public function apiEntry($request) # {{{
+  public function apiEntry($p) # {{{
   {
-    # refine parameters {{{
+    # prepare parameters
+    # {{{
     # get parameters
-    if (!($P = $request->get_json_params()) || !is_array($P)) {
+    if (!($p = $p->get_json_params()) || !is_array($p)) {
       $this->apiFail(400, 'incorrect request');
     }
-    # check defaults
+    # check
     $a = [
-      'func','lang',
-      'range','order','category','price',
+      'lang','range','order',
+      'category','price',
     ];
     foreach ($a as $b) {
-      if (!array_key_exists($b, $P)) {
+      if (!array_key_exists($b, $p)) {
         $this->apiFail(400, 'missing "'.$b.'" parameter');
       }
     }
-    # refine
+    # refine parameters
     # language
-    $a = strval($P['lang']);
-    $P['lang'] = (strlen($a) !== 2)
-      ? $this->lang
-      : $a;
-    # category filter
-    $P['category'] = $this->parseCategoryFilter($P['category']);
-    # price filter
-    if (!($a = $P['price']) ||
-        !is_array($a) || count($a) !== 5 || !$a[0])
-    {
-      $P['price'] = null;
+    $a = $p['lang'];
+    if (!is_string($a) || strlen($a) > 2) {
+      $this->apiFail(400, 'incorrect language');
     }
-    else {
-      $P['price'] = [intval($a[1]), intval($a[2])];
+    else if (!$a) {
+      #$p['lang'] = $this->lang;
+      $p['lang'] = 'en';
+    }
+    # range
+    if ($R = $p['range'])
+    {
+      if (!is_array($R) || count($R) !== 5) {
+        $this->apiFail(400, 'incorrect range');
+      }
+      for ($a = 0; $a < 5; ++$a)
+      {
+        if (!array_key_exists($a, $R) || !is_int($R[$a]) || $R[$a] < 0) {
+          $this->apiFail(400, 'incorrect range');
+        }
+      }
     }
     # order
-    $a = $P['order'];
-    if (!is_array($a) || !is_string($a[0]) || !is_int($a[1])) {
-      $P['order'] = null;
-    }
-    # range [offset,limit,total]
-    $a = $P['range'];
-    if (!is_array($a) || count($a) !== 3 ||
-        !is_int($a[0]) || !is_int($a[1]) || !is_int($a[2]))
+    $a = $p['order'];
+    if (!is_array($a)     || count($a) !== 2 ||
+        !is_string($a[0]) || !is_int($a[1]))
     {
-      $this->apiFail(400, 'incorrect range');
+      $p['order'] = null;
     }
-    # }}}
-    # operate {{{
-    switch ($P['func']) {
-    case 'config':
-      $this->apiConfig($P);
-      break;
-    case 'data':
-      $this->apiData($P);
-      break;
-    default:
-      $this->apiFail(400, 'invalid request function');
-      break;
-    }
-    # }}}
-    exit; # terminate
-  }
-  # }}}
-  private function apiConfig($p) # {{{
-  {
-    # prepare
-    $range = $p['range'];
-    if ($range[1] <= 0 || $range[1] > 128) {
-      $this->apiFail(400, 'incorrect range limit');
-    }
-    # query products (thin parameters)
-    $q = [
-      'category' => $p['category'],
-      'price'    => null,
-      'order'    => null,
-    ];
-    if (($q = $this->db_Products($q)) === null) {
-      $this->apiFail(500, 'failed to get products map');
-    }
-    # determine ranges
-    $range[2] = count($q);
-    $page     = [0, ceil($range[2] / $range[1])];
-    $range[0] = $page[0] * $range[1];
-    # determine language specific data
-    $locale = __DIR__.DIRECTORY_SEPARATOR.$this->name.'-locale.php';
-    $locale = (include $locale);
-    $locale = array_key_exists($p['lang'], $locale)
-      ? $locale[$p['lang']]
-      : $locale['en'];
-    # encode result
-    $q = json_encode([
-      'range'     => $range,
-      'page'      => $page,
-      'category'  => $p['category'],
-      'price'     => $this->db_PriceFilter($q),
-      'currency'  => $this->db_Currency(),
-      'cart'      => $this->db_Cart(),
-      'locale'    => $locale,
-    ], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
-    # check
-    if ($q === null) {
-      $this->apiFail(500, json_last_error_msg());
-    }
-    # send
-    header('content-type: application/json');
-    echo $q;
-  }
-  # }}}
-  private function apiData($p) # {{{
-  {
-    # TODO: cache
-    # get products map {{{
-    # set parameters (heavy)
-    $ids = [
-      'order'    => $p['order'],
-      'category' => $p['category'],
-      'price'    => $p['price'],
-    ];
-    # get identifiers
-    if (($ids = $this->db_Products($ids)) === null) {
-      $this->apiFail(500, 'failed to get products map');
-    }
-    # determine range
-    $range    = $p['range'];
-    $range[2] = count($ids);
-    if ($range[0] >= $range[2]) {
-      $this->apiFail(400, 'incorrect offset, too large');
-    }
-    # }}}
-    # send metadata {{{
-    # activate streaming
-    if (session_status() === PHP_SESSION_ACTIVE) {
-      session_write_close();
-    }
-    while (ob_get_level() !== 0) {
-      ob_end_clean();
-    }
-    header('content-type: application/octet-stream');
-    # send
-    $this->sendInt($range[2]);
-    # }}}
-    # send items {{{
-    $ids = array_slice($ids, $range[0], $range[1]);
-    foreach ($ids as $id)
+    # category filter
+    $p['category'] = $this->parseCategoryFilter($p['category']);
+    # price filter
+    if (!($a = $p['price']) ||
+        !is_array($a) || count($a) !== 5 || !$a[0])
     {
-      # get product
-      if (!($a = $this->getProduct($id))) {
-        break;
+      $p['price'] = null;
+    }
+    else {
+      $p['price'] = [intval($a[1]), intval($a[2])];
+    }
+    # }}}
+    # operate
+    if ($R) {
+      # data {{{
+      # close session
+      if (session_status() === PHP_SESSION_ACTIVE) {
+        session_write_close();
       }
-      # create transferable item
-      $item = [
-        'id'    => intval($id),
-        'title' => $a['title'],
-        'type'  => $a['product_type'],
-        'link'  => get_permalink($id),
-        'image' => null,
-        'price' => null,
-        'stock' => [
-          'status'    => $a['_stock_status'],
-          'backorder' => $a['_backorders'],
-          'count'     => (($a['_stock'] !== null)
-            ? intval($a['_stock'])
-            : null
-          ),
-        ],
+      # clear output buffer
+      while (ob_get_level() !== 0) {
+        ob_end_clean();
+      }
+      # set query parameters (thick)
+      $q = [
+        'order'    => $p['order'],
+        'category' => $p['category'],
+        'price'    => $p['price'],
       ];
-      # set image
-      if (array_key_exists('_thumbnail_id', $a) &&
-          ($b = $a['_thumbnail_id']) && !empty($b) &&
-          ($c = wp_get_attachment_url($b)))
-      {
-        $item['image'] = [
-          'src'    => $c,
-          'srcset' => wp_get_attachment_image_srcset($b, 'full'),
-        ];
+      # TODO: cache
+      # get identifiers
+      if (($q = $this->db_Products($q)) === null) {
+        $this->apiFail(500, 'failed to get products map');
       }
-      # set price (TODO: other types)
-      switch ($item['type']) {
-      case 'simple':
-        $item['price'] = [
-          $a['_regular_price'], $a['_price']
-        ];
-        break;
+      # activate streaming
+      header('content-type: application/octet-stream');
+      # send total count
+      $c = count($q);
+      $this->sendInt($c);
+      # check
+      if (!$c || ($R[2] === 0 && $R[4] === 0)) {
+        exit;
       }
-      # transfer
-      $this->sendJSON($item);
-      #usleep(500 * 1000);
+      # send product ranges
+      # forward
+      $a = $R[1] - 1;
+      while (++$a < $R[2]) {
+        $this->sendJSON($this->db_Product($q[$a]));
+      }
+      # backward (in reverse order)
+      $a = $R[3] + $R[4];
+      while (--$a >= $R[3]) {
+        $this->sendJSON($this->db_Product($q[$a]));
+      }
+      # }}}
     }
-    # }}}
+    else {
+      # configuration {{{
+      # get products (thin query)
+      $q = [
+        'category' => $p['category'],
+        'price'    => null,
+        'order'    => null,
+      ];
+      if (($q = $this->db_Products($q)) === null) {
+        $this->apiFail(500, 'failed to get products map');
+      }
+      # get locale and language
+      $locale = __DIR__.DIRECTORY_SEPARATOR.$this->name.'-locale.php';
+      $locale = (include $locale);
+      $lang   = array_key_exists($p['lang'], $locale)
+        ? $p['lang']
+        : 'en';
+      # encode
+      $q = json_encode([
+        'lang'      => $lang,
+        'locale'    => $locale[$lang],
+        'currency'  => $this->db_Currency(),
+        'cart'      => $this->db_Cart(),
+        'price'     => $this->db_PriceFilter($q),
+        'total'     => count($q),
+      ], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+      if ($q === null) {
+        $this->apiFail(500, json_last_error_msg());
+      }
+      # send
+      header('content-type: application/json');
+      echo $q;
+      # }}}
+    }
+    # terminate
+    exit;
   }
   # }}}
   private function apiCart($request) # {{{
@@ -1215,29 +1167,6 @@ class StorefrontModernBlocks {
     }
     # remove extra gaps and complete
     return preg_replace('/>\s+</', '><', $template);
-  }
-  private function parseLocalName($json)
-  {
-    # parse JSON string into array
-    if (($json = json_decode($json, true)) === null) {
-      return '';
-    }
-    # check hardcoded
-    if (!is_array($json)) {
-      return is_string($json) ? $json : '';
-    }
-    # check localized name exists
-    if (array_key_exists($this->lang, $json)) {
-      $json = $json[$this->lang];
-    }
-    else if (array_key_exists('en', $json)) {
-      $json = $json['en'];
-    }
-    else {
-      return '';
-    }
-    # complete
-    return is_string($json) ? $json : '';
   }
   private function parseCategoryFilter($s)
   {
@@ -1499,12 +1428,12 @@ EOD;
     return $woocommerce->cart->get_cart_contents();
   }
   # }}}
-  public function getProduct($id) # {{{
+  private function db_Product($id) # {{{
   {
     # prepare
     $db  = $this->db;
     $wp_ = $this->prefix;
-    $res = null;
+    $x   = null;
     # get posts {{{
     # assemble a query
     $q = <<<EOD
@@ -1529,7 +1458,7 @@ EOD;
       return null;
     }
     # get the result
-    $res = ($a->fetch_all(MYSQLI_ASSOC))[0];
+    $x = ($a->fetch_all(MYSQLI_ASSOC))[0];
     # cleanup
     $a->free();
     # }}}
@@ -1564,13 +1493,45 @@ EOD;
     for ($b = 0; $b < $a->num_rows; ++$b)
     {
       $c = $a->fetch_row();
-      $res[$c[0]] = $c[1];
+      $x[$c[0]] = $c[1];
     }
     # cleanup
     $a->free();
     # }}}
-    # done
-    return $res;
+    # create transferable item
+    $a = [
+      'id'    => intval($id),
+      'title' => $x['title'],
+      'type'  => $x['product_type'],
+      'link'  => get_permalink($id),
+      'image' => null,
+      'price' => null,
+      'stock' => [
+        'status'    => $x['_stock_status'],
+        'backorder' => $x['_backorders'],
+        'count'     => (($x['_stock'] !== null)
+          ? intval($x['_stock'])
+          : null
+        ),
+      ],
+    ];
+    # get image
+    if (array_key_exists('_thumbnail_id', $x) &&
+        ($b = $x['_thumbnail_id']) && !empty($b) &&
+        ($c = wp_get_attachment_url($b)))
+    {
+      $a['image'] = [
+        'src'    => $c,
+        'srcset' => wp_get_attachment_image_srcset($b, 'full'),
+      ];
+    }
+    # get price (TODO: other types)
+    switch ($a['type']) {
+    case 'simple':
+      $a['price'] = [$x['_regular_price'], $x['_price']];
+      break;
+    }
+    return $a;
   }
   # }}}
   private function getCategoryTree($root, $hasEmpty) # {{{

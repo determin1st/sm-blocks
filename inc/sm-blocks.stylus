@@ -286,35 +286,39 @@ WebSafeFontHeadline = Times, 'Times New Roman', serif
 // }}}
 // ===
 .sm-blocks.products // {{{
+	// configuration
+	// static (absolute)
+	--column-gap: 8px
+	--row-gap: 16px
+	--item-width: 304px
+	--item-height: 404px
+	--foot-size: 25 // % of the item's height
+	// dynamic (controlled)
+	--columns: 1
+	--rows: 1
+	// calculated (relative)
+	--item-x: calc(var(--item-width) * var(--sm-blocks-factor))
+	--item-y: calc(var(--item-height) * var(--sm-blocks-factor))
+	--gap-x: calc(var(--column-gap) * var(--sm-blocks-factor))
+	--gap-y: calc(var(--row-gap) * var(--sm-blocks-factor))
+	--grid-width: calc(
+		var(--columns) * var(--item-x) + \
+		calc(var(--columns) - 1) * var(--gap-x) \
+	)
+	--grid-height: calc(
+		var(--rows) * var(--item-y) + \
+		calc(var(--rows) - 1) * var(--gap-y) \
+	)
+	// root
 	display: flex
-	flex-direction: row
+	flex-direction: row // tested!
 	justify-content: center
 	align-items: flex-start
 	width:  100% // take all width (observed)
 	height: auto // grow/shrink automatically (calculated)
-	padding: 2px 0 2px 8px
+	padding: 2px 0 8px 8px // should be absolute
+	// rootBox
 	> div
-		// default settings (absolute)
-		--columns: 1
-		--rows: 1
-		--column-gap: 8px
-		--row-gap: 16px
-		--item-width: 304px
-		--item-height: 404px
-		// calculated (relative)
-		--item-x: calc(var(--item-width) * var(--sm-blocks-factor))
-		--item-y: calc(var(--item-height) * var(--sm-blocks-factor))
-		--gap-x: calc(var(--column-gap) * var(--sm-blocks-factor))
-		--gap-y: calc(var(--row-gap) * var(--sm-blocks-factor))
-		--grid-width: calc(
-			var(--columns) * var(--item-x) + \
-			calc(var(--columns) - 1) * var(--gap-x) \
-		)
-		--grid-height: calc(
-			var(--rows) * var(--item-y) + \
-			calc(var(--rows) - 1) * var(--gap-y) \
-		)
-		// container
 		display: grid
 		grid-template-columns: repeat(var(--columns), 1fr)
 		grid-column-gap: var(--gap-x)
@@ -322,18 +326,20 @@ WebSafeFontHeadline = Times, 'Times New Roman', serif
 		flex: 1 1 0
 		max-width: var(--grid-width)
 		height: var(--grid-height)
-		// common card layout
-		> div
+		contain: strict // optimize
+		// common and standard card
+		> div // {{{
 			justify-self: stretch // width=100%
 			align-self: stretch // height=100%
 			max-width: var(--item-x)
 			height: var(--item-y)
 			display: none
+			contain: strict // optimize
 			// constructed
 			&.v
 				display: block
-		// standard product card
-		> .product
+		// }}}
+		> .product // {{{
 			////
 			--a-size: 60
 			--b-size: 27
@@ -512,6 +518,27 @@ WebSafeFontHeadline = Times, 'Times New Roman', serif
 					display: flex
 				> svg
 					display: none
+		// }}}
+	// intersection sentinel (required for infinite scroll)
+	> hr
+		--size: calc(var(--gap-y) + var(--item-y))
+		position: absolute
+		top:    auto
+		bottom: calc(0px - var(--size))
+		left:   auto
+		right:  auto
+		////
+		width:   1px
+		height:  var(--size)
+		padding: 0
+		margin:  0
+		border:  0
+		//background-color: transparent
+		//background-color: slategray
+		visibility: hidden
+		display: none
+		&.v
+			display: block
 // }}}
 .sm-blocks.paginator // {{{
 	width: 100%
@@ -1037,7 +1064,7 @@ WebSafeFontHeadline = Times, 'Times New Roman', serif
 				border-color: darkslategray
 		// }}}
 // }}}
-.sm-blocks.limit-selector // {{{
+.sm-blocks.rows-selector // {{{
 	// root (horizontal block)
 	width:  auto
 	height: calc(8px + var(--height))

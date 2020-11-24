@@ -9,6 +9,9 @@
 	     url('TradeWinds.woff') format('woff'), /* Modern Browsers */
 	     url('TradeWinds.ttf') format('truetype');
 ////
+html
+	scroll-behavior: smooth
+////
 #sm-page
 	width: 100%
 	font-size: calc(var(--sm-blocks-height) * var(--sm-blocks-factor))
@@ -25,7 +28,7 @@
 			margin:  0
 			padding: 0
 			border: 0
-			border-radius: 1px
+			border-radius: 2px
 			background-color: alpha(silver, 0.2)
 		&.h > hr
 			width:  3px
@@ -110,4 +113,11 @@
 							flex: 3 1 0
 							justify-content: flex-end
 		// }}}
+	> .foot
+		padding: 2px 0 2px 0
+		> .box
+			display: flex
+			flex-direction: row
+			align-items: stretch
+			justify-content: flex-end
 /***/

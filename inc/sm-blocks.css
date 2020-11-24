@@ -300,27 +300,28 @@
   background-color: #f00;
 }
 .sm-blocks.products {
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
-  align-items: flex-start;
-  width: 100%;
-  height: auto;
-  padding: 2px 0 2px 8px;
-}
-.sm-blocks.products > div {
-  --columns: 1;
-  --rows: 1;
   --column-gap: 8px;
   --row-gap: 16px;
   --item-width: 304px;
   --item-height: 404px;
+  --foot-size: 25;
+  --columns: 1;
+  --rows: 1;
   --item-x: calc(var(--item-width) * var(--sm-blocks-factor));
   --item-y: calc(var(--item-height) * var(--sm-blocks-factor));
   --gap-x: calc(var(--column-gap) * var(--sm-blocks-factor));
   --gap-y: calc(var(--row-gap) * var(--sm-blocks-factor));
   --grid-width: calc(var(--columns) * var(--item-x) + calc(var(--columns) - 1) * var(--gap-x));
   --grid-height: calc(var(--rows) * var(--item-y) + calc(var(--rows) - 1) * var(--gap-y));
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: flex-start;
+  width: 100%;
+  height: auto;
+  padding: 2px 0 8px 8px;
+}
+.sm-blocks.products > div {
   display: grid;
   grid-template-columns: repeat(var(--columns), 1fr);
   grid-column-gap: var(--gap-x);
@@ -328,6 +329,7 @@
   flex: 1 1 0;
   max-width: var(--grid-width);
   height: var(--grid-height);
+  contain: strict;
 }
 .sm-blocks.products > div > div {
   justify-self: stretch;
@@ -335,6 +337,7 @@
   max-width: var(--item-x);
   height: var(--item-y);
   display: none;
+  contain: strict;
 }
 .sm-blocks.products > div > div.v {
   display: block;
@@ -534,6 +537,24 @@
 }
 .sm-blocks.products > div > .product.loaded > svg {
   display: none;
+}
+.sm-blocks.products > hr {
+  --size: calc(var(--gap-y) + var(--item-y));
+  position: absolute;
+  top: auto;
+  bottom: calc(0px - var(--size));
+  left: auto;
+  right: auto;
+  width: 1px;
+  height: var(--size);
+  padding: 0;
+  margin: 0;
+  border: 0;
+  visibility: hidden;
+  display: none;
+}
+.sm-blocks.products > hr.v {
+  display: block;
 }
 .sm-blocks.paginator {
   width: 100%;
@@ -1084,7 +1105,7 @@
 .sm-blocks.orderer > div.v.hovered > select {
   border-color: #2f4f4f;
 }
-.sm-blocks.limit-selector {
+.sm-blocks.rows-selector {
   width: auto;
   height: calc(8px + var(--height));
   padding: 4px 0 4px 0;
@@ -1093,12 +1114,12 @@
   align-items: stretch;
   justify-content: flex-start;
 }
-.sm-blocks.limit-selector > div {
+.sm-blocks.rows-selector > div {
   font-size: var(--height);
   flex: 0 0 0;
   min-width: 2.1em;
 }
-.sm-blocks.limit-selector > div > select {
+.sm-blocks.rows-selector > div > select {
   font-size: var(--font-size);
   width: 100%;
   height: 100%;
@@ -1124,10 +1145,10 @@
   white-space: nowrap;
   cursor: pointer;
 }
-.sm-blocks.limit-selector > div > select:-ms-expand {
+.sm-blocks.rows-selector > div > select:-ms-expand {
   display: none;
 }
-.sm-blocks.limit-selector > div > svg {
+.sm-blocks.rows-selector > div > svg {
   position: absolute;
   top: 0;
   right: 0;
@@ -1135,49 +1156,49 @@
   pointer-events: none;
   fill: #c0c0c0;
 }
-.sm-blocks.limit-selector > div > svg > .b {
+.sm-blocks.rows-selector > div > svg > .b {
   fill: transparent;
 }
-.sm-blocks.limit-selector > div.v > select {
+.sm-blocks.rows-selector > div.v > select {
   color: #708090;
 }
-.sm-blocks.limit-selector > div.v > select > option {
+.sm-blocks.rows-selector > div.v > select > option {
   color: #2f4f4f;
   background-color: #dcdcdc;
   border: 1px solid #f00;
 }
-.sm-blocks.limit-selector > div.v > select > option:checked {
+.sm-blocks.rows-selector > div.v > select > option:checked {
   color: rgba(106,90,205,0.6);
 }
-.sm-blocks.limit-selector > div.v > select > option:hover {
+.sm-blocks.rows-selector > div.v > select > option:hover {
   background-color: #000;
   color: #fff;
 }
-.sm-blocks.limit-selector > div.v > svg > .a {
+.sm-blocks.rows-selector > div.v > svg > .a {
   fill: #c0c0c0;
 }
-.sm-blocks.limit-selector > div.v > svg > .b {
+.sm-blocks.rows-selector > div.v > svg > .b {
   fill: #708090;
 }
-.sm-blocks.limit-selector > div.v.hovered > select {
+.sm-blocks.rows-selector > div.v.hovered > select {
   color: #2f4f4f;
   border-color: #2f4f4f;
 }
-.sm-blocks.limit-selector > div.v.focused > select {
+.sm-blocks.rows-selector > div.v.focused > select {
   color: #2f4f4f;
   background-color: #c0c0c0;
   border-color: #2f4f4f;
   box-shadow: inset 0 0 0 0.04em #fff;
 }
-.sm-blocks.limit-selector > div.v.focused > svg > .a {
+.sm-blocks.rows-selector > div.v.focused > svg > .a {
   fill: #708090;
 }
-.sm-blocks.limit-selector > div.v.focused > svg > .b {
+.sm-blocks.rows-selector > div.v.focused > svg > .b {
   fill: #dcdcdc;
 }
-.sm-blocks.limit-selector > div.v.active > select {
+.sm-blocks.rows-selector > div.v.active > select {
   color: #483d8b;
 }
-.sm-blocks.limit-selector > div.v.active > svg > .a {
+.sm-blocks.rows-selector > div.v.active > svg > .a {
   fill: rgba(106,90,205,0.6);
 }
