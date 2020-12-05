@@ -31,16 +31,6 @@ smBlocks = do ->
 				data = p.pending
 			p.pending = 0
 			r data
-		# create spinner
-		p.spin = (data) ->
-			# resolve current
-			p.resolve data
-			# create another
-			a = newPromise!
-			# replace current with another
-			p.resolve = a.resolve
-			p.spin    = a.spin
-			return a
 		# done
 		return p
 	# }}}
@@ -550,35 +540,11 @@ smBlocks = do ->
 				*/
 			# }}}
 			Items = (block) !-> # {{{
-				# {{{
-				# create object shape
 				@image   = new @image block
 				@title   = new @title block
 				@price   = new @price block
 				@actions = new @actions block
-				/***
-				# initialize
-				do ~>>
-					# wait variables initialized
-					await init
-					# check container's aspect ratio,
-					# assuming that image item takes all,
-					# first section's space (gaps doesn't break ration), and
-					# determine optimal display variant (class)
-					if sizes.0 < 1
-						# vertical is smaller than horizontal,
-						# limit image by max-[h]eight and
-						# unleash automatic browser's width calculation
-						@image.box.classList.add 'h'
-					else
-						# vertical is bigger than horizontal,
-						# stretch image by [w]idth and
-						# unleash automatic browser's height calculation
-						@image.box.classList.add 'w'
-					# now, loaded image (if any) may show up
-					@image.ready.resolve!
-				/***/
-				# }}}
+			###
 			Items.prototype =
 				image: do -> # {{{
 					Item = (block) !->
@@ -595,21 +561,42 @@ smBlocks = do ->
 								return false
 							# wait variables initialized
 							await init
-							# check container's aspect ratio,
-							# assuming that image item takes all,
-							# first section's space (gaps doesn't break ration), and
-							# determine optimal display variant (class)
-							debugger
-							if sizes.0 < 1
-								# vertical is smaller than horizontal,
-								# limit image by max-[h]eight and
-								# unleash automatic browser's width calculation
-								@box.classList.add 'h'
+							# get container size
+							cw = sizes.3
+							ch = sizes.0
+							# determine optimal display
+							if w >= h
+								# stretch by width
+								a  = h / w
+								b  = cw - w
+								w += b # 100%
+								h += a*b
+								# check overflow
+								if (b = h - ch) > 0
+									# reduce width
+									a = w / h
+									w = 100*(w - a*b)/cw
+									@image.style.maxWidth = w+'%'
+								else
+									# reduce height
+									h = 100*(h / ch)
+									@image.style.maxHeight = h+'%'
 							else
-								# vertical is bigger than horizontal,
-								# stretch image by [w]idth and
-								# unleash automatic browser's height calculation
-								@box.classList.add 'w'
+								# stretch by height
+								a  = w / h
+								b  = ch - h
+								w += a*b
+								h += b
+								# check overflow
+								if (b = w - cw) > 0
+									# reduce height
+									a = h / w
+									h = 100*(h - a*b)/ch
+									@image.style.maxHeight = h+'%'
+								else
+									# reduce width
+									w = 100*(w / cw)
+									@image.style.maxWidth = w+'%'
 							# done
 							@box.classList.add 'v'
 							@loaded = true
@@ -618,14 +605,16 @@ smBlocks = do ->
 					###
 					Item.prototype =
 						set: (data) -> # {{{
-							# check
-							if not data.image
-								return true
-							# set handler
-							@image.addEventListener 'load', @load
-							# set image attributes
-							for a,b of data.image
-								@image[a] = b
+							# check already loaded
+							if @loaded
+								@clear!
+							# check image
+							if data.image
+								# set handler
+								@image.addEventListener 'load', @load
+								# set attributes
+								for a,b of data.image
+									@image[a] = b
 							# done
 							return true
 						# }}}
@@ -633,8 +622,9 @@ smBlocks = do ->
 							@image.removeEventListener 'load', @load
 							if @loaded
 								@box.classList.remove 'v'
-								@image.className = ''
+								@image.removeAttribute 'style'
 								@image.src = ''
+								@image.srcset = ''
 								@loaded = false
 						# }}}
 					###
@@ -649,6 +639,9 @@ smBlocks = do ->
 					eBreakMarkers = /\s+([\\\|/.]){1}\s+/
 					Item.prototype =
 						set: (data) -> # {{{
+							# TODO: DELETE
+							@title.firstChild.textContent = data.index
+							return true
 							# check
 							if not (data = data.title)
 								return true
@@ -876,26 +869,37 @@ smBlocks = do ->
 				@rootBox = R.firstChild
 				@id      = -1
 				@items   = new Items @
+				@loaded  = false
 			###
 			Block.prototype =
 				set: (record) -> # {{{
-					# set own
-					@id = record.id
-					# set items
-					a = @items
-					for b of a
-						if not a[b].set record
-							return false
+					# prepare
+					@clear! if @loaded
+					# check
+					if record
+						# set id
+						@id = record.id
+						# set items
+						for a,a of @items
+							if not a.set record
+								return false
+						# set class
+						if not @loaded
+							@root.classList.add 'loaded'
+						# set flag
+						@loaded = true
 					# done
-					@root.classList.add 'loaded'
 					return true
 				# }}}
 				clear: !-> # {{{
-					# clear items
-					@root.classList.remove 'loaded'
-					a = @items
-					for b of a
-						a[b].clear!
+					# check
+					if @loaded
+						# clear items
+						for a,a of @items
+							a.clear!
+						# clear class
+						@root.classList.remove 'loaded'
+						@loaded = false
 					# done
 				# }}}
 			# }}}
@@ -917,18 +921,14 @@ smBlocks = do ->
 						parseInt (s.getPropertyValue 'padding-top')
 						parseInt (s.getPropertyValue 'padding-bottom')
 					]
-					# determine default item size
-					a = m.master.resizer.sizes
-					b = a.1 - s.5 - s.6
-					a = a.0 - s.3 - s.4
-					# convert relative heights to absolute and
-					# determine aspect ratios
-					s.0 = (b * s.0 / 100) / a
-					s.1 = (b * s.1 / 100) / a
-					s.2 = (b * s.2 / 100) / a
-					# keep default size of the item
-					s.3 = a
-					s.4 = b
+					# determine item size
+					c = m.master.resizer.sizes
+					s.3 = c.0 - s.3 - s.4 # width
+					s.4 = c.1 - s.5 - s.6 # height
+					# determine section sizes
+					s.0 = s.4 * s.0 / 100
+					s.1 = s.4 * s.1 / 100
+					s.2 = s.4 * s.2 / 100
 					# complete
 					s.length = 5
 					init.resolve!
@@ -1884,174 +1884,6 @@ smBlocks = do ->
 			# }}}
 			return Block
 		# }}}
-		'orderer': do -> # {{{
-			Control = (block) !-> # {{{
-				# create object shape
-				# data
-				@block   = block
-				@hovered = 0
-				@focused = false
-				# bound handlers
-				@hover = (e) !~> # {{{
-					# fulfil event
-					e.preventDefault!
-					# operate
-					if not @block.locked and not @hovered
-						@hovered = 1
-						@block.rootBox.classList.add 'hovered'
-				# }}}
-				@unhover = (e) !~> # {{{
-					# fulfil event
-					e.preventDefault!
-					# operate
-					if @hovered == 1
-						@hovered = 0
-						@block.rootBox.classList.remove 'hovered'
-				# }}}
-				@switchVariant = (e) !~> # {{{
-					# fulfil event
-					e.preventDefault!
-					e.stopPropagation!
-					# operate
-					B = @block
-					D = B.group.data
-					if not B.locked and (a = B.current.1) > 0
-						# set variant
-						D.1 = a = if a == 1
-							then 2
-							else 1
-						# update DOM
-						b = B.select.selectedIndex
-						b = B.select.options[b]
-						b.value = a
-						# move focus
-						B.select.focus!
-						# update state
-						B.group.update!
-				# }}}
-				@switchFocusIn = (e) !~> # {{{
-					# fulfil event
-					e.preventDefault!
-					e.stopPropagation!
-					# operate
-					if not @block.locked and @hovered != 2
-						@hovered = 2
-						@block.rootBox.classList.add 'hovered'
-				# }}}
-				@switchFocusOut = (e) !~> # {{{
-					# fulfil event
-					e.preventDefault!
-					e.stopPropagation!
-					# operate
-					if not @block.locked and @hovered == 2
-						@hovered = 0
-						@block.rootBox.classList.remove 'hovered'
-				# }}}
-				@selected = (e) !~> # {{{
-					# fulfil event
-					e.preventDefault!
-					e.stopPropagation!
-					# operate
-					B = @block
-					D = B.group.data
-					if not B.locked
-						# set new index and variant
-						a = B.select.selectedIndex
-						D.0 = B.keys[a]
-						D.1 = +B.select.options[a].value
-						# update state
-						B.group.update!
-				# }}}
-			###
-			Control.prototype = {
-				attach: !-> # {{{
-					B = @block
-					B.rootBox.addEventListener 'pointerenter', @hover
-					B.rootBox.addEventListener 'pointerleave', @unhover
-					B.switch.forEach (a) !~>
-						a.addEventListener 'click', @switchVariant
-						a.addEventListener 'focusin', @switchFocusIn
-						a.addEventListener 'focusout', @switchFocusOut
-					B.select.addEventListener 'input', @selected
-				# }}}
-				detach: !-> # {{{
-					true
-				# }}}
-			}
-			# }}}
-			Block = (root) !-> # {{{
-				# base
-				@group   = 'order'
-				@root    = root
-				@rootBox = root.firstChild
-				# controls
-				@variant = a = [...(root.querySelectorAll '.variant')]
-				@switch  = a.map (a) -> a.firstChild
-				@select  = root.querySelector 'select'
-				# state
-				@locked  = -1
-				@current = ['',-1]
-				@options = null
-				@keys    = null
-				@ctrl    = new Control @
-				# handlers
-				@onResize = null
-			###
-			Block.prototype =
-				level: 1
-				init: (cfg) -> # {{{
-					# initialize state
-					s = @group.config
-					@options = o = cfg.locale.order
-					@keys    = k = s.orderOptions or (Object.getOwnPropertyNames o)
-					# create select options
-					s = @select
-					for a in k
-						# create
-						b = document.createElement 'option'
-						b.textContent = o[a].0
-						b.value = o[a].1
-						# add
-						s.appendChild b
-					# complete
-					@refresh!
-					@ctrl.attach!
-					return true
-				# }}}
-				refresh: -> # {{{
-					# get data
-					a = @group.data
-					b = @current
-					# sync tag
-					if a.0 != b.0
-						# set controls
-						if (c = @keys.indexOf a.0) != @select.selectedIndex
-							@select.selectedIndex = c
-						if (not a.1 and b.1) or (a.1 and not b.1)
-							c = !a.1
-							@switch.forEach (d) !->
-								d.disabled = c
-						# store
-						b.0 = a.0
-					# sync variant
-					if a.1 != b.1
-						# set controls
-						if b.1 >= 0
-							c = ('abc')[b.1]
-							@variant.forEach (d) !->
-								d.classList.remove c
-						if a.1 >= 0
-							c = ('abc')[a.1]
-							@variant.forEach (d) !->
-								d.classList.add c
-						# store
-						b.1 = a.1
-					# done
-					return true
-				# }}}
-			# }}}
-			return Block
-		# }}}
 	M = # masters (active)
 		'products': do -> # {{{
 			Resizer = (block) !-> # {{{
@@ -2415,15 +2247,21 @@ smBlocks = do ->
 				@resizer = new Resizer @
 				# state
 				@range   = [
-					0,   # primary offset
+					0,   # primary offset (first record index)
 					0,0, # forward range: offset,count
 					0,0  # backward range
 				]
 				@rows    = -1 # fixed number of rows, 0=auto, -1=init
 				@count   = 0  # items displayed
-				@page    = 0  # approximated number of items in the viewport
-				@rec_a   = [] # forward range records
-				@rec_b   = [] # backward
+				@page    = 0  # approximated max number of items in the viewport
+				@bufA    = [] # forward buffer
+				@bufB    = [] # backward buffer
+				@offset  = [  # buffer offset state
+					0, # primary range offset (for update check)
+					0, # current buffer offset (center point)
+					0  # buffer validity flag (for load)
+				]
+				@charged = 0
 				@locked  = -1
 			###
 			Block.prototype =
@@ -2432,42 +2270,28 @@ smBlocks = do ->
 				# }}}
 				init: (s, c) -> # {{{
 					# set state and config
+					c.order = a if a = @config.options
 					s.order = a if a = @config.order
 					s.range = @range
-					c.count = 0
-					c.rows  = @config.layout.1 # refresh guarantee
+					c.rows  = (o = @config.layout).1 # refresh guarantee
+					c.count = o.0 * o.1 # minimal
 					# activate resizer
 					@resizer.attach!
-					# approximate maximal viewport capacity (page)
+					# approximate maximal viewport capacity (page buffer)
 					s = window.screen
 					s = if (a = s.availWidth) > (b = s.availHeight)
 						then a
 						else b
 					s = Math.ceil (s / @resizer.sizes.1)
-					a = @config.layout
-					@page = 5 * a.0 * s # x5 zoom factor (x4=25% considered max)
-					# set minimal items count
-					@setCount (a.0 * a.1)
-					# set initial range
-					a   = @range
-					a.0 = 0
-					a.1 = a.0
-					if a.1 + @page > c.total
-						a.2 = c.total
-						a.3 = a.2 - 1
-						a.4 = 0
-					else
-						a.2 = @page
-						if (a.3 = a.0 - @page) < 0
-							a.3 = c.total + a.3
-							a.4 = c.total - a.3
-						else
-							a.4 = a.0 - a.3
+					@page = 5 * o.0 * s # x5 zoom factor (x4=25% considered max)
+					# set initial range and items count
+					@setRange 0
+					@setCount c.count
 					# done
 					return true
 				# }}}
 				refresh: ->> # {{{
-					# check rows mode
+					# check rows
 					if @rows != (a = @group.config.rows)
 						# set dot display
 						if @rows and not a
@@ -2477,8 +2301,38 @@ smBlocks = do ->
 						# update value and refresh layout
 						@rows = a
 						await @resizer.refresh!
+					# check offset
+					if (a = @range.0) != @offset.0
+						# update primary value
+						@offset.0 = a
+						# update buffer
+						if @setBuffer!
+							@offset.1 = a # update buffer offset
+							@offset.2 = 0 # invalidate buffer
+							@charged++
+							@group.submit @
+					else
+						# confirm buffer validity
+						@offset.2 = 1
 					# done
 					return true
+				# }}}
+				notify: (level) -> # {{{
+					# skip own charge
+					if @charged
+						--@charged
+						return 0
+					# check foreign update priority and
+					# reset in case of query change
+					if level
+						@offset.0 = @offset.1 = 0
+						@clearBuffer!
+						# in case of total record count change,
+						# set special range offsets (determined by the server)
+						if level > 1
+							@range.1 = @range.3 = -1
+					# continue
+					return 0
 				# }}}
 				setCount: (count) -> # {{{
 					# check equal
@@ -2492,7 +2346,7 @@ smBlocks = do ->
 						while a.length < c
 							a[*] = @group.f.productCard @
 					# show more
-					b = @rec_a
+					b = @bufA
 					c = @count - 1
 					while ++c < count
 						# set constructed
@@ -2504,69 +2358,226 @@ smBlocks = do ->
 					while c > count
 						a[--c].root.classList.remove 'v'
 					# update value
-					@count = c
-					# check range
-					# ...
+					if (@count = c) != @group.config.count
+						# refresh group
+						@group.config.count = c
+						@group.refresh @
 					# done
 					return true
 				# }}}
-				load: (i, record) -> # {{{
-					# check destination
-					if (j = i - @range.2) < 0
-						# forward,
-						# store
-						@rec_a[i] = record
-						# determine item offset
-						j = @range.1 - @range.0 + i
-						# set item (if displayed)
-						if j < @count
-							@items[j].set record
+				setBuffer: -> # {{{
+					# prepare
+					A = @bufA
+					B = @bufB
+					R = @range
+					a = A.length
+					b = B.length
+					c = @group.config.total
+					d = @page
+					o = @offset.0
+					O = @offset.1
+					# determine offset deviation
+					if (i = o - O) > 0 and c - i < i
+						i = i - c # swap to backward
+					else if i < 0 and c + i < -i
+						i = c + i # swap to forward
+					# check out of the buffer
+					if (Math.abs i) > d + d - 1
+						# cleanup
+						console.log 'out of buffer'
+						@clearBuffer!
+						return 2
+					# determine steady limit
+					d = d .>>>. 1
+					# check steady
+					if i == 0 or (i > 0 and d - i > 0)
+						# forward {{{
+						# update items
+						j = -1
+						while ++j < @count
+							if i < a
+								@items[j].set A[i++]
+							else
+								@items[j].clear!
+						# }}}
+						return 0
+					if i < 0 and d + i >= 0
+						# backward {{{
+						# update items
+						j = -1
+						k = -i - 1
+						while ++j < @count
+							if k >= 0 and b - k > 0
+								@items[j].set B[k]
+							else if k < 0 and a + k > 0
+								# the count of displayed items may not align
+								# with the total count, so, the last page may show
+								# records from forward buffer
+								@items[j].set A[-k - 1]
+							else
+								@items[j].clear!
+							--k
+						# }}}
+						return 0
+					###
+					# check partial penetration
+					if i > 0 and a - i > 0
+						# forward {{{
+						# [v|v|v|v]
+						#   [v|v|v|x]
+						# avoid creation of sparse array
+						console.log 'front partially penetrated'
+						j = b
+						while j < i
+							B[j++] = null
+						# rotate buffer forward
+						j = i
+						k = 0
+						while k < b and j < @page
+							B[j++] = B[k++]
+						B.length = j
+						j = i - 1
+						k = 0
+						while ~j
+							B[j--] = A[k++]
+						#j = -1
+						#k = i
+						while k < a
+							A[++j] = A[k++]
+						A.length = k = j + 1
+						# update items (last to first)
+						j = @count
+						while j
+							if --j < k
+								@items[j].set A[j]
+							else
+								@items[j].clear!
+						# update range
+						@setRange o, true
+						# }}}
+						return 1
+					if i < 0 and b + i > 0
+						# backward {{{
+						#   [v|v|v|v]
+						# [x|v|v|v]
+						# avoid creation of sparse array
+						console.log 'back partially penetrated'
+						i = -i
+						j = a
+						while j < i
+							A[j++] = null
+						# rotate buffer backward
+						j = i
+						k = 0
+						while k < a and j < @page
+							A[j++] = A[k++]
+						A.length = j
+						j = i - 1
+						k = 0
+						while ~j
+							A[j--] = B[k++]
+						#j = -1
+						#k = i
+						while k < b
+							B[++j] = B[k++]
+						B.length = j + 1
+						# update items display (first to last)
+						j = -1
+						k = A.length
+						while ++j < @count
+							if j < k
+								@items[j].set A[j]
+							else
+								@items[j].clear!
+						# update range
+						@setRange o, true
+						# }}}
+						return -1
+					# buffer penetrated (wasn't filled enough)
+					console.log 'buffer penetrated'
+					@clearBuffer!
+					return -2
+				# }}}
+				clearBuffer: !-> # {{{
+					# set new range
+					@setRange @offset.0
+					# clear records
+					@bufA.length = @bufB.length = 0
+					# clear items
+					i = @count
+					while i
+						@items[--i].clear!
+					# done
+				# }}}
+				setRange: (o, gaps) !-> # {{{
+					# prepare
+					a = @range
+					c = @page
+					n = @group.config.total
+					# operate
+					if not ~n
+						# the total is not determined,
+						# backend will determine proper range,
+						# set special offset
+						a.0 = o
+						a.1 = a.3 = -1
+						a.2 = a.4 = c
+						###
+					else if gaps
+						# buffer replenishment required,
+						# shift offsets to fill the gaps
+						a.0 = o
+						if (b = @bufA.length) < c
+							if (a.1 = o + b) >= n
+								a.1 = a.1 - n
+							a.2 = c - b
+						else
+							a.1 = a.2 = 0
+						if (b = @bufB.length) < c
+							if (a.3 = o - 1 - b) < 0
+								a.3 = a.3 + n
+							a.4 = c - b
+						else
+							a.3 = a.4 = 0
+						###
 					else
-						# backward,
-						# store only
-						@rec_b[j] = record
+						# default range (n > c + c)
+						a.0 = a.1 = o
+						a.2 = a.4 = c
+						a.3 = if o
+							then o - 1
+							else n - 1
+						###
+				# }}}
+				load: (i, record) -> # {{{
+					# check range and buffer are valid
+					if not (o = @offset).2
+						return false
+					# determine where to store this record
+					if i < @range.2
+						# store forward
+						i = @bufA.length
+						@bufA[i] = record
+						# determine display offset
+						i = if (o = o.0 - o.1) >= 0
+							then i - o
+							else i - @group.config.total - o
+						# update item if it's displayed
+						if i >= 0 and i < @count
+							@items[i].set record
+					else
+						# store backward
+						i = @bufB.length
+						@bufB[i] = record
+						# determine display offset
+						i = if (o = o.1 - o.0) > 0
+							then i - o
+							else i - @group.config.total - o
+						# update item if it's displayed
+						if i < 0 and i + @count >= 0
+							@items[-i - 1].set record
 					# done
 					return true
-					/***
-					# prepare
-					D = @group.data
-					I = @items
-					# check continuation
-					if (@offset + @loaded) == (D.0 + index) and \
-					   I.length >= @size + @loaded
-						###
-						# continuation,
-						# items capacity allows to append
-						# more items into the grid's view
-						index += @loaded
-						if not I[index].set record
-							return false
-						# complete
-						++@loaded
-						return true
-					# check replacement
-					if @offset <= D.0 and \
-					   @offset + @loaded > D.0 + @size
-						###
-						# replacement,
-						# determine record index
-						index = @offset - D.0 + index
-						# unload previous items (if any)
-						while @loaded > index + 1
-							I[--@loaded].clear!
-						# replace and complete
-						return I[index].set record
-					###
-					# full reload (out of current bounds)
-					# update records offset
-					@offset = D.0
-					# unload previous items (if any)
-					while @loaded > index + 1
-						I[--@loaded].clear!
-					# complete
-					++@loaded
-					return I[index].set record
-					/***/
 				# }}}
 			# }}}
 			return Block
@@ -2651,7 +2662,6 @@ smBlocks = do ->
 					if @block.locked or @lock.pending
 						return
 					# prepare
-					console.log 'page.click'
 					B = @block
 					C = B.current
 					R = B.range
@@ -2713,43 +2723,48 @@ smBlocks = do ->
 				# }}}
 				@dragStart = (e) ~>> # {{{
 					# fulfil event
-					e.preventDefault!
+					#e.preventDefault!
 					e.stopPropagation!
 					# prepare
 					B = @block
+					R = B.range
 					# check requirements
 					if not e.isPrimary or e.button or typeof e.offsetX != 'number' or \
-					   B.locked or not B.range.mode or \
+					   B.locked or not R.mode or \
 					   B.current.1 < 2 or @lock.pending
 						###
 						return true
 					# create drag lock
 					@lock = lock = newPromise 3
+					# set drag style
+					R.focus! # solves cursor refresh issue?
+					R.box.classList.add 'active', 'drag'
 					# cooldown
 					await Promise.race [(newDelay 200), lock]
-					# prevent collisions
+					# check
 					if not lock.pending
+						# aborted, remove drag style
+						R.box.classList.remove 'active', 'drag'
 						return true
 					# initialize dragbox
 					@initDragbox!
 					# save initial page index
 					a = B.current.0
 					# capture pointer
-					(R = B.range).focus!
-					R.box.classList.add 'active', 'drag'
 					if not R.box.hasPointerCapture e.pointerId
 						R.box.setPointerCapture e.pointerId
-					# to prevent dragging before capture,
+					# to prevent dragging before capturing,
 					# change promise value
 					lock.pending = 4
 					# wait dragging complete
-					await lock
+					lock = await lock
 					# release capture
 					if R.box.hasPointerCapture e.pointerId
 						R.box.releasePointerCapture e.pointerId
+					# remove drag style
 					R.box.classList.remove 'active', 'drag'
-					# submit if changed
-					if not @block.locked and a != B.current.0
+					# submit if changed normally
+					if lock and a != B.current.0
 						B.submit!
 					# done
 					return true
@@ -2799,36 +2814,30 @@ smBlocks = do ->
 					else
 						# out of last
 						a = C.1 - 1
-					# submit
+					# update current
 					if C.0 != a
 						C.0 = a
-						@block.submit!
+						@block.range.refresh!
 				# }}}
-				@wheel = (e) !~> # {{{
-					console.log 'wheel'
-					/***
-					# check
-					if @lock or @block.locked or not @block.range.mode
-						return
+				@wheel = (e) ~> # {{{
 					# fulfil event
 					e.preventDefault!
 					e.stopPropagation!
 					# prepare
-					a = @group.data.0
-					if (b = @group.data.1 - 1) == 0
-						return
-					# determine new index
-					a = a + 1*(Math.sign e.deltaY)
-					if a > b
-						a = 0
-					else if a < 0
-						a = b
-					# update common state
-					@group.data.0 = a
-					@group.common!
-					# done
-					@block.focus!
-					/***/
+					B = @block
+					C = B.current
+					# check requirements
+					if B.locked or not B.range.mode or @lock.pending
+						return true
+					# determine new page index
+					if (i = C.0 + 1*(Math.sign e.deltaY)) >= C.1
+						i = 0
+					else if i < 0
+						i = C.1 - 1
+					# update state
+					C.0 = i
+					B.submit!
+					return true
 				# }}}
 			###
 			Control.prototype =
@@ -2889,11 +2898,13 @@ smBlocks = do ->
 					C.0 = first
 					await @fastUpdate!
 					# cooldown
-					await Promise.race [(newDelay 200), lock]
-					# check stopped
+					L = await Promise.race [(newDelay 200), lock]
+					# check finished or cancelled
 					if not lock.pending
-						# submit first goto
-						B.submit!
+						# when finished normally,
+						# set first selected index
+						B.submit! if L
+						# done
 						return true
 					# activate style
 					B.range.box.classList.add 'active'
@@ -2901,7 +2912,7 @@ smBlocks = do ->
 					# capture pointer
 					if event and not btn.hasPointerCapture event.pointerId
 						btn.setPointerCapture event.pointerId
-					# start
+					# determine runway parameters
 					a = first
 					b = step
 					c = @fastCfg.1
@@ -2911,6 +2922,7 @@ smBlocks = do ->
 					else
 						beg = C.1 - 1
 						end = -1
+					# select page indexes until finished or cancelled
 					while lock.pending
 						# increment
 						if (a = a + b) == end
@@ -2926,20 +2938,21 @@ smBlocks = do ->
 							# throttle
 							b = step
 							d = 1000 / (1 + d)
-							await Promise.race [(newDelay d), lock]
+							L = await Promise.race [(newDelay d), lock]
 						else if step*b < @fastCfg.0 and --c == 0
 							# accelerate
 							b = b + step
 							c = @fastCfg.1
-					# complete
 					# release capture
 					if event and btn.hasPointerCapture event.pointerId
 						btn.releasePointerCapture event.pointerId
-					# deactivate style
+					# deactivate
 					btn.parentNode.classList.remove 'active'
 					B.range.box.classList.remove 'active'
-					# submit if changed
-					B.submit! if C.0 != first
+					# when finished normally (not cancelled),
+					# set last selected index
+					if L and C.0 != first
+						B.submit!
 					# done
 					return true
 				# }}}
@@ -3387,7 +3400,7 @@ smBlocks = do ->
 					return true
 				# }}}
 				refresh: -> # {{{
-					# determine current page index and count
+					# determine current
 					if (a = @group.config).count
 						b = (Math.round (@group.data.0 / a.count)) .|. 0
 						c = Math.ceil (a.total / a.count)
@@ -3404,28 +3417,34 @@ smBlocks = do ->
 					return true
 				# }}}
 				lock: (level) ->> # {{{
-					if level
-						# wait activity terminated
-						if (a = @control.lock).pending
-							await a.spin!
-						# remove selected class
-						if ~(a = @range.current)
-							@range.pages[a].classList.remove 'x'
-					else
-						# restore selected
-						if ~(a = @range.current)
-							@range.pages[a].classList.add 'x'
+					# terminate activity (dragging, fast forwarding..)
+					if level > 0 and @control.lock.pending
+						@control.lock.resolve 0
+					# remove selection style if the total is going to change
+					if level > 1 and ~(a = @range.current)
+						@range.pages[a].classList.remove 'x'
+					# done
+					return true
+				# }}}
+				unlock: (level) ->> # {{{
+					# restore selection style
+					if (level == -1 or level > 1) and ~(a = @range.current)
+						@range.pages[a].classList.add 'x'
 					# done
 					return true
 				# }}}
 				submit: !-> # {{{
-					# set records offset (page*limit)
-					@group.data.0 = @current.0 * @group.data.1
-					@group.update @
+					# set records offset
+					@group.data.0 = @current.0 * @group.config.count
+					# refresh
+					@range.focus!
+					@range.refresh!
+					@group.refresh @
 				# }}}
-				notify: (s) -> # {{{
-					@refresh!
-					return not @control.lock.pending
+				notify: (level) -> # {{{
+					return if @control.lock.pending
+						then 1
+						else 0
 				# }}}
 				focus: !-> # {{{
 					# set focus to current
@@ -3546,11 +3565,11 @@ smBlocks = do ->
 					# done
 					return true
 				# }}}
-				lock: (level) !-> # {{{
-					if level
-						@select.disabled = true
-					else
-						@select.disabled = false
+				lock: !-> # {{{
+					@select.disabled = true
+				# }}}
+				unlock: !-> # {{{
+					@select.disabled = false
 				# }}}
 				submit: !-> # {{{
 					# get current value
@@ -3576,9 +3595,177 @@ smBlocks = do ->
 			# }}}
 			return Block
 		# }}}
+		'orderer': do -> # {{{
+			Control = (block) !-> # {{{
+				# create object shape
+				# data
+				@block   = block
+				@hovered = 0
+				@focused = false
+				# bound handlers
+				@hover = (e) !~> # {{{
+					# fulfil event
+					e.preventDefault!
+					# operate
+					if not @block.locked and not @hovered
+						@hovered = 1
+						@block.rootBox.classList.add 'hovered'
+				# }}}
+				@unhover = (e) !~> # {{{
+					# fulfil event
+					e.preventDefault!
+					# operate
+					if @hovered == 1
+						@hovered = 0
+						@block.rootBox.classList.remove 'hovered'
+				# }}}
+				@switchVariant = (e) !~> # {{{
+					# fulfil event
+					e.preventDefault!
+					e.stopPropagation!
+					# operate
+					B = @block
+					D = B.group.data
+					if not B.locked and (a = B.current.1) > 0
+						# set variant
+						D.1 = a = if a == 1
+							then 2
+							else 1
+						# update DOM
+						b = B.select.selectedIndex
+						b = B.select.options[b]
+						b.value = a
+						# move focus
+						B.select.focus!
+						# update state
+						B.group.update!
+				# }}}
+				@switchFocusIn = (e) !~> # {{{
+					# fulfil event
+					e.preventDefault!
+					e.stopPropagation!
+					# operate
+					if not @block.locked and @hovered != 2
+						@hovered = 2
+						@block.rootBox.classList.add 'hovered'
+				# }}}
+				@switchFocusOut = (e) !~> # {{{
+					# fulfil event
+					e.preventDefault!
+					e.stopPropagation!
+					# operate
+					if not @block.locked and @hovered == 2
+						@hovered = 0
+						@block.rootBox.classList.remove 'hovered'
+				# }}}
+				@selected = (e) !~> # {{{
+					# fulfil event
+					e.preventDefault!
+					e.stopPropagation!
+					# operate
+					B = @block
+					D = B.group.data
+					if not B.locked
+						# set new index and variant
+						a = B.select.selectedIndex
+						D.0 = B.keys[a]
+						D.1 = +B.select.options[a].value
+						# update state
+						B.group.submit B
+				# }}}
+			###
+			Control.prototype = {
+				attach: !-> # {{{
+					B = @block
+					B.rootBox.addEventListener 'pointerenter', @hover
+					B.rootBox.addEventListener 'pointerleave', @unhover
+					B.switch.forEach (a) !~>
+						a.addEventListener 'click', @switchVariant
+						a.addEventListener 'focusin', @switchFocusIn
+						a.addEventListener 'focusout', @switchFocusOut
+					B.select.addEventListener 'input', @selected
+				# }}}
+				detach: !-> # {{{
+					true
+				# }}}
+			}
+			# }}}
+			Block = (root) !-> # {{{
+				# base
+				@group   = 'order'
+				@root    = root
+				@rootBox = root.firstChild
+				# controls
+				@variant = a = [...(root.querySelectorAll '.variant')]
+				@switch  = a.map (a) -> a.firstChild
+				@select  = root.querySelector 'select'
+				# state
+				@locked  = -1
+				@current = ['',-1]
+				@options = null
+				@keys    = null
+				@ctrl    = new Control @
+				# handlers
+				@onResize = null
+			###
+			Block.prototype =
+				level: 1
+				init: (s, c) -> # {{{
+					# initialize state
+					@options = o = c.locale.order
+					@keys    = k = c.order or (Object.getOwnPropertyNames o)
+					# create select options
+					s = @select
+					for a in k
+						# create
+						a = o[a]
+						b = document.createElement 'option'
+						b.textContent = a.0
+						b.value = a.1
+						# add
+						s.appendChild b
+					# complete
+					@ctrl.attach!
+					return true
+				# }}}
+				refresh: -> # {{{
+					# get data
+					a = @group.data
+					b = @current
+					# sync tag
+					if a.0 != b.0
+						# set controls
+						if (c = @keys.indexOf a.0) != @select.selectedIndex
+							@select.selectedIndex = c
+						if (not a.1 and b.1) or (a.1 and not b.1)
+							c = !a.1
+							@switch.forEach (d) !->
+								d.disabled = c
+						# store
+						b.0 = a.0
+					# sync variant
+					if a.1 != b.1
+						# set controls
+						if b.1 >= 0
+							c = ('abc')[b.1]
+							@variant.forEach (d) !->
+								d.classList.remove c
+						if a.1 >= 0
+							c = ('abc')[a.1]
+							@variant.forEach (d) !->
+								d.classList.add c
+						# store
+						b.1 = a.1
+					# done
+					return true
+				# }}}
+			# }}}
+			return Block
+		# }}}
 	# controllers
 	Config = !-> # {{{
 		@locale   = null  # interface labels, titles, etc
+		@order    = null  # order tags to use for ordering
 		@currency = null  # [symbol,decimal_sep,thousand_sep,decimal_cnt]
 		@cart     = null  # shopping cart contents
 		@price    = null  # price range [min,max]
@@ -3594,11 +3781,11 @@ smBlocks = do ->
 		@price    = null  # [min,max]
 	# }}}
 	Loader = (s) !-> # {{{
-		@super = s     # s-supervisor
-		@lock  = null  # loader promise
-		@dirty = -1    # resolved-in-process flag
-		@level = -1    # update priority
-		@fetch = null  # fetcher promise
+		@super  = s     # s-supervisor
+		@lock   = null  # loader promise
+		@dirty  = -1    # resolved-in-process: 0=clean, -1=soft, 1=hard
+		@level  = -1    # update priority
+		@fetch  = null  # fetcher promise
 	###
 	Loader.prototype =
 		init: ->> # {{{
@@ -3644,109 +3831,118 @@ smBlocks = do ->
 			@dirty = @level = -1
 			@lock  = @fetch = null
 		# }}}
-		charge: (group) -> # {{{
-			# check priority
-			# deny lower levels
-			if @level > group.level
-				return false
-			# rise current
-			if @level < group.level
-				@level = group.pending
-			# operate
+		charge: (group) !-> # {{{
+			# rise priority
+			@level = group.level if @level < group.level
+			# check
 			if @lock.pending
-				# clean, start or restart
+				# charge clean,
+				# start or restart routine
 				@lock.resolve (@lock.pending == 1)
 			else
-				# dirty, restart
+				# charge dirty,
+				# set flag and terminate fetcher
 				@dirty = 1
 				@fetch.cancel! if @fetch
 			# done
-			return true
 		# }}}
-		enter: ->> # {{{
+		enter: ->>
+			# initiate {{{
 			# create new lock
-			# to guard against excessive fetch requests,
-			# resulted by fast, multiple user actions,
-			# actions are throttled with delay
+			# dirty flag is a guard against excessive queries,
+			# resulted by fast, multiple user actions (charges),
+			# which are throttled by reasonable delay,
+			# except the soft/programmatic restarts made by routine itself,
+			# otherwise a lock is clean - instant charge by the user.
 			@lock = if @dirty
 				then newDelay (~@dirty and 400)
 				else newPromise 1
-			# wait for updates
+			# wait for the charge
 			if not (await @lock)
 				return true
 			# reset dirty
 			@dirty = 0
-			# prepare
-			console.log 'loader charged'
-			S = @super
-			if ~@level
-				# lock blocks (lower -> higher)
-				a = []
-				for b in S.blocks
-					if b.level < @level and not b.locked
-						# update and callback
-						b.locked = 1
-						a[*] = b.lock! if b.lock
-						# remove availability class
-						b.rootBox.classList.remove 'v'
-				# wait locked
-				await Promise.all a if a.length
-				# notify blocks (higher -> lower)
-				b = S.blocks.length
-				while ~--b
-					if (a = S.blocks[b]).notify and not a.notify S.state
-						@dirty = 2 # delay restart
-				# check
-				if @dirty
-					return true
-			# start fetcher
-			# {{{
-			F = await (@fetch = oFetch S.state)
-			@fetch = null
-			# check
-			if F instanceof Error
-				# cancelled?
-				if F.id == 4
-					return true
-				# fatal failure!
-				consoleError F.message
-				return false
-			# get total records
-			if (a = await F.readInt!) == null
-				consoleError 'fetch stream failed'
-				F.cancel!
-				return false
-			# update config and refresh range group
-			if S.config.total != a
-				S.config.total = a
-				S.groups.range.refresh!
+			# get superviser and priority
+			s = @super
+			c = @level
 			# }}}
+			# syncronize {{{
+			# this step is skipped first time (after init)
+			if ~c
+				# query may or may not be executed,
+				# but any block should be notified that something is changed
+				# iteration order goes from higher levels to lower and
+				# allows to restart the process by any master through the callback
+				a = s.blocks.length
+				while a
+					# get instance
+					b = s.blocks[--a]
+					# operate
+					if b.notify and (@dirty = b.notify c)
+						return true
+				# restart query-less charge
+				if not c
+					return true
+				# lock lower priority blocks (if they are not locked already)
+				for b in s.blocks when b.level < c and not b.locked
+					# set common property here (block doesn't have to)
+					b.locked = 1
+					# execute specialized async callback (if present) and
+					# collect returned promise
+					b.lock c if b.lock
+					# clear availability class from the common content container
+					b.rootBox.classList.remove 'v'
+			# }}}
+			# startup {{{
+			# send the request
+			consoleInfo 'fetcher charged at '+c
+			f = await (@fetch = oFetch s.state)
+			@fetch = null
+			# check the result
+			if f instanceof Error
+				consoleError f.message
+				return if f.id == 4
+					then true  # cancelled
+					else false # fatal
+			# read total records count
+			if (s.config.total = a = await f.readInt!) == null
+				consoleError 'fetch stream failed'
+				f.cancel!
+				return false
+			# }}}
+			# desynchronize {{{
+			# refresh worker blocks individually
+			a = []
+			for b in s.blocks when b.level > 0
+				a[*] = b.refresh c
+			# wait complete
+			await Promise.all a
 			# unlock blocks
-			for b in S.blocks when b.locked
+			for b in s.blocks when b.locked
 				# update value and callback
 				b.locked = 0
-				b.lock! if b.lock
+				b.unlock c if b.unlock
 				# restore availability class
 				b.rootBox.classList.add 'v'
-			# reset update priority
+			# reset priority
 			@level = 0
-			for a,a of S.groups when a.level
-				a.level = 0
-			# load records
-			if S.receiver
-				a = -1
-				while b = await F.readJSON!
+			# }}}
+			# load {{{
+			# check (allow uncomplete configurations)
+			if s.receiver
+				a = 0
+				while not @dirty and b = await f.readJSON!
 					# check
 					if b instanceof Error
 						consoleError 'fetch stream failed, '+b.message
 						return false
 					# load
-					if @dirty or not S.receiver.load ++a, b
+					if @dirty or not s.receiver.load a++, b
 						break
-			# complete
-			F.cancel!
+			# terminate explicitly if cancelled or didn't started
+			f.cancel! if b
+			# }}}
 			return true
-		# }}}
 	# }}}
 	Group = (sup, name, blocks) !-> # {{{
 		# {{{
@@ -3790,11 +3986,8 @@ smBlocks = do ->
 			# done
 			return true
 		# }}}
-		update: (block) !-> # DELETE ME {{{
-			@submit!
-		# }}}
 		submit: (block) !-> # {{{
-			# determine update priority
+			# set priority
 			@level = if block
 				then block.level     # exact
 				else @blocks.0.level # group minimal

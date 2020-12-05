@@ -53,6 +53,7 @@ class StorefrontModernBlocks {
           ],
           'order'         => [
             'type'        => 'array',
+            #'default'     => ['featured',0],
             'default'     => ['price',1],
           ],
         ],
@@ -189,7 +190,7 @@ class StorefrontModernBlocks {
           ### config
           'list'          => [
             'type'        => 'array',
-            'default'     => [0,2,4,8,16,32,64], # 0=auto
+            'default'     => [0,2,4,8,16], # 0=auto
           ],
           'index'         => [
             'type'        => 'number',
@@ -960,9 +961,18 @@ class StorefrontModernBlocks {
       }
       for ($a = 0; $a < 5; ++$a)
       {
-        if (!array_key_exists($a, $R) || !is_int($R[$a]) || $R[$a] < 0) {
+        if (!array_key_exists($a, $R) || !is_int($R[$a])) {
           $this->apiFail(400, 'incorrect range');
         }
+      }
+      if ($R[0] <  0 || $R[2] <  0 || $R[4] < 0 ||
+          $R[1] < -1 || $R[3] < -1 ||
+          ($R[1] === -1 && $R[3] !== -1) ||
+          ($R[3] === -1 && $R[1] !== -1) ||
+          ($R[1] === -1 && $R[2] !== $R[4]) ||
+          ($R[1] === -1 && $R[2] === 0))
+      {
+        $this->apiFail(400, 'incorrect range');
       }
     }
     # order
@@ -1004,27 +1014,116 @@ class StorefrontModernBlocks {
       # TODO: cache
       # get identifiers
       if (($q = $this->db_Products($q)) === null) {
-        $this->apiFail(500, 'failed to get products map');
+        $this->apiFail(500, 'failed to get');
       }
       # activate streaming
       header('content-type: application/octet-stream');
-      # send total count
-      $c = count($q);
-      $this->sendInt($c);
+      # determine total items count
+      $n = count($q);
       # check
-      if (!$c || ($R[2] === 0 && $R[4] === 0)) {
+      if (!$n || ($R[2] === 0 && $R[4] === 0)) {
         exit;
       }
-      # send product ranges
-      # forward
-      $a = $R[1] - 1;
-      while (++$a < $R[2]) {
-        $this->sendJSON($this->db_Product($q[$a]));
+      # determine proper range
+      if ($R[1] === -1) {
+        # {{{
+        # get maximal range size (equal for both ranges)
+        $c = $R[2];
+        # get desired offset
+        if ($R[0] >= $n) {
+          $R[0] = 0;
+        }
+        # set initial range offsets
+        $R[1] = $R[0];
+        $R[3] = $R[0] - 1;
+        # correct
+        # check front overflows N-point
+        if (($b = $R[0] + $c - $n - 1) >= 0)
+        {
+          # front overflows,
+          # check back is not at the end
+          if (~$R[3])
+          {
+            # check back overflows 0-point
+            if (($d = $R[3] - $c) < 0)
+            {
+              # back is limited by 0-point
+              # front is limited by N-point
+              $R[2] = $n - $R[0];
+              $R[4] = $R[0];
+            }
+            else if ($d < $b)
+            {
+              # front is limited by back
+              $R[2] = $c - $b + $d;
+            }
+          }
+          else
+          {
+            # back is empty
+            $R[3] = $n - 1;
+            $R[4] = 0;
+          }
+        }
+        else
+        {
+          # standard front,
+          # check back is not at the end
+          if (~$R[3])
+          {
+            # check back overflows 0-point and front end-point
+            if (($b = $R[3] - $c) < 0 &&
+                ($d = $R[0] + $c - $n - $b - 1) > 0)
+            {
+              # back is limited by front
+              $R[4] = $c - $d;
+            }
+          }
+          else
+          {
+            # check back overflows front end-point
+            $R[3] = $n - 1;
+            if (($b = $R[0] + $c - $R[3] + $c) > 0)
+            {
+              # back is limited by front
+              $R[4] = $b - 1;
+            }
+          }
+        }
+        # }}}
       }
-      # backward (in reverse order)
-      $a = $R[3] + $R[4];
-      while (--$a >= $R[3]) {
-        $this->sendJSON($this->db_Product($q[$a]));
+      # send total
+      $this->sendInt($n);
+      # send items
+      if ($R[2]) {
+        # forward range
+        $a = $R[1] - 1;
+        if (($b = $R[1] + $R[2]) > $n)
+        {
+          while (++$a < $n) {
+            $this->sendJSON($this->db_Product($q[$a], $a));
+          }
+          $a = -1;
+          $b = $b - $n;
+        }
+        while (++$a < $b) {
+          $this->sendJSON($this->db_Product($q[$a], $a));
+        }
+      }
+      if ($R[4]) {
+        # backward range (in reversed order)
+        $a = $R[3] + 1;
+        if (($b = $R[3] - $R[4]) < -1)
+        {
+          while (--$a >= 0) {
+            $this->sendJSON($this->db_Product($q[$a], $a));
+          }
+          $a = $n;
+          $b = $n + $b;
+        }
+        while (--$a > $b) {
+          $this->sendJSON($this->db_Product($q[$a], $a));
+        }
       }
       # }}}
     }
@@ -1037,7 +1136,7 @@ class StorefrontModernBlocks {
         'order'    => null,
       ];
       if (($q = $this->db_Products($q)) === null) {
-        $this->apiFail(500, 'failed to get products map');
+        $this->apiFail(500, 'failed to get');
       }
       # get locale and language
       $locale = __DIR__.DIRECTORY_SEPARATOR.$this->name.'-locale.php';
@@ -1259,8 +1358,8 @@ class StorefrontModernBlocks {
   private function db_Products($o) # {{{
   {
     # prepare
-    $joins = $filts = $order = '';
     # determine filters {{{
+    $joins = $filts = '';
     if (!!($a = $o['category']) && count($a) > 0)
     {
       $joins .= <<<EOD
@@ -1293,44 +1392,42 @@ EOD;
     }
     # }}}
     # determine order {{{
-    if (!($order = $o['order']))
+    # default
+    $order = 'p.menu_order, p.ID';
+    # specific
+    if ($o['order'])
     {
-      # NON-SPECIFIED DEFAULT
-      $order = 'p.menu_order, p.ID';
-    }
-    else if ($order[0] === 'featured')
-    {
-      $joins .= <<<EOD
-        LEFT JOIN {$this->prefix}terms as tFeatured
-          ON tFeatured.name = 'featured'
-        LEFT JOIN {$this->prefix}term_relationships as tFeatRel
-          ON tFeatRel.term_taxonomy_id = tFeatured.term_id AND
-             tFeatRel.object_id = p.ID
-EOD;
-      $order = 'tFeatRel.term_taxonomy_id DESC, p.menu_order, p.post_title';
-    }
-    else if ($order[0] === 'new')
-    {
-      $order = 'p.post_date DESC, p.post_title';
-    }
-    else if ($order[0] === 'price')
-    {
-      # add joins only if required
-      if (!$o['price'])
+      if ($o['order'][0] === 'featured')
       {
         $joins .= <<<EOD
-          LEFT JOIN {$this->prefix}postmeta as mPrice
-            ON mPrice.post_id  = p.ID AND
-              mPrice.meta_key = '_price'
+          LEFT JOIN {$this->prefix}terms as tFeatured
+            ON tFeatured.name = 'featured'
+          LEFT JOIN {$this->prefix}term_relationships as tFeatRel
+            ON tFeatRel.term_taxonomy_id = tFeatured.term_id AND
+              tFeatRel.object_id = p.ID
 EOD;
+        $order = 'tFeatRel.term_taxonomy_id DESC, p.menu_order, p.post_title';
       }
-      $order = ($order[1] === 1)
-        ? ' DESC'
-        : '';
-      $order = 'CAST(mPrice.meta_value AS SIGNED)'.$order;
-    }
-    else {
-      return null;
+      else if ($o['order'][0] === 'new')
+      {
+        $order = 'p.post_date DESC, p.post_title';
+      }
+      else if ($o['order'][0] === 'price')
+      {
+        # add joins only if required
+        if (!$o['price'])
+        {
+          $joins .= <<<EOD
+            LEFT JOIN {$this->prefix}postmeta as mPrice
+              ON mPrice.post_id  = p.ID AND
+                mPrice.meta_key = '_price'
+EOD;
+        }
+        $order = ($o['order'][1] === 1)
+          ? ' DESC'
+          : '';
+        $order = 'CAST(mPrice.meta_value AS SIGNED)'.$order;
+      }
     }
     # }}}
     # compose
@@ -1428,7 +1525,7 @@ EOD;
     return $woocommerce->cart->get_cart_contents();
   }
   # }}}
-  private function db_Product($id) # {{{
+  private function db_Product($id, $index) # {{{
   {
     # prepare
     $db  = $this->db;
@@ -1500,7 +1597,8 @@ EOD;
     # }}}
     # create transferable item
     $a = [
-      'id'    => intval($id),
+      'id'    => $id,
+      'index' => $index,
       'title' => $x['title'],
       'type'  => $x['product_type'],
       'link'  => get_permalink($id),
@@ -1520,10 +1618,10 @@ EOD;
         ($b = $x['_thumbnail_id']) && !empty($b) &&
         ($c = wp_get_attachment_url($b)))
     {
-      $a['image'] = [
-        'src'    => $c,
-        'srcset' => wp_get_attachment_image_srcset($b, 'full'),
-      ];
+      $a['image'] = ['src' => $c];
+      if ($b = wp_get_attachment_image_srcset($b, 'full')) {
+        $a['image']['srcset'] = $b;
+      }
     }
     # get price (TODO: other types)
     switch ($a['type']) {

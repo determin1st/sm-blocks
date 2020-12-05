@@ -326,7 +326,7 @@ WebSafeFontHeadline = Times, 'Times New Roman', serif
 		flex: 1 1 0
 		max-width: var(--grid-width)
 		height: var(--grid-height)
-		contain: strict // optimize
+		contain: strict // optimize?
 		// common and standard card
 		> div // {{{
 			justify-self: stretch // width=100%
@@ -355,38 +355,34 @@ WebSafeFontHeadline = Times, 'Times New Roman', serif
 				min-width:  0
 				min-height: 0
 				> .section
-					flex-shrink: 100
-					flex-basis:  0
+					flex: 1 1 0
 					display: flex
 					flex-direction: column
 					align-items: stretch
 					font-size: var(--font-size)
-					// common feature container (image,title,..)
+					// feature container (image,title,..)
 					> div
 						flex: 1 1 0
+					// specific sections
 					&.a
-						flex-grow: var(--a-size)
+						max-height: calc(1% * var(--a-size))
 						> .image // {{{
 							display: flex
+							flex-direction: row
 							align-items: center
+							justify-content: center
 							> img
-								flex: 1 1 0
-								display: none
-								width: auto
-								height: auto
-							> svg
-								flex: 1 1 0
-								display: block
+								flex: 1 0 0
 								width:  100%
 								height: 100%
-							&.w
-								flex-direction: row
-								> img
-									max-width: 100%
-							&.h
-								flex-direction: column
-								> img
-									max-height: 100%
+								max-width:  100%
+								max-height: 100%
+								display: none
+							> svg
+								flex: 1 1 0
+								width:  100%
+								height: 100%
+								display: block
 							&.v
 								> img
 									display: block
@@ -394,7 +390,7 @@ WebSafeFontHeadline = Times, 'Times New Roman', serif
 									display: none
 						// }}}
 					&.b
-						flex-grow: var(--b-size)
+						max-height: calc(1% * var(--b-size))
 						> .title // {{{
 							order: 1
 							flex: 0 0 0
@@ -474,7 +470,7 @@ WebSafeFontHeadline = Times, 'Times New Roman', serif
 									display: none
 						// }}}
 					&.c
-						flex-grow: var(--c-size)
+						max-height: calc(1% * var(--c-size))
 						> .actions // {{{
 							////
 							--height: calc(var(--item-y) * var(--c-size) / 100)
@@ -636,6 +632,9 @@ WebSafeFontHeadline = Times, 'Times New Roman', serif
 					padding-bottom: 0
 					> button
 						font-size: calc(1.25 * var(--font-size))
+						border-color: black
+						background-color: black
+						color: alpha(white, 0.4)
 			// range without gaps
 			&.nogap
 				// only page buttons
@@ -686,18 +685,22 @@ WebSafeFontHeadline = Times, 'Times New Roman', serif
 					> .page > button
 						color: darkslategray
 					> .page.x > button
-						border-color: black
-						background-color: black
 						color: alpha(white, 1)
 						cursor: grab
 						&:hover
-							color: alpha(white, 0.5)
+							color: alpha(white, 0.8)
 						&:focus,
 						&:active
 							color: alpha(white, 1)
 							box-shadow: inset 0 0 0.1em 0.1em white
+					&.nogap
+						> .page.x > button
+							cursor: default
 					&.active.drag
 						cursor: grabbing
+						> .page.x > button
+							cursor: grabbing
+							box-shadow: inset 0 0 0.1em 0.15em white
 				&.flexy
 					> .range > .gap > svg
 						fill: gainsboro

@@ -48,10 +48,10 @@ $o = <<<EOD
         </div>
         <div class="lines">
           <div>
-            <!-- wp:sm-blocks/rows-selector {} /-->
           </div>
           <div>
             <!-- wp:sm-blocks/paginator {"gotoMode":3} /-->
+            <!-- wp:sm-blocks/rows-selector {} /-->
             <!-- wp:sm-blocks/orderer {
               "switchMode":1
             } /-->

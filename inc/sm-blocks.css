@@ -358,8 +358,7 @@
   min-height: 0;
 }
 .sm-blocks.products > div > .product > div > .section {
-  flex-shrink: 100;
-  flex-basis: 0;
+  flex: 1 1 0;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -369,35 +368,27 @@
   flex: 1 1 0;
 }
 .sm-blocks.products > div > .product > div > .section.a {
-  flex-grow: var(--a-size);
+  max-height: calc(1% * var(--a-size));
 }
 .sm-blocks.products > div > .product > div > .section.a > .image {
   display: flex;
+  flex-direction: row;
   align-items: center;
+  justify-content: center;
 }
 .sm-blocks.products > div > .product > div > .section.a > .image > img {
-  flex: 1 1 0;
+  flex: 1 0 0;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
   display: none;
-  width: auto;
-  height: auto;
 }
 .sm-blocks.products > div > .product > div > .section.a > .image > svg {
   flex: 1 1 0;
-  display: block;
   width: 100%;
   height: 100%;
-}
-.sm-blocks.products > div > .product > div > .section.a > .image.w {
-  flex-direction: row;
-}
-.sm-blocks.products > div > .product > div > .section.a > .image.w > img {
-  max-width: 100%;
-}
-.sm-blocks.products > div > .product > div > .section.a > .image.h {
-  flex-direction: column;
-}
-.sm-blocks.products > div > .product > div > .section.a > .image.h > img {
-  max-height: 100%;
+  display: block;
 }
 .sm-blocks.products > div > .product > div > .section.a > .image.v > img {
   display: block;
@@ -406,7 +397,7 @@
   display: none;
 }
 .sm-blocks.products > div > .product > div > .section.b {
-  flex-grow: var(--b-size);
+  max-height: calc(1% * var(--b-size));
 }
 .sm-blocks.products > div > .product > div > .section.b > .title {
   order: 1;
@@ -496,7 +487,7 @@
   display: none;
 }
 .sm-blocks.products > div > .product > div > .section.c {
-  flex-grow: var(--c-size);
+  max-height: calc(1% * var(--c-size));
 }
 .sm-blocks.products > div > .product > div > .section.c > .actions {
   --height: calc(var(--item-y) * var(--c-size) / 100);
@@ -655,6 +646,9 @@
 }
 .sm-blocks.paginator > div > .range > .page.x > button {
   font-size: calc(1.25 * var(--font-size));
+  border-color: #000;
+  background-color: #000;
+  color: rgba(255,255,255,0.4);
 }
 .sm-blocks.paginator > div > .range.nogap {
   max-width: calc(1em * var(--count));
@@ -703,21 +697,26 @@
   color: #2f4f4f;
 }
 .sm-blocks.paginator.v > div.v > .range > .page.x > button {
-  border-color: #000;
-  background-color: #000;
   color: #fff;
   cursor: grab;
 }
 .sm-blocks.paginator.v > div.v > .range > .page.x > button:hover {
-  color: rgba(255,255,255,0.5);
+  color: rgba(255,255,255,0.8);
 }
 .sm-blocks.paginator.v > div.v > .range > .page.x > button:focus,
 .sm-blocks.paginator.v > div.v > .range > .page.x > button:active {
   color: #fff;
   box-shadow: inset 0 0 0.1em 0.1em #fff;
 }
+.sm-blocks.paginator.v > div.v > .range.nogap > .page.x > button {
+  cursor: default;
+}
 .sm-blocks.paginator.v > div.v > .range.active.drag {
   cursor: grabbing;
+}
+.sm-blocks.paginator.v > div.v > .range.active.drag > .page.x > button {
+  cursor: grabbing;
+  box-shadow: inset 0 0 0.1em 0.15em #fff;
 }
 .sm-blocks.paginator.v > div.v.flexy > .range > .gap > svg {
   fill: #dcdcdc;

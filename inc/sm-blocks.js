@@ -28,14 +28,6 @@ smBlocks = function(){
       p.pending = 0;
       r(data);
     };
-    p.spin = function(data){
-      var a;
-      p.resolve(data);
-      a = newPromise();
-      p.resolve = a.resolve;
-      p.spin = a.spin;
-      return a;
-    };
     return p;
   };
   newDelay = function(ms, id){
@@ -523,28 +515,6 @@ smBlocks = function(){
         this.title = new this.title(block);
         this.price = new this.price(block);
         this.actions = new this.actions(block);
-        /***
-        # initialize
-        do ~>>
-        	# wait variables initialized
-        	await init
-        	# check container's aspect ratio,
-        	# assuming that image item takes all,
-        	# first section's space (gaps doesn't break ration), and
-        	# determine optimal display variant (class)
-        	if sizes.0 < 1
-        		# vertical is smaller than horizontal,
-        		# limit image by max-[h]eight and
-        		# unleash automatic browser's width calculation
-        		@image.box.classList.add 'h'
-        	else
-        		# vertical is bigger than horizontal,
-        		# stretch image by [w]idth and
-        		# unleash automatic browser's height calculation
-        		@image.box.classList.add 'w'
-        	# now, loaded image (if any) may show up
-        	@image.ready.resolve!
-        /***/
       };
       Items.prototype = {
         image: function(){
@@ -556,16 +526,39 @@ smBlocks = function(){
             this.image = box.firstChild;
             this.loaded = false;
             this.load = async function(){
-              var w, h;
+              var w, h, cw, ch, a, b;
               if (!this$.image.complete || (w = this$.image.naturalWidth) < 2 || (h = this$.image.naturalHeight) < 2) {
                 return false;
               }
               (await init);
-              debugger;
-              if (sizes[0] < 1) {
-                this$.box.classList.add('h');
+              cw = sizes[3];
+              ch = sizes[0];
+              if (w >= h) {
+                a = h / w;
+                b = cw - w;
+                w += b;
+                h += a * b;
+                if ((b = h - ch) > 0) {
+                  a = w / h;
+                  w = 100 * (w - a * b) / cw;
+                  this$.image.style.maxWidth = w + '%';
+                } else {
+                  h = 100 * (h / ch);
+                  this$.image.style.maxHeight = h + '%';
+                }
               } else {
-                this$.box.classList.add('w');
+                a = w / h;
+                b = ch - h;
+                w += a * b;
+                h += b;
+                if ((b = w - cw) > 0) {
+                  a = h / w;
+                  h = 100 * (h - a * b) / ch;
+                  this$.image.style.maxHeight = h + '%';
+                } else {
+                  w = 100 * (w / cw);
+                  this$.image.style.maxWidth = w + '%';
+                }
               }
               this$.box.classList.add('v');
               this$.loaded = true;
@@ -575,13 +568,15 @@ smBlocks = function(){
           Item.prototype = {
             set: function(data){
               var a, ref$, b;
-              if (!data.image) {
-                return true;
+              if (this.loaded) {
+                this.clear();
               }
-              this.image.addEventListener('load', this.load);
-              for (a in ref$ = data.image) {
-                b = ref$[a];
-                this.image[a] = b;
+              if (data.image) {
+                this.image.addEventListener('load', this.load);
+                for (a in ref$ = data.image) {
+                  b = ref$[a];
+                  this.image[a] = b;
+                }
               }
               return true;
             },
@@ -589,8 +584,9 @@ smBlocks = function(){
               this.image.removeEventListener('load', this.load);
               if (this.loaded) {
                 this.box.classList.remove('v');
-                this.image.className = '';
+                this.image.removeAttribute('style');
                 this.image.src = '';
+                this.image.srcset = '';
                 this.loaded = false;
               }
             }
@@ -608,6 +604,8 @@ smBlocks = function(){
           eBreakMarkers = /\s+([\\\|/.]){1}\s+/;
           Item.prototype = {
             set: function(data){
+              this.title.firstChild.textContent = data.index;
+              return true;
               if (!(data = data.title)) {
                 return true;
               }
@@ -800,44 +798,54 @@ smBlocks = function(){
         this.rootBox = R.firstChild;
         this.id = -1;
         this.items = new Items(this);
+        this.loaded = false;
       };
       Block.prototype = {
         set: function(record){
-          var a, b;
-          this.id = record.id;
-          a = this.items;
-          for (b in a) {
-            if (!a[b].set(record)) {
-              return false;
-            }
+          var a, ref$;
+          if (this.loaded) {
+            this.clear();
           }
-          this.root.classList.add('loaded');
+          if (record) {
+            this.id = record.id;
+            for (a in ref$ = this.items) {
+              a = ref$[a];
+              if (!a.set(record)) {
+                return false;
+              }
+            }
+            if (!this.loaded) {
+              this.root.classList.add('loaded');
+            }
+            this.loaded = true;
+          }
           return true;
         },
         clear: function(){
-          var a, b;
-          this.root.classList.remove('loaded');
-          a = this.items;
-          for (b in a) {
-            a[b].clear();
+          var a, ref$;
+          if (this.loaded) {
+            for (a in ref$ = this.items) {
+              a = ref$[a];
+              a.clear();
+            }
+            this.root.classList.remove('loaded');
+            this.loaded = false;
           }
         }
       };
       return function(m){
-        var s, a, b;
+        var s, c;
         m = new Block(m);
         m.master.rootBox.appendChild(m.root);
         if (init.pending) {
           s = getComputedStyle(m.root);
           sizes = s = [parseInt(s.getPropertyValue('--a-size')), parseInt(s.getPropertyValue('--b-size')), parseInt(s.getPropertyValue('--c-size')), parseInt(s.getPropertyValue('padding-left')), parseInt(s.getPropertyValue('padding-right')), parseInt(s.getPropertyValue('padding-top')), parseInt(s.getPropertyValue('padding-bottom'))];
-          a = m.master.resizer.sizes;
-          b = a[1] - s[5] - s[6];
-          a = a[0] - s[3] - s[4];
-          s[0] = (b * s[0] / 100) / a;
-          s[1] = (b * s[1] / 100) / a;
-          s[2] = (b * s[2] / 100) / a;
-          s[3] = a;
-          s[4] = b;
+          c = m.master.resizer.sizes;
+          s[3] = c[0] - s[3] - s[4];
+          s[4] = c[1] - s[5] - s[6];
+          s[0] = s[4] * s[0] / 100;
+          s[1] = s[4] * s[1] / 100;
+          s[2] = s[4] * s[2] / 100;
           s.length = 5;
           init.resolve();
         }
@@ -1724,161 +1732,6 @@ smBlocks = function(){
         }()
       };
       return Block;
-    }(),
-    'orderer': function(){
-      var Control, Block;
-      Control = function(block){
-        var this$ = this;
-        this.block = block;
-        this.hovered = 0;
-        this.focused = false;
-        this.hover = function(e){
-          e.preventDefault();
-          if (!this$.block.locked && !this$.hovered) {
-            this$.hovered = 1;
-            this$.block.rootBox.classList.add('hovered');
-          }
-        };
-        this.unhover = function(e){
-          e.preventDefault();
-          if (this$.hovered === 1) {
-            this$.hovered = 0;
-            this$.block.rootBox.classList.remove('hovered');
-          }
-        };
-        this.switchVariant = function(e){
-          var B, D, a, b;
-          e.preventDefault();
-          e.stopPropagation();
-          B = this$.block;
-          D = B.group.data;
-          if (!B.locked && (a = B.current[1]) > 0) {
-            D[1] = a = a === 1 ? 2 : 1;
-            b = B.select.selectedIndex;
-            b = B.select.options[b];
-            b.value = a;
-            B.select.focus();
-            B.group.update();
-          }
-        };
-        this.switchFocusIn = function(e){
-          e.preventDefault();
-          e.stopPropagation();
-          if (!this$.block.locked && this$.hovered !== 2) {
-            this$.hovered = 2;
-            this$.block.rootBox.classList.add('hovered');
-          }
-        };
-        this.switchFocusOut = function(e){
-          e.preventDefault();
-          e.stopPropagation();
-          if (!this$.block.locked && this$.hovered === 2) {
-            this$.hovered = 0;
-            this$.block.rootBox.classList.remove('hovered');
-          }
-        };
-        this.selected = function(e){
-          var B, D, a;
-          e.preventDefault();
-          e.stopPropagation();
-          B = this$.block;
-          D = B.group.data;
-          if (!B.locked) {
-            a = B.select.selectedIndex;
-            D[0] = B.keys[a];
-            D[1] = +B.select.options[a].value;
-            B.group.update();
-          }
-        };
-      };
-      Control.prototype = {
-        attach: function(){
-          var B, this$ = this;
-          B = this.block;
-          B.rootBox.addEventListener('pointerenter', this.hover);
-          B.rootBox.addEventListener('pointerleave', this.unhover);
-          B['switch'].forEach(function(a){
-            a.addEventListener('click', this$.switchVariant);
-            a.addEventListener('focusin', this$.switchFocusIn);
-            a.addEventListener('focusout', this$.switchFocusOut);
-          });
-          B.select.addEventListener('input', this.selected);
-        },
-        detach: function(){
-          true;
-        }
-      };
-      Block = function(root){
-        var a;
-        this.group = 'order';
-        this.root = root;
-        this.rootBox = root.firstChild;
-        this.variant = a = arrayFrom$(root.querySelectorAll('.variant'));
-        this['switch'] = a.map(function(a){
-          return a.firstChild;
-        });
-        this.select = root.querySelector('select');
-        this.locked = -1;
-        this.current = ['', -1];
-        this.options = null;
-        this.keys = null;
-        this.ctrl = new Control(this);
-        this.onResize = null;
-      };
-      Block.prototype = {
-        level: 1,
-        init: function(cfg){
-          var s, o, k, i$, len$, a, b;
-          s = this.group.config;
-          this.options = o = cfg.locale.order;
-          this.keys = k = s.orderOptions || Object.getOwnPropertyNames(o);
-          s = this.select;
-          for (i$ = 0, len$ = k.length; i$ < len$; ++i$) {
-            a = k[i$];
-            b = document.createElement('option');
-            b.textContent = o[a][0];
-            b.value = o[a][1];
-            s.appendChild(b);
-          }
-          this.refresh();
-          this.ctrl.attach();
-          return true;
-        },
-        refresh: function(){
-          var a, b, c;
-          a = this.group.data;
-          b = this.current;
-          if (a[0] !== b[0]) {
-            if ((c = this.keys.indexOf(a[0])) !== this.select.selectedIndex) {
-              this.select.selectedIndex = c;
-            }
-            if ((!a[1] && b[1]) || (a[1] && !b[1])) {
-              c = !a[1];
-              this['switch'].forEach(function(d){
-                d.disabled = c;
-              });
-            }
-            b[0] = a[0];
-          }
-          if (a[1] !== b[1]) {
-            if (b[1] >= 0) {
-              c = 'abc'[b[1]];
-              this.variant.forEach(function(d){
-                d.classList.remove(c);
-              });
-            }
-            if (a[1] >= 0) {
-              c = 'abc'[a[1]];
-              this.variant.forEach(function(d){
-                d.classList.add(c);
-              });
-            }
-            b[1] = a[1];
-          }
-          return true;
-        }
-      };
-      return Block;
     }()
   };
   M = {
@@ -2185,44 +2038,33 @@ smBlocks = function(){
         this.rows = -1;
         this.count = 0;
         this.page = 0;
-        this.rec_a = [];
-        this.rec_b = [];
+        this.bufA = [];
+        this.bufB = [];
+        this.offset = [0, 0, 0];
+        this.charged = 0;
         this.locked = -1;
       };
       Block.prototype = {
         level: 1,
         configure: function(s){},
         init: function(s, c){
-          var a, b;
+          var a, o, b;
+          if (a = this.config.options) {
+            c.order = a;
+          }
           if (a = this.config.order) {
             s.order = a;
           }
           s.range = this.range;
-          c.count = 0;
-          c.rows = this.config.layout[1];
+          c.rows = (o = this.config.layout)[1];
+          c.count = o[0] * o[1];
           this.resizer.attach();
           s = window.screen;
           s = (a = s.availWidth) > (b = s.availHeight) ? a : b;
           s = Math.ceil(s / this.resizer.sizes[1]);
-          a = this.config.layout;
-          this.page = 5 * a[0] * s;
-          this.setCount(a[0] * a[1]);
-          a = this.range;
-          a[0] = 0;
-          a[1] = a[0];
-          if (a[1] + this.page > c.total) {
-            a[2] = c.total;
-            a[3] = a[2] - 1;
-            a[4] = 0;
-          } else {
-            a[2] = this.page;
-            if ((a[3] = a[0] - this.page) < 0) {
-              a[3] = c.total + a[3];
-              a[4] = c.total - a[3];
-            } else {
-              a[4] = a[0] - a[3];
-            }
-          }
+          this.page = 5 * o[0] * s;
+          this.setRange(0);
+          this.setCount(c.count);
           return true;
         },
         refresh: async function(){
@@ -2236,7 +2078,32 @@ smBlocks = function(){
             this.rows = a;
             (await this.resizer.refresh());
           }
+          if ((a = this.range[0]) !== this.offset[0]) {
+            this.offset[0] = a;
+            if (this.setBuffer()) {
+              this.offset[1] = a;
+              this.offset[2] = 0;
+              this.charged++;
+              this.group.submit(this);
+            }
+          } else {
+            this.offset[2] = 1;
+          }
           return true;
+        },
+        notify: function(level){
+          if (this.charged) {
+            --this.charged;
+            return 0;
+          }
+          if (level) {
+            this.offset[0] = this.offset[1] = 0;
+            this.clearBuffer();
+            if (level > 1) {
+              this.range[1] = this.range[3] = -1;
+            }
+          }
+          return 0;
         },
         setCount: function(count){
           var a, c, b;
@@ -2250,7 +2117,7 @@ smBlocks = function(){
               a[a.length] = this.group.f.productCard(this);
             }
           }
-          b = this.rec_a;
+          b = this.bufA;
           c = this.count - 1;
           while (++c < count) {
             a[c].root.classList.add('v');
@@ -2261,19 +2128,197 @@ smBlocks = function(){
           while (c > count) {
             a[--c].root.classList.remove('v');
           }
-          this.count = c;
+          if ((this.count = c) !== this.group.config.count) {
+            this.group.config.count = c;
+            this.group.refresh(this);
+          }
           return true;
         },
-        load: function(i, record){
-          var j;
-          if ((j = i - this.range[2]) < 0) {
-            this.rec_a[i] = record;
-            j = this.range[1] - this.range[0] + i;
-            if (j < this.count) {
-              this.items[j].set(record);
+        setBuffer: function(){
+          var A, B, R, a, b, c, d, o, O, i, j, k;
+          A = this.bufA;
+          B = this.bufB;
+          R = this.range;
+          a = A.length;
+          b = B.length;
+          c = this.group.config.total;
+          d = this.page;
+          o = this.offset[0];
+          O = this.offset[1];
+          if ((i = o - O) > 0 && c - i < i) {
+            i = i - c;
+          } else if (i < 0 && c + i < -i) {
+            i = c + i;
+          }
+          if (Math.abs(i) > d + d - 1) {
+            console.log('out of buffer');
+            this.clearBuffer();
+            return 2;
+          }
+          d = d >>> 1;
+          if (i === 0 || (i > 0 && d - i > 0)) {
+            j = -1;
+            while (++j < this.count) {
+              if (i < a) {
+                this.items[j].set(A[i++]);
+              } else {
+                this.items[j].clear();
+              }
+            }
+            return 0;
+          }
+          if (i < 0 && d + i >= 0) {
+            j = -1;
+            k = -i - 1;
+            while (++j < this.count) {
+              if (k >= 0 && b - k > 0) {
+                this.items[j].set(B[k]);
+              } else if (k < 0 && a + k > 0) {
+                this.items[j].set(A[-k - 1]);
+              } else {
+                this.items[j].clear();
+              }
+              --k;
+            }
+            return 0;
+          }
+          if (i > 0 && a - i > 0) {
+            console.log('front partially penetrated');
+            j = b;
+            while (j < i) {
+              B[j++] = null;
+            }
+            j = i;
+            k = 0;
+            while (k < b && j < this.page) {
+              B[j++] = B[k++];
+            }
+            B.length = j;
+            j = i - 1;
+            k = 0;
+            while (~j) {
+              B[j--] = A[k++];
+            }
+            while (k < a) {
+              A[++j] = A[k++];
+            }
+            A.length = k = j + 1;
+            j = this.count;
+            while (j) {
+              if (--j < k) {
+                this.items[j].set(A[j]);
+              } else {
+                this.items[j].clear();
+              }
+            }
+            this.setRange(o, true);
+            return 1;
+          }
+          if (i < 0 && b + i > 0) {
+            console.log('back partially penetrated');
+            i = -i;
+            j = a;
+            while (j < i) {
+              A[j++] = null;
+            }
+            j = i;
+            k = 0;
+            while (k < a && j < this.page) {
+              A[j++] = A[k++];
+            }
+            A.length = j;
+            j = i - 1;
+            k = 0;
+            while (~j) {
+              A[j--] = B[k++];
+            }
+            while (k < b) {
+              B[++j] = B[k++];
+            }
+            B.length = j + 1;
+            j = -1;
+            k = A.length;
+            while (++j < this.count) {
+              if (j < k) {
+                this.items[j].set(A[j]);
+              } else {
+                this.items[j].clear();
+              }
+            }
+            this.setRange(o, true);
+            return -1;
+          }
+          console.log('buffer penetrated');
+          this.clearBuffer();
+          return -2;
+        },
+        clearBuffer: function(){
+          var i;
+          this.setRange(this.offset[0]);
+          this.bufA.length = this.bufB.length = 0;
+          i = this.count;
+          while (i) {
+            this.items[--i].clear();
+          }
+        },
+        setRange: function(o, gaps){
+          var a, c, n, b;
+          a = this.range;
+          c = this.page;
+          n = this.group.config.total;
+          if (!~n) {
+            a[0] = o;
+            a[1] = a[3] = -1;
+            a[2] = a[4] = c;
+          } else if (gaps) {
+            a[0] = o;
+            if ((b = this.bufA.length) < c) {
+              if ((a[1] = o + b) >= n) {
+                a[1] = a[1] - n;
+              }
+              a[2] = c - b;
+            } else {
+              a[1] = a[2] = 0;
+            }
+            if ((b = this.bufB.length) < c) {
+              if ((a[3] = o - 1 - b) < 0) {
+                a[3] = a[3] + n;
+              }
+              a[4] = c - b;
+            } else {
+              a[3] = a[4] = 0;
             }
           } else {
-            this.rec_b[j] = record;
+            a[0] = a[1] = o;
+            a[2] = a[4] = c;
+            a[3] = o
+              ? o - 1
+              : n - 1;
+          }
+        },
+        load: function(i, record){
+          var o;
+          if (!(o = this.offset)[2]) {
+            return false;
+          }
+          if (i < this.range[2]) {
+            i = this.bufA.length;
+            this.bufA[i] = record;
+            i = (o = o[0] - o[1]) >= 0
+              ? i - o
+              : i - this.group.config.total - o;
+            if (i >= 0 && i < this.count) {
+              this.items[i].set(record);
+            }
+          } else {
+            i = this.bufB.length;
+            this.bufB[i] = record;
+            i = (o = o[1] - o[0]) > 0
+              ? i - o
+              : i - this.group.config.total - o;
+            if (i < 0 && i + this.count >= 0) {
+              this.items[-i - 1].set(record);
+            }
           }
           return true;
         }
@@ -2344,7 +2389,6 @@ smBlocks = function(){
           if (this$.block.locked || this$.lock.pending) {
             return;
           }
-          console.log('page.click');
           B = this$.block;
           C = B.current;
           R = B.range;
@@ -2389,32 +2433,33 @@ smBlocks = function(){
           return true;
         };
         this.dragStart = async function(e){
-          var B, lock, a, R;
-          e.preventDefault();
+          var B, R, lock, a;
           e.stopPropagation();
           B = this$.block;
-          if (!e.isPrimary || e.button || typeof e.offsetX !== 'number' || B.locked || !B.range.mode || B.current[1] < 2 || this$.lock.pending) {
+          R = B.range;
+          if (!e.isPrimary || e.button || typeof e.offsetX !== 'number' || B.locked || !R.mode || B.current[1] < 2 || this$.lock.pending) {
             return true;
           }
           this$.lock = lock = newPromise(3);
+          R.focus();
+          R.box.classList.add('active', 'drag');
           (await Promise.race([newDelay(200), lock]));
           if (!lock.pending) {
+            R.box.classList.remove('active', 'drag');
             return true;
           }
           this$.initDragbox();
           a = B.current[0];
-          (R = B.range).focus();
-          R.box.classList.add('active', 'drag');
           if (!R.box.hasPointerCapture(e.pointerId)) {
             R.box.setPointerCapture(e.pointerId);
           }
           lock.pending = 4;
-          (await lock);
+          lock = (await lock);
           if (R.box.hasPointerCapture(e.pointerId)) {
             R.box.releasePointerCapture(e.pointerId);
           }
           R.box.classList.remove('active', 'drag');
-          if (!this$.block.locked && a !== B.current[0]) {
+          if (lock && a !== B.current[0]) {
             B.submit();
           }
           return true;
@@ -2454,34 +2499,26 @@ smBlocks = function(){
           }
           if (C[0] !== a) {
             C[0] = a;
-            this$.block.submit();
+            this$.block.range.refresh();
           }
         };
         this.wheel = function(e){
-          console.log('wheel');
-          /***
-          # check
-          if @lock or @block.locked or not @block.range.mode
-          	return
-          # fulfil event
-          e.preventDefault!
-          e.stopPropagation!
-          # prepare
-          a = @group.data.0
-          if (b = @group.data.1 - 1) == 0
-          	return
-          # determine new index
-          a = a + 1*(Math.sign e.deltaY)
-          if a > b
-          	a = 0
-          else if a < 0
-          	a = b
-          # update common state
-          @group.data.0 = a
-          @group.common!
-          # done
-          @block.focus!
-          /***/
+          var B, C, i;
+          e.preventDefault();
+          e.stopPropagation();
+          B = this$.block;
+          C = B.current;
+          if (B.locked || !B.range.mode || this$.lock.pending) {
+            return true;
+          }
+          if ((i = C[0] + 1 * Math.sign(e.deltaY)) >= C[1]) {
+            i = 0;
+          } else if (i < 0) {
+            i = C[1] - 1;
+          }
+          C[0] = i;
+          B.submit();
+          return true;
         };
       };
       Control.prototype = {
@@ -2519,7 +2556,7 @@ smBlocks = function(){
           true;
         },
         fastGo: async function(event, btn, step){
-          var B, C, lock, first, a, b, c, beg, end, d;
+          var B, C, lock, first, L, a, b, c, beg, end, d;
           B = this.block;
           if ((C = B.current) < 2) {
             return false;
@@ -2533,9 +2570,11 @@ smBlocks = function(){
           }
           C[0] = first;
           (await this.fastUpdate());
-          (await Promise.race([newDelay(200), lock]));
+          L = (await Promise.race([newDelay(200), lock]));
           if (!lock.pending) {
-            B.submit();
+            if (L) {
+              B.submit();
+            }
             return true;
           }
           B.range.box.classList.add('active');
@@ -2564,7 +2603,7 @@ smBlocks = function(){
             if ((d = end - step - step * a) <= this.fastCfg[1]) {
               b = step;
               d = 1000 / (1 + d);
-              (await Promise.race([newDelay(d), lock]));
+              L = (await Promise.race([newDelay(d), lock]));
             } else if (step * b < this.fastCfg[0] && --c === 0) {
               b = b + step;
               c = this.fastCfg[1];
@@ -2575,7 +2614,7 @@ smBlocks = function(){
           }
           btn.parentNode.classList.remove('active');
           B.range.box.classList.remove('active');
-          if (C[0] !== first) {
+          if (L && C[0] !== first) {
             B.submit();
           }
           return true;
@@ -2985,27 +3024,29 @@ smBlocks = function(){
         },
         lock: async function(level){
           var a;
-          if (level) {
-            if ((a = this.control.lock).pending) {
-              (await a.spin());
-            }
-            if (~(a = this.range.current)) {
-              this.range.pages[a].classList.remove('x');
-            }
-          } else {
-            if (~(a = this.range.current)) {
-              this.range.pages[a].classList.add('x');
-            }
+          if (level > 0 && this.control.lock.pending) {
+            this.control.lock.resolve(0);
+          }
+          if (level > 1 && ~(a = this.range.current)) {
+            this.range.pages[a].classList.remove('x');
+          }
+          return true;
+        },
+        unlock: async function(level){
+          var a;
+          if ((level === -1 || level > 1) && ~(a = this.range.current)) {
+            this.range.pages[a].classList.add('x');
           }
           return true;
         },
         submit: function(){
-          this.group.data[0] = this.current[0] * this.group.data[1];
-          this.group.update(this);
+          this.group.data[0] = this.current[0] * this.group.config.count;
+          this.range.focus();
+          this.range.refresh();
+          this.group.refresh(this);
         },
-        notify: function(s){
-          this.refresh();
-          return !this.control.lock.pending;
+        notify: function(level){
+          return this.control.lock.pending ? 1 : 0;
         },
         focus: function(){
           var a;
@@ -3115,12 +3156,11 @@ smBlocks = function(){
           }
           return true;
         },
-        lock: function(level){
-          if (level) {
-            this.select.disabled = true;
-          } else {
-            this.select.disabled = false;
-          }
+        lock: function(){
+          this.select.disabled = true;
+        },
+        unlock: function(){
+          this.select.disabled = false;
         },
         submit: function(){
           var a;
@@ -3144,10 +3184,165 @@ smBlocks = function(){
         }
       };
       return Block;
+    }(),
+    'orderer': function(){
+      var Control, Block;
+      Control = function(block){
+        var this$ = this;
+        this.block = block;
+        this.hovered = 0;
+        this.focused = false;
+        this.hover = function(e){
+          e.preventDefault();
+          if (!this$.block.locked && !this$.hovered) {
+            this$.hovered = 1;
+            this$.block.rootBox.classList.add('hovered');
+          }
+        };
+        this.unhover = function(e){
+          e.preventDefault();
+          if (this$.hovered === 1) {
+            this$.hovered = 0;
+            this$.block.rootBox.classList.remove('hovered');
+          }
+        };
+        this.switchVariant = function(e){
+          var B, D, a, b;
+          e.preventDefault();
+          e.stopPropagation();
+          B = this$.block;
+          D = B.group.data;
+          if (!B.locked && (a = B.current[1]) > 0) {
+            D[1] = a = a === 1 ? 2 : 1;
+            b = B.select.selectedIndex;
+            b = B.select.options[b];
+            b.value = a;
+            B.select.focus();
+            B.group.update();
+          }
+        };
+        this.switchFocusIn = function(e){
+          e.preventDefault();
+          e.stopPropagation();
+          if (!this$.block.locked && this$.hovered !== 2) {
+            this$.hovered = 2;
+            this$.block.rootBox.classList.add('hovered');
+          }
+        };
+        this.switchFocusOut = function(e){
+          e.preventDefault();
+          e.stopPropagation();
+          if (!this$.block.locked && this$.hovered === 2) {
+            this$.hovered = 0;
+            this$.block.rootBox.classList.remove('hovered');
+          }
+        };
+        this.selected = function(e){
+          var B, D, a;
+          e.preventDefault();
+          e.stopPropagation();
+          B = this$.block;
+          D = B.group.data;
+          if (!B.locked) {
+            a = B.select.selectedIndex;
+            D[0] = B.keys[a];
+            D[1] = +B.select.options[a].value;
+            B.group.submit(B);
+          }
+        };
+      };
+      Control.prototype = {
+        attach: function(){
+          var B, this$ = this;
+          B = this.block;
+          B.rootBox.addEventListener('pointerenter', this.hover);
+          B.rootBox.addEventListener('pointerleave', this.unhover);
+          B['switch'].forEach(function(a){
+            a.addEventListener('click', this$.switchVariant);
+            a.addEventListener('focusin', this$.switchFocusIn);
+            a.addEventListener('focusout', this$.switchFocusOut);
+          });
+          B.select.addEventListener('input', this.selected);
+        },
+        detach: function(){
+          true;
+        }
+      };
+      Block = function(root){
+        var a;
+        this.group = 'order';
+        this.root = root;
+        this.rootBox = root.firstChild;
+        this.variant = a = arrayFrom$(root.querySelectorAll('.variant'));
+        this['switch'] = a.map(function(a){
+          return a.firstChild;
+        });
+        this.select = root.querySelector('select');
+        this.locked = -1;
+        this.current = ['', -1];
+        this.options = null;
+        this.keys = null;
+        this.ctrl = new Control(this);
+        this.onResize = null;
+      };
+      Block.prototype = {
+        level: 1,
+        init: function(s, c){
+          var o, k, i$, len$, a, b;
+          this.options = o = c.locale.order;
+          this.keys = k = c.order || Object.getOwnPropertyNames(o);
+          s = this.select;
+          for (i$ = 0, len$ = k.length; i$ < len$; ++i$) {
+            a = k[i$];
+            a = o[a];
+            b = document.createElement('option');
+            b.textContent = a[0];
+            b.value = a[1];
+            s.appendChild(b);
+          }
+          this.ctrl.attach();
+          return true;
+        },
+        refresh: function(){
+          var a, b, c;
+          a = this.group.data;
+          b = this.current;
+          if (a[0] !== b[0]) {
+            if ((c = this.keys.indexOf(a[0])) !== this.select.selectedIndex) {
+              this.select.selectedIndex = c;
+            }
+            if ((!a[1] && b[1]) || (a[1] && !b[1])) {
+              c = !a[1];
+              this['switch'].forEach(function(d){
+                d.disabled = c;
+              });
+            }
+            b[0] = a[0];
+          }
+          if (a[1] !== b[1]) {
+            if (b[1] >= 0) {
+              c = 'abc'[b[1]];
+              this.variant.forEach(function(d){
+                d.classList.remove(c);
+              });
+            }
+            if (a[1] >= 0) {
+              c = 'abc'[a[1]];
+              this.variant.forEach(function(d){
+                d.classList.add(c);
+              });
+            }
+            b[1] = a[1];
+          }
+          return true;
+        }
+      };
+      return Block;
     }()
   };
   Config = function(){
     this.locale = null;
+    this.order = null;
     this.currency = null;
     this.cart = null;
     this.price = null;
@@ -3228,11 +3423,8 @@ smBlocks = function(){
       this.lock = this.fetch = null;
     },
     charge: function(group){
-      if (this.level > group.level) {
-        return false;
-      }
       if (this.level < group.level) {
-        this.level = group.pending;
+        this.level = group.level;
       }
       if (this.lock.pending) {
         this.lock.resolve(this.lock.pending === 1);
@@ -3242,10 +3434,9 @@ smBlocks = function(){
           this.fetch.cancel();
         }
       }
-      return true;
     },
     enter: async function(){
-      var S, a, i$, ref$, len$, b, F;
+      var s, c, a, b, i$, ref$, len$, f;
       this.lock = this.dirty
         ? newDelay(~this.dirty && 400)
         : newPromise(1);
@@ -3253,81 +3444,76 @@ smBlocks = function(){
         return true;
       }
       this.dirty = 0;
-      console.log('loader charged');
-      S = this['super'];
-      if (~this.level) {
-        a = [];
-        for (i$ = 0, len$ = (ref$ = S.blocks).length; i$ < len$; ++i$) {
+      s = this['super'];
+      c = this.level;
+      if (~c) {
+        a = s.blocks.length;
+        while (a) {
+          b = s.blocks[--a];
+          if (b.notify && (this.dirty = b.notify(c))) {
+            return true;
+          }
+        }
+        if (!c) {
+          return true;
+        }
+        for (i$ = 0, len$ = (ref$ = s.blocks).length; i$ < len$; ++i$) {
           b = ref$[i$];
-          if (b.level < this.level && !b.locked) {
+          if (b.level < c && !b.locked) {
             b.locked = 1;
             if (b.lock) {
-              a[a.length] = b.lock();
+              b.lock(c);
             }
             b.rootBox.classList.remove('v');
           }
         }
-        if (a.length) {
-          (await Promise.all(a));
-        }
-        b = S.blocks.length;
-        while (~--b) {
-          if ((a = S.blocks[b]).notify && !a.notify(S.state)) {
-            this.dirty = 2;
-          }
-        }
-        if (this.dirty) {
-          return true;
-        }
       }
-      F = (await (this.fetch = oFetch(S.state)));
+      consoleInfo('fetcher charged at ' + c);
+      f = (await (this.fetch = oFetch(s.state)));
       this.fetch = null;
-      if (F instanceof Error) {
-        if (F.id === 4) {
-          return true;
-        }
-        consoleError(F.message);
-        return false;
+      if (f instanceof Error) {
+        consoleError(f.message);
+        return f.id === 4 ? true : false;
       }
-      if ((a = (await F.readInt())) === null) {
+      if ((s.config.total = a = (await f.readInt())) === null) {
         consoleError('fetch stream failed');
-        F.cancel();
+        f.cancel();
         return false;
       }
-      if (S.config.total !== a) {
-        S.config.total = a;
-        S.groups.range.refresh();
+      a = [];
+      for (i$ = 0, len$ = (ref$ = s.blocks).length; i$ < len$; ++i$) {
+        b = ref$[i$];
+        if (b.level > 0) {
+          a[a.length] = b.refresh(c);
+        }
       }
-      for (i$ = 0, len$ = (ref$ = S.blocks).length; i$ < len$; ++i$) {
+      (await Promise.all(a));
+      for (i$ = 0, len$ = (ref$ = s.blocks).length; i$ < len$; ++i$) {
         b = ref$[i$];
         if (b.locked) {
           b.locked = 0;
-          if (b.lock) {
-            b.lock();
+          if (b.unlock) {
+            b.unlock(c);
           }
           b.rootBox.classList.add('v');
         }
       }
       this.level = 0;
-      for (a in ref$ = S.groups) {
-        a = ref$[a];
-        if (a.level) {
-          a.level = 0;
-        }
-      }
-      if (S.receiver) {
-        a = -1;
-        while (b = (await F.readJSON())) {
+      if (s.receiver) {
+        a = 0;
+        while (!this.dirty && (b = (await f.readJSON()))) {
           if (b instanceof Error) {
             consoleError('fetch stream failed, ' + b.message);
             return false;
           }
-          if (this.dirty || !S.receiver.load(++a, b)) {
+          if (this.dirty || !s.receiver.load(a++, b)) {
             break;
           }
         }
       }
-      F.cancel();
+      if (b) {
+        f.cancel();
+      }
       return true;
     }
   };
@@ -3373,9 +3559,6 @@ smBlocks = function(){
         }
       }
       return true;
-    },
-    update: function(block){
-      this.submit();
     },
     submit: function(block){
       this.level = block
