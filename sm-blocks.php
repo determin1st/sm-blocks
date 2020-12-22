@@ -53,8 +53,107 @@ class StorefrontModernBlocks {
           ],
           'order'         => [
             'type'        => 'array',
-            #'default'     => ['featured',0],
             'default'     => ['price',1],
+          ],
+          'wrapAround'    => [
+            'type'        => 'boolean',
+            'default'     => true,
+          ],
+        ],
+      ],
+      # }}}
+      'rows-selector' => [ # {{{
+        'render_callback' => [null, 'renderBase'],
+        'attributes'      => [
+          ###
+          ###
+          'list'          => [
+            'type'        => 'array',
+            'default'     => [0,2,4,8,16], # 0=auto
+          ],
+          'index'         => [
+            'type'        => 'number',
+            'default'     => 1,
+          ],
+        ],
+      ],
+      # }}}
+      'paginator' => [ # {{{
+        'render_callback' => [null, 'renderPaginator'],
+        'attributes'      => [
+          ### common
+          'customClass'   => [
+            'type'        => 'string',
+            'default'     => 'custom',
+          ],
+          'focusGreedy'   => [
+            'type'        => 'boolean',
+            'default'     => true,
+          ],
+          ### controls
+          'rangeMode'     => [
+            'type'        => 'number',
+            'default'     => 2, # 0=none,1=static,2=flexy
+          ],
+          'rangeSize'     => [
+            'type'        => 'string',
+            'default'     => '1:2', # pages before:after current
+          ],
+          'gotoMode'      => [
+            'type'        => 'number',
+            'default'     => 1|2|4, # 0=none|1=separators|2=prev/next|4=first/last
+          ],
+        ],
+      ],
+      # }}}
+      'orderer' => [ # {{{
+        'render_callback' => [null, 'renderBase'],
+        'attributes'      => [
+          ### common
+          'customClass'   => [
+            'type'        => 'string',
+            'default'     => 'custom',
+          ],
+          ###
+          'order'         => [
+            'type'        => 'array',
+            'default'     => ['featured',-1],
+          ],
+          'switchMode'    => [
+            'type'        => 'number',
+            'default'     => 1,
+          ],
+          'autodrop'      => [
+            'type'        => 'boolean',
+            'default'     => false,
+          ],
+        ],
+      ],
+      # }}}
+      'price-filter' => [ # {{{
+        'render_callback' => [null, 'renderPriceFilter'],
+        'attributes'      => [
+          ### common
+          'customClass'   => [
+            'type'        => 'string',
+            'default'     => 'custom',
+          ],
+          'focusGreedy'   => [
+            'type'        => 'boolean',
+            'default'     => false,
+          ],
+          'sectionMode'   => [
+            'type'        => 'number',
+            'default'     => 1|2|4,
+          ],
+          ### specific
+          'sectionSwitch' => [
+            'type'        => 'boolean',
+            'default'     => true,
+          ],
+          'sliceGroups'   => [
+            'type'        => 'number',
+            'default'     => 0,
           ],
         ],
       ],
@@ -96,105 +195,6 @@ class StorefrontModernBlocks {
           'hasCount'      => [
             'type'        => 'boolean',
             'default'     => false,
-          ],
-        ],
-      ],
-      # }}}
-      'paginator' => [ # {{{
-        'render_callback' => [null, 'renderPaginator'],
-        'attributes'      => [
-          ### common
-          'customClass'   => [
-            'type'        => 'string',
-            'default'     => 'custom',
-          ],
-          'focusGreedy'   => [
-            'type'        => 'boolean',
-            'default'     => true,
-          ],
-          ### controls
-          'rangeMode'     => [
-            'type'        => 'number',
-            'default'     => 2, # 0=none,1=static,2=flexy
-          ],
-          'rangeSize'     => [
-            'type'        => 'string',
-            'default'     => '1:2', # pages before:after current
-          ],
-          'gotoMode'      => [
-            'type'        => 'number',
-            'default'     => 1|2|4, # 0=none|1=separators|2=prev/next|4=first/last
-          ],
-        ],
-      ],
-      # }}}
-      'orderer' => [ # {{{
-        'render_callback' => [null, 'renderOrderer'],
-        'attributes'      => [
-          ### common
-          'customClass'   => [
-            'type'        => 'string',
-            'default'     => 'custom',
-          ],
-          ###
-          'switchMode'    => [
-            'type'        => 'number',
-            'default'     => 1,
-          ],
-          'dropOnHover'   => [
-            'type'        => 'boolean',
-            'default'     => true,
-          ],
-        ],
-      ],
-      # }}}
-      'price-filter' => [ # {{{
-        'render_callback' => [null, 'renderPriceFilter'],
-        'attributes'      => [
-          ### common
-          'customClass'   => [
-            'type'        => 'string',
-            'default'     => 'custom',
-          ],
-          'focusGreedy'   => [
-            'type'        => 'boolean',
-            'default'     => false,
-          ],
-          ###
-          'sectionMode'   => [
-            'type'        => 'number',
-            'default'     => 1|2|4,
-          ],
-          'sectionSwitch' => [
-            'type'        => 'boolean',
-            'default'     => true,
-          ],
-          'baseUI'        => [
-            'type'        => 'number',
-            'default'     => 0,
-          ],
-          'submitButton'  => [
-            'type'        => 'number',
-            'default'     => 0,
-          ],
-          'sliceGroups'   => [
-            'type'        => 'number',
-            'default'     => 0,
-          ],
-        ],
-      ],
-      # }}}
-      'rows-selector' => [ # {{{
-        'render_callback' => [null, 'renderBase'],
-        'attributes'      => [
-          ### config
-          'list'          => [
-            'type'        => 'array',
-            'default'     => [0,2,4,8,16], # 0=auto
-          ],
-          'index'         => [
-            'type'        => 'number',
-            'default'     => 1,
           ],
         ],
       ],
@@ -249,20 +249,6 @@ class StorefrontModernBlocks {
         'cartIcon' => '
         <svg preserveAspectRatio="none" viewBox="0 0 446.843 446.843">
           <path d="M444.09 93.103a14.343 14.343 0 00-11.584-5.888H109.92c-.625 0-1.249.038-1.85.119l-13.276-38.27a14.352 14.352 0 00-8.3-8.646L19.586 14.134c-7.374-2.887-15.695.735-18.591 8.1-2.891 7.369.73 15.695 8.1 18.591l60.768 23.872 74.381 214.399c-3.283 1.144-6.065 3.663-7.332 7.187l-21.506 59.739a11.928 11.928 0 001.468 10.916 11.95 11.95 0 009.773 5.078h11.044c-6.844 7.616-11.044 17.646-11.044 28.675 0 23.718 19.298 43.012 43.012 43.012s43.012-19.294 43.012-43.012c0-11.029-4.2-21.059-11.044-28.675h93.776c-6.847 7.616-11.048 17.646-11.048 28.675 0 23.718 19.294 43.012 43.013 43.012 23.718 0 43.012-19.294 43.012-43.012 0-11.029-4.2-21.059-11.043-28.675h13.433c6.599 0 11.947-5.349 11.947-11.948s-5.349-11.947-11.947-11.947H143.647l13.319-36.996c1.72.724 3.578 1.152 5.523 1.152h210.278a14.33 14.33 0 0013.65-9.959l59.739-186.387a14.33 14.33 0 00-2.066-12.828zM169.659 409.807c-10.543 0-19.116-8.573-19.116-19.116s8.573-19.117 19.116-19.117 19.116 8.574 19.116 19.117-8.573 19.116-19.116 19.116zm157.708 0c-10.543 0-19.117-8.573-19.117-19.116s8.574-19.117 19.117-19.117c10.542 0 19.116 8.574 19.116 19.117s-8.574 19.116-19.116 19.116zm75.153-261.658h-73.161V115.89h83.499l-10.338 32.259zm-21.067 65.712h-52.094v-37.038h63.967l-11.873 37.038zm-146.882 0v-37.038h66.113v37.038h-66.113zm66.113 28.677v31.064h-66.113v-31.064h66.113zm-161.569-65.715h66.784v37.038h-53.933l-12.851-37.038zm95.456-28.674V115.89h66.113v32.259h-66.113zm-28.673-32.259v32.259h-76.734l-11.191-32.259h87.925zm-43.982 126.648h43.982v31.064h-33.206l-10.776-31.064zm167.443 31.065v-31.064h42.909l-9.955 31.064h-32.954z"/>
-        </svg>
-        ',
-      ],
-      # }}}
-      'category-filter' => [ # {{{
-        'extra' => '
-        <button class="checkbox v" type="button">
-          {{checkmark}}
-        </button>
-        ',
-        'checkmark' => '
-        <svg preserveAspectRatio="none" viewBox="0 0 48 48">
-          <polygon class="c1" points="13,17 24,27 40,8 42,10 25,38 23,38 9,21 "/>
-          <polygon class="c2" points="9,20 10,19 38,19 39,20 39,28 38,29 10,29 9,28 "/>
         </svg>
         ',
       ],
@@ -365,47 +351,9 @@ class StorefrontModernBlocks {
         ',
       ],
       # }}}
-      'orderer' => [ # {{{
-        'main' => '
-        <div class="sm-blocks orderer {{custom}}">
-          <div class="sm-buttons">
-            {{variantLeft}}
-            <select class="{{class}}"></select>
-            {{variantRight}}
-          </div>
-          {{placeholder}}
-        </div>
-        ',
-        'variantLeft' => '
-        <div class="variant left">
-          <button type="button">{{arrow}}</button>
-        </div>
-        ',
-        'variantRight' => '
-        <div class="variant right">
-          <button type="button">{{arrow}}</button>
-        </div>
-        ',
-        'arrow' => '
-        <svg preserveAspectRatio="none" shape-rendering="geometricPrecision" viewBox="0 0 48 48">
-          <path stroke-linejoin="round" d="M11 25l13 13 13-13h-2l-8 5-2-19-1-1-1 1-2 19-8-5z"/>
-        </svg>
-        ',
-        'asc_desc' => '
-        <svg preserveAspectRatio="none" shape-rendering="geometricPrecision" viewBox="0 0 48 48">
-          <path stroke-linejoin="round" d="M11 25l13 13 13-13h-2l-8 5-1-6 1-6 8 5h2L24 10 11 23h2l8-5 1 6-1 6-8-5z"/>
-        </svg>
-        ',
-      ],
-      # }}}
       'price-filter' => [ # {{{
-        'main' => '
-        <div class="sm-blocks price-filter {{custom}}" data-cfg=\'{{cfg}}\'>
-          {{content}}{{placeholder}}
-        </div>
-        ',
-        'textInputs' => '
-        <div class="text">
+        'root' => '
+        <div>
           <div class="L">
             <input id="{{UID=1}}"
                    type="text" inputmode="numeric"
@@ -421,14 +369,6 @@ class StorefrontModernBlocks {
                    maxlength="9" readonly>
             <label for="{{UID=2}}"></label>
           </div>
-          {{submitButton}}
-        </div>
-        ',
-        'rangeSlider' => '
-        ',
-        'submitButton' => '
-        <div class="submit" data-mode="1">
-          <button type="button">{{submitIcon}}</button>
         </div>
         ',
         'delimiter' => '
@@ -443,46 +383,38 @@ class StorefrontModernBlocks {
       # }}}
       'section' => [ # {{{
         'main' => '
-        <div class="sm-blocks main-section {{custom}}">
-          <div class="item{{class}}" data-cfg=\'{{cfg}}\'>
-            {{titleMain}}{{sep}}{{section}}
+        <div class="sm-blocks section {{custom}}">
+          <div class="item" data-cfg=\'{{cfg}}\'>
+            {{title}}{{sep}}{{section}}
           </div>
           {{placeholder}}
         </div>
         ',
-        'titleMain' => '
-        <div class="title">
-          <h3><label></label></h3>
-          <button class="arrow{{arrow}}" type="button">{{arrowIcon}}</button>
-          {{extraMain}}
+        'item' => '
+        <div class="item" data-cfg=\'{{cfg}}\'>
+          {{title}}{{section}}
         </div>
         ',
-        'item' => '
-        <div class="item{{class}}" data-cfg=\'{{cfg}}\'>
-          <div class="title">
-            <h3><label>{{title}}</label></h3>
-            <button class="arrow{{arrow}}" type="button">{{arrowIcon}}</button>
-            {{extra}}
+        'title' => '
+        <div class="title">
+          <div>
+            <h3><label></label></h3>
+            <button type="button" class="arrow">{{arrowIcon}}</button>
           </div>
-          {{section}}
         </div>
         ',
         'section' => '
         <div class="section">{{items}}</div>
         ',
         'arrowIcon' => '
-        <svg preserveAspectRatio="none" viewBox="0 0 16 16">
-          <path class="a" stroke-linejoin="round" d="M8 12l2.5-4L13 4H3l2.5 4z"/>
+        <svg preserveAspectRatio="none" shape-rendering="geometricPrecision" viewBox="0 0 48 48">
+          <polygon class="a" points="24,44 1,4 47,4 "/>
+          <polygon class="b" points="24,40 5,6 43,6 "/>
         </svg>
         ',
         'sep' => '
-        <svg class="sep" preserveAspectRatio="none" viewBox="0 0 100 5">
-          <polygon points="2,0 98.001,0 100,4 100,5 0,5 0,4 "/>
-        </svg>
-        ',
-        'sep2' => '
-        <svg class="sep" preserveAspectRatio="none" viewBox="0 0 100 5">
-          <polygon points="0,0 100,0 100,1 98.001,5 2,5 0,1 "/>
+        <svg class="sep" preserveAspectRatio="none" viewBox="0 0 200 5">
+          <polygon points="2,0 6,0 8,1 192,1 194,0 198,0 200,4 200,5 0,5 0,4 "/>
         </svg>
         ',
       ],
@@ -683,31 +615,9 @@ class StorefrontModernBlocks {
         'layout'  => $layout,
         'order'   => $attr['order'],
         'options' => $attr['options'],
+        'wrapAround' => $attr['wrapAround'],
       ]),
       'placeholder' => $this->templates['svg']['placeholder'],
-    ]);
-  }
-  # }}}
-  # category-filter {{{
-  public function renderCategoryFilter($attr, $content)
-  {
-    # prepare
-    $T = $this->templates['category-filter'];
-    # get data
-    $a = $attr['baseCategory'];
-    $b = $attr['hasEmpty'];
-    if (!($root = $this->getCategoryTree($a, $b))) {
-      return '';
-    }
-    # create a section
-    return $this->renderSection([
-      'custom'    => 'category-filter custom',
-      'mode'      => $attr['sectionMode'],
-      'autofocus' => $attr['focusGreedy'],
-      'extraMain' => '',
-      'extra'     => $this->parseTemplate($T['extra'], $T),
-      'items'     => $root,
-      'opened'    => $attr['sectionOpened'],
     ]);
   }
   # }}}
@@ -758,86 +668,51 @@ class StorefrontModernBlocks {
     ]);
   }
   # }}}
-  # orderer {{{
-  public function renderOrderer($attr, $content)
-  {
-    # prepare
-    $T = $this->templates['orderer'];
-    # determine class
-    $variantL = true;
-    $variantR = true;
-    switch ($attr['switchMode']) {
-    case 1:
-      $class    = 'left';
-      $variantR = false;
-      break;
-    case 2:
-      $class    = 'right';
-      $variantL = false;
-      break;
-    default:
-      $class = 'left right';
-      break;
-    }
-    # complete
-    return $this->parseTemplate($T['main'], $T, [
-      'custom' => $attr['customClass'],
-      'class'  => $class,
-      'variantLeft'  => $variantL,
-      'variantRight' => $variantR,
-      'placeholder'  => $this->templates['svg']['placeholder'],
-    ]);
-  }
-  # }}}
   # price-filter {{{
   public function renderPriceFilter($attr, $content)
   {
     # prepare
     $T = $this->templates['price-filter'];
-    # create filter variant
-    switch ($attr['baseUI']) {
-    default:
-      $content = $this->parseTemplate($T['textInputs'], $T, [
-        'submitButton' => ($attr['submitButton'] !== 0),
-      ]);
-      break;
-    }
-    # compose widget
-    $content = $this->parseTemplate($T['main'], $T, [
-      'custom'  => $attr['customClass'],
-      'content' => $content,
-      'placeholder' => $this->templates['svg']['placeholder'],
-      'cfg' => json_encode([
-        'sectionSwitch' => $attr['sectionSwitch'],
-      ]),
-    ]);
-    # create a 0-section
+    # compose
     return $this->renderSection([
+      'custom'    => trim('price-filter '.$attr['customClass']),
+      'cfg'       => [
+        'sectionSwitch' => $attr['sectionSwitch'],
+      ],
       'mode'      => $attr['sectionMode'],
       'autofocus' => $attr['focusGreedy'],
-      'extraMain' => '',
-      'extra'     => '',
-      'items'     => $content,
+      'items'     => $this->parseTemplate($T['root'], $T, []),
       'opened'    => true,
     ]);
   }
   # }}}
-  # section {{{
+  # category-filter {{{
+  public function renderCategoryFilter($attr, $content)
+  {
+    # get content
+    $content = $this->db_CategoryTree(
+      $attr['baseCategory'],
+      $attr['hasEmpty']
+    );
+    # create a section
+    return $this->renderSection([
+      'custom'    => trim('category-filter '.$attr['customClass']),
+      'mode'      => $attr['sectionMode'],
+      'autofocus' => $attr['focusGreedy'],
+      'items'     => $content,
+      'opened'    => $attr['sectionOpened'],
+    ]);
+  }
   private function renderSection($attr)
   {
     # preapre
     $T = $this->templates['section'];
     # determine main section parameters
-    $mode      = $attr['mode'];
-    $content   = $attr['items'];
-    $custom    = !!$attr['custom']
+    $mode    = $attr['mode'];
+    $content = $attr['items'];
+    $custom  = !!$attr['custom']
       ? $attr['custom']
       : 'custom';
-    $class     = !!($mode &  1) # opened section
-      ? ' opened'
-      : '';
-    $titleMain = !!($mode &  2);# has title
-    $arrow     = !!($mode &  4);# may be opened/closed
     # check items
     if (is_array($content))
     {
@@ -850,32 +725,25 @@ class StorefrontModernBlocks {
       # zero section (foreign content)
       $id = -1;
     }
-    # create root configuration
+    # determine root configuration
     $config = !!$attr['cfg']
       ? $attr['cfg']
       : [];
     $config = json_encode(array_merge($config, [
-      'mode'  => $mode,
-      'id'    => $id,
-      'arrow' => $arrow,
-      'extra' => !!$attr['extraMain'],
+      'mode'   => $mode,
+      'id'     => $id,
+      'arrow'  => !!($mode &  4), # allow to open/close
+      'opened' => !!($mode &  1), # section opened/closed
       'autofocus' => $attr['autofocus'],
     ]));
     # compose
     return $this->parseTemplate($T['main'], $T, [
-      'custom'    => $custom,
-      'class'     => $class,
-      'cfg'       => $config,
-      'titleMain' => $titleMain,
-      'extraMain' => $attr['extraMain'],
-      'extra'     => $attr['extra'],
-      'arrow'     => ($arrow ? ' v' : ''),
-      'items'     => $content,
+      'custom' => $custom,
+      'cfg'    => $config,
+      'items'  => $content,
       'placeholder' => $this->templates['svg']['placeholder'],
     ]);
   }
-  /***/
-  /***/
   private function renderSectionItem($node, $T, $attr)
   {
     # iterate slaves of this master
@@ -885,9 +753,10 @@ class StorefrontModernBlocks {
       # create configuration
       $b = json_encode([
         'id'     => $a['id'],
+        'name'   => $a['name'],
         'depth'  => $a['depth'],
-        'extra'  => !!$attr['extra'],
         'arrow'  => $a['arrow'],
+        'opened' => false,
         'order'  => $a['order'],
         'count'  => $a['count'],
         'total'  => $a['total'],
@@ -895,26 +764,20 @@ class StorefrontModernBlocks {
       # check slave is also a master
       if ($a['slaves'])
       {
-        # create a section (recurse)
+        # create section item (recurse)
         $b = $this->parseTemplate($T['item'], $T, [
-          'class'   => ($attr['opened'] ? ' opened' : ''),
+          'class'   => ($attr['opened'] ? ' o' : ''),
           'cfg'     => $b,
-          'title'   => $a['name'],
-          'arrow'   => ($a['arrow'] ? ' v' : ''),
-          'extra'   => $attr['extra'],
           'section' => true,
           'items'   => $this->renderSectionItem($a, $T, $attr),
         ]);
       }
       else
       {
-        # create an item
+        # create simple item
         $b = $this->parseTemplate($T['item'], $T, [
           'class'   => '',
           'cfg'     => $b,
-          'title'   => $a['name'],
-          'arrow'   => '',
-          'extra'   => $attr['extra'],
           'section' => false,
         ]);
       }
@@ -925,9 +788,10 @@ class StorefrontModernBlocks {
   }
   # }}}
   # rest api
-  public function apiEntry($p) # {{{
+  # kiss entry {{{
+  public function apiEntry($p)
   {
-    # prepare parameters
+    # prepare
     # {{{
     # get parameters
     if (!($p = $p->get_json_params()) || !is_array($p)) {
@@ -953,7 +817,7 @@ class StorefrontModernBlocks {
       #$p['lang'] = $this->lang;
       $p['lang'] = 'en';
     }
-    # range
+    # records range
     if ($R = $p['range'])
     {
       if (!is_array($R) || count($R) !== 5) {
@@ -983,15 +847,26 @@ class StorefrontModernBlocks {
       $p['order'] = null;
     }
     # category filter
+    # parsing is not simple, so it's wrapped
     $p['category'] = $this->parseCategoryFilter($p['category']);
     # price filter
-    if (!($a = $p['price']) ||
-        !is_array($a) || count($a) !== 5 || !$a[0])
+    if (!($a = $p['price']))
     {
+      # empty parameter is allowed (meaning no filter)
       $p['price'] = null;
     }
-    else {
-      $p['price'] = [intval($a[1]), intval($a[2])];
+    else if (!is_array($a)  || count($a) !== 2 ||
+             !is_int($a[0]) || !is_int($a[1]) ||
+             $a[0] < -1 || $a[1] < -1 ||
+             (~$a[0] && ~$a[1] && $a[0] >= $a[1]))
+    {
+      # incorrect value and type should be rejected
+      $this->apiFail(400, 'incorrect price');
+    }
+    if ($a[0] === -1 && $a[0] == $a[1])
+    {
+      # a special case, unlimited range, means no filter
+      $p['price'] = null;
     }
     # }}}
     # operate
@@ -1150,7 +1025,7 @@ class StorefrontModernBlocks {
         'locale'    => $locale[$lang],
         'currency'  => $this->db_Currency(),
         'cart'      => $this->db_Cart(),
-        'price'     => $this->db_PriceFilter($q),
+        'price'     => $this->db_PriceRange($q),
         'total'     => count($q),
       ], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
       if ($q === null) {
@@ -1161,10 +1036,11 @@ class StorefrontModernBlocks {
       echo $q;
       # }}}
     }
-    # terminate
+    # done
     exit;
   }
   # }}}
+  # helpers {{{
   private function apiCart($request) # {{{
   {
     # check
@@ -1196,134 +1072,7 @@ class StorefrontModernBlocks {
     }
   }
   # }}}
-  # model helpers
-  # parsers {{{
-  private function parseTemplate($template, $data, $attr = [])
-  {
-    $depth = 0;
-    while (true)
-    {
-      # get template tokens
-      $list = [];
-      if (!preg_match_all('/{{([^}]+)}}/', $template, $list) ||
-          count($list) < 2 || count($list[1]) === 0)
-      {
-        break;# nothing to substitute
-      }
-      $list = $list[1];
-      # iterate
-      $c = 0;
-      foreach ($list as $a)
-      {
-        # prepare
-        $b = null;
-        # check attribute specified
-        if (array_key_exists($a, $attr))
-        {
-          if (is_array($attr[$a])) {
-            $b = $attr[$a][$depth];// follow the sequence
-          }
-          else if (!is_bool($attr[$a])) {
-            $b = $attr[$a];// as is (string)
-          }
-          else if (!$attr[$a]) {
-            $b = '';// empty flagged
-          }
-        }
-        else
-        {
-          # check special
-          switch(substr($a, 0, 4)) {
-          case 'UID=':
-            ++$this->unique_id;
-            $attr[$a] = $b = $this->name.'-'.$this->unique_id;
-            break;
-          }
-        }
-        # check data
-        if ($b === null && array_key_exists($a, $data)) {
-          $b = $data[$a];// may be null to save the marker
-        }
-        # substitute
-        if ($b !== null)
-        {
-          $template = str_replace('{{'.$a.'}}', $b, $template);
-          ++$c;
-        }
-      }
-      # check count
-      if ($c === 0)
-      {
-        # no more substitutions possible,
-        # wipe all markers and complete
-        foreach ($list as $a) {
-          $template = str_replace('{{'.$a.'}}', '', $template);
-        }
-        break;
-      }
-      # continue
-      ++$depth;
-    }
-    # remove extra gaps and complete
-    return preg_replace('/>\s+</', '><', $template);
-  }
-  private function parseCategoryFilter($s)
-  {
-    # check type
-    if (!is_array($s)) {
-      return null;
-    }
-    # check empty
-    if (($a = count($s)) === 0) {
-      return [];
-    }
-    # restrict AND operator (count of filters)
-    if ($a > 10) {
-      return null;
-    }
-    # prepare
-    $F = [];
-    $I = 0;
-    # refine values
-    foreach ($s as $a)
-    {
-      # check item type
-      if (!is_array($a)) {
-        return null;
-      }
-      # check empty
-      if (($c = count($a)) === 0) {
-        continue;
-      }
-      # create an entry
-      $F[$I] = [];
-      # restrict OR operator (check list size)
-      if (($I === 0 && $c > 2000) ||
-          ($I !== 0 && $c > 100))
-      {
-        return null;
-      }
-      # iterate and collect identifiers
-      $b = -1;
-      while (++$b < $c)
-      {
-        # check type
-        if (!is_int($a[$b]) || $a[$b] < 0) {
-          return null;
-        }
-        # collect unique
-        if (array_search($a[$b], $F[$I], true) === false) {
-          $F[$I][] = $a[$b];
-        }
-      }
-      # continue
-      ++$I;
-    }
-    return $F;
-  }
-  # }}}
-  # apis {{{
-  private function apiFail($code, $msg)
+  private function apiFail($code, $msg) # {{{
   {
     http_response_code($code);
     header('content-type: text/plain');
@@ -1331,7 +1080,8 @@ class StorefrontModernBlocks {
     flush();
     exit;
   }
-  private function sendInt($i)
+  # }}}
+  private function sendInt($i) # {{{
   {
     # convert and send as big-endian value
     echo pack('N', $i);
@@ -1339,7 +1089,8 @@ class StorefrontModernBlocks {
     # done
     return true;
   }
-  private function sendJSON($o)
+  # }}}
+  private function sendJSON($o) # {{{
   {
     # create json string
     if (($o = json_encode($o)) === false) {
@@ -1354,7 +1105,9 @@ class StorefrontModernBlocks {
     return true;
   }
   # }}}
-  # database processing {{{
+  # }}}
+  # model
+  # database {{{
   private function db_Products($o) # {{{
   {
     # prepare
@@ -1383,10 +1136,10 @@ EOD;
           ON mPrice.post_id  = p.ID AND
              mPrice.meta_key = '_price'
 EOD;
-      if ($a[0] >= 0) {
+      if (~$a[0]) {
         $filts .= 'AND CAST(mPrice.meta_value AS SIGNED) >= '.$a[0].' ';
       }
-      if ($a[1] >= 0) {
+      if (~$a[1]) {
         $filts .= 'AND CAST(mPrice.meta_value AS SIGNED) < '.$a[1].' ';
       }
     }
@@ -1458,38 +1211,37 @@ EOD;
     return $res;
   }
   # }}}
-  private function db_PriceFilter($ids) # {{{
+  private function db_PriceRange($ids) # {{{
   {
     # prepare
-    $x   = [false, -1, -1, 0, 1];# enabled,a,b,aMax,bMax
     $ids = implode(',', $ids);
-    $wp_ = $this->prefix;
-    # compose database query
+    $wp  = $this->prefix;
+    # compose query
     $q = <<<EOD
 
       SELECT
         MIN(CAST(m.meta_value AS SIGNED)),
         MAX(CAST(m.meta_value AS SIGNED))
-      FROM {$wp_}posts AS p
-        JOIN {$wp_}postmeta AS m
+      FROM {$wp}posts AS p
+        JOIN {$wp}postmeta AS m
           ON m.meta_key = '_price' AND
              m.post_id = p.ID
       WHERE
-        p.post_type = 'product' AND
         p.ID IN ({$ids})
 
 EOD;
-    # query the database
+    # execute
     if (($q = $this->db->query($q)) === false) {
-      return $x;
+      return [0,1];
     }
     # get the result and cleanup
     $a = $q->fetch_all(MYSQLI_NUM);
     $q->free();
     # check
     if (count($a) !== 1) {
-      return $x;
+      return [0,1];
     }
+    # correct
     $a = $a[0];
     if (($a[0] = intval($a[0])) < 0) {
       $a[0] = 0;
@@ -1498,9 +1250,7 @@ EOD;
       $a[1] = 1;
     }
     # done
-    $x[3] = $a[0];
-    $x[4] = $a[1];
-    return $x;
+    return $a;
   }
   # }}}
   private function db_Currency() # {{{
@@ -1632,7 +1382,7 @@ EOD;
     return $a;
   }
   # }}}
-  private function getCategoryTree($root, $hasEmpty) # {{{
+  private function db_CategoryTree($root, $hasEmpty) # {{{
   {
     # determine root identifier
     # {{{
@@ -1775,8 +1525,7 @@ EOD;
         }
       }
       unset($a);
-      # create recursive helper and
-      # determine relationships
+      # create recursive helper
       $f = function(&$item, $depth) use (&$f, $q, $p)
       {
         # set depth
@@ -1800,6 +1549,7 @@ EOD;
         }
         return $item['total'];
       };
+      # set relationships
       $f($q[$root], 0);
       # set cache
       $this->cache['categoryTree'][$k] = &$q[$root];
@@ -1822,22 +1572,145 @@ EOD;
   }
   # }}}
   # }}}
+  # parsers {{{
+  private function parseTemplate($template, $data, $attr = [])
+  {
+    $depth = 0;
+    while (true)
+    {
+      # get template tokens
+      $list = [];
+      if (!preg_match_all('/{{([^}]+)}}/', $template, $list) ||
+          count($list) < 2 || count($list[1]) === 0)
+      {
+        break;# nothing to substitute
+      }
+      $list = $list[1];
+      # iterate
+      $c = 0;
+      foreach ($list as $a)
+      {
+        # prepare
+        $b = null;
+        # check attribute specified
+        if (array_key_exists($a, $attr))
+        {
+          if (is_array($attr[$a])) {
+            $b = $attr[$a][$depth];// follow the sequence
+          }
+          else if (!is_bool($attr[$a])) {
+            $b = $attr[$a];// as is (string)
+          }
+          else if (!$attr[$a]) {
+            $b = '';// empty flagged
+          }
+        }
+        else
+        {
+          # check special
+          switch(substr($a, 0, 4)) {
+          case 'UID=':
+            ++$this->unique_id;
+            $attr[$a] = $b = $this->name.'-'.$this->unique_id;
+            break;
+          }
+        }
+        # check data
+        if ($b === null && array_key_exists($a, $data)) {
+          $b = $data[$a];// may be null to save the marker
+        }
+        # substitute
+        if ($b !== null)
+        {
+          $template = str_replace('{{'.$a.'}}', $b, $template);
+          ++$c;
+        }
+      }
+      # check count
+      if ($c === 0)
+      {
+        # no more substitutions possible,
+        # wipe all markers and complete
+        foreach ($list as $a) {
+          $template = str_replace('{{'.$a.'}}', '', $template);
+        }
+        break;
+      }
+      # continue
+      ++$depth;
+    }
+    # remove extra gaps and complete
+    return preg_replace('/>\s+</', '><', $template);
+  }
+  private function parseCategoryFilter($s)
+  {
+    # check type
+    if (!is_array($s)) {
+      return null;
+    }
+    # check empty
+    if (($a = count($s)) === 0) {
+      return [];
+    }
+    # restrict AND operator (count of filters)
+    if ($a > 10) {
+      return null;
+    }
+    # prepare
+    $F = [];
+    $I = 0;
+    # refine values
+    foreach ($s as $a)
+    {
+      # check item type
+      if (!is_array($a)) {
+        return null;
+      }
+      # check empty
+      if (($c = count($a)) === 0) {
+        continue;
+      }
+      # create an entry
+      $F[$I] = [];
+      # restrict OR operator (check list size)
+      if (($I === 0 && $c > 2000) ||
+          ($I !== 0 && $c > 100))
+      {
+        return null;
+      }
+      # iterate and collect identifiers
+      $b = -1;
+      while (++$b < $c)
+      {
+        # check type
+        if (!is_int($a[$b]) || $a[$b] < 0) {
+          return null;
+        }
+        # collect unique
+        if (array_search($a[$b], $F[$I], true) === false) {
+          $F[$I][] = $a[$b];
+        }
+      }
+      # continue
+      ++$I;
+    }
+    return $F;
+  }
+  # }}}
 }
+# hooks (wp) {{{
 function_exists('register_activation_hook') && register_activation_hook(__FILE__, function() {
-  # {{{
   # activate woocommerce plugin
   if (!class_exists('WooCommerce', false))
   {
     $a = 'woocommerce';
     $a = activate_plugin($a.DIRECTORY_SEPARATOR.$a.'.php');
   }
-  # }}}
 });
 function_exists('add_action') && add_action('plugins_loaded', function() {
-  # {{{
   if (class_exists('WooCommerce', false)) {
     StorefrontModernBlocks::init();
   }
-  # }}}
 });
+# }}}
 ?>

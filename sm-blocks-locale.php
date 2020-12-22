@@ -2,45 +2,41 @@
 return [
   'en' => [ # {{{
     'order'      => [
-      'default'  => ['default', 0],
-      'featured' => ['featured', 0],
-      'new'      => ['new', 0],
+      'default'  => ['default', -1],
+      'featured' => ['featured', -1],
+      'new'      => ['new', -1],
       'price'    => ['price', 1],
-    ],
-    'price'   => [
-      'title' => 'Price',
-      'min'   => 'min',
-      'max'   => 'max',
     ],
     'title' => [
       'Categories',
+      'Price',
     ],
     'label' => [
       'auto',
       'view',
       '∞',
+      'min',
+      'max',
     ],
   ],
   # }}}
   'ru' => [ # {{{
     'order'      => [
-      'default'  => ['по-умолчанию', 0],
-      'featured' => ['рекомендуемые', 0],
-      'new'      => ['новые', 0],
+      'default'  => ['по-умолчанию', -1],
+      'featured' => ['рекомендуемые', -1],
+      'new'      => ['новые', -1],
       'price'    => ['цена', 1],
-    ],
-    'price'   => [
-      'title' => 'Цена',
-      'min'   => 'минимум',
-      'max'   => 'максимум',
     ],
     'title' => [
       'Категории',
+      'Цена',
     ],
     'label' => [
       'авто',
       'посмотреть',
       '∞',
+      'минимум',
+      'максимум',
     ],
   ],
   # }}}

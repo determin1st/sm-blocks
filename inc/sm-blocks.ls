@@ -4,19 +4,19 @@ smBlocks = do ->
 	# helpers {{{
 	###
 	# TODO
-	# - unify some configs
-	# - determine optimal height for paginator/orderer (CSS)
+	# - section => treeview
+	# - new slave: selector (simple dropdown)
 	# - category count display (extra)
 	# - static paginator max-width auto-calc
-	# - grid's goto next page + scroll up (?)
-	# - unify "sm-blocks" selector prefix
+	###
+	BRAND = 'sm-blocks'
 	###
 	consoleError = (msg) !-> # {{{
-		a = '%csm-blocks: %c'+msg
+		a = '%c'+BRAND+': %c'+msg
 		console.log a, 'font-weight:bold;color:slateblue', 'color:orange'
 	# }}}
 	consoleInfo = (msg) !-> # {{{
-		a = '%csm-blocks: %c'+msg
+		a = '%c'+BRAND+': %c'+msg
 		console.log a, 'font-weight:bold;color:slateblue', 'color:aquamarine'
 	# }}}
 	newPromise = (id = -1) -> # {{{
@@ -105,13 +105,13 @@ smBlocks = do ->
 	# }}}
 	# fetchers {{{
 	soFetch = httpFetch.create {
-		baseUrl: '/?rest_route=/sm-blocks/kiss'
+		baseUrl: '/?rest_route=/'+BRAND+'/kiss'
 		mounted: true
 		notNull: true
 		method: 'POST'
 	}
 	oFetch = httpFetch.create {
-		baseUrl: '/?rest_route=/sm-blocks/kiss'
+		baseUrl: '/?rest_route=/'+BRAND+'/kiss'
 		mounted: true
 		notNull: true
 		method: 'POST'
@@ -119,208 +119,229 @@ smBlocks = do ->
 		parseResponse: 'stream'
 	}
 	# }}}
-	S = # slaves (passive)
+	S = # slaves
 		section: do -> # {{{
+			Title = (node) !-> # {{{
+				@root  = node
+				@box   = node = node.firstChild
+				@h3    = node.children.0
+				@arrow = node.children.1
+				@label = @h3.firstChild
+			# }}}
 			Item = (block, node, parent) !-> # {{{
 				# base
 				@block  = block
 				@node   = node
 				@parent = parent
-				# state
-				@config  = JSON.parse node.dataset.cfg
-				@hovered = false
-				@focused = false
-				@opened  = node.classList.contains 'opened'
+				@config = cfg = JSON.parse node.dataset.cfg
 				# controls
-				# {{{
-				@titleBox = box  = querySelectorChild node, '.title'
+				@title    = new Title (querySelectorChild node, '.title')
+				@extra    = null # title extension
 				@section  = sect = querySelectorChild node, '.section'
-				if box
-					@title = querySelectorChild box, 'h3'
-					@arrow = querySelectorChild box, '.arrow'
-				else
-					@title = null
-					@arrow = null
-				# }}}
+				@children = c = querySelectorChildren sect, '.item'
+				# construct recursively
+				if c
+					for a,b in c
+						c[b] = new Item block, a, @
+				# state
+				@hovered = 0 # 1=arrow 2=extra
+				@focused = 0
+				@opened  = false
+				@locked  = true
 				# handlers
-				@hover = (e) !~> # {{{
-					# fulfil event
-					e.preventDefault!
-					# operate
-					if not @block.locked
-						e.currentTarget.classList.add 'h'
-						if not @hovered and \
-							(not @config.extra or \
-								e.currentTarget == @arrow)
-							###
-							@hovered = true
-							@node.classList.add 'hovered'
-							# set extra hover
-							if not @config.extra
-								if e.currentTarget == @title
-									@arrow.classList.add 'h'
-								else
-									@title.classList.add 'h'
-							# autofocus
-							if not @block.focused
-								@block.onAutofocus @arrow
+				hoverBounce = newDelay!
+				focusBounce = newDelay!
+				@onHover = (e, hovered) ~>> # {{{
+					# bounce
+					hoverBounce.cancel! if hoverBounce.pending
+					if await hoverBounce := newDelay 66
+						# determine hover variant
+						a = @title.arrow
+						x = @extra
+						hovered = if not hovered
+							then 0
+							else if not x or e == a
+								then 1 # arrow
+								else 2 # extra
+						# check
+						if hovered != (h = @hovered)
+							# operate
+							# update value
+							@hovered = hovered
+							# set children
+							if hovered == 1
+								x.setHovered false if h
+								a.classList.add 'h'
+							else if hovered == 2
+								x.setHovered true
+								a.classList.remove 'h' if h
+							else if h == 2
+								x.setHovered false
+							else
+								a.classList.remove 'h'
+							# set self
+							a = @node.classList
+							a.remove 'h'+h if h
+							a.add 'h'+hovered if hovered
+							# callback
+							if (not hovered or not h) and @block.onHover
+								@block.onHover @, hovered
+					# done
+					return false
 				# }}}
-				@unhover = (e) !~> # {{{
-					# fulfil event
-					e.preventDefault!
-					# operate
-					if not @block.locked
-						e.currentTarget.classList.remove 'h'
-						if @hovered
-							@hovered = false
-							@node.classList.remove 'hovered'
-							if not @config.extra
-								if e.currentTarget == @title
-									@arrow.classList.remove 'h'
-								else
-									@title.classList.remove 'h'
+				@onFocus = (e, focused) ~>> # {{{
+					# bounce
+					focusBounce.cancel! if focusBounce.pending
+					if await focusBounce := newDelay 66
+						# determine focus variant
+						a = @title.arrow
+						x = @extra
+						focused = if not focused
+							then 0
+							else if not x or e == a
+								then 1 # arrow
+								else 2 # extra
+						# check
+						if focused != (f = @focused)
+							# operate
+							@focused = focused
+							@node.classList.toggle 'f', !!focused
+							# callback
+							@block.onFocus @ if @block.onFocus
+					# done
+					return true
 				# }}}
 				@focus = (e) !~> # {{{
-					# fulfil event
+					# prepare
 					e.preventDefault!
 					# operate
-					if not @block.locked and not @focused
-						@focused = @block.focused = true
-						e @ if e = @block.onFocus
-						@node.classList.add 'focused'
-						@arrow.classList.add 'f'
-						if not @config.extra
-							@title.classList.add 'f'
+					if not @locked
+						(e = @title.arrow).classList.add 'f'
+						@onFocus e, true
 				# }}}
 				@unfocus = (e) !~> # {{{
-					# fulfil event
-					e.preventDefault!
-					# operate
-					if not @block.locked and @focused
-						@focused = @block.focused = false
-						e @ if e = @block.onFocus
-						@node.classList.remove 'focused'
-						@arrow.classList.remove 'f'
-						if not @config.extra
-							@title.classList.remove 'f'
-				# }}}
-				@switch = (e) !~> # {{{
-					# fulfil event
-					e.preventDefault!
-					e.stopPropagation!
-					# operate
-					if not @block.locked and @config.arrow and \
-						(not @config.extra or e.currentTarget == @arrow)
-						###
-						@opened = !@opened
-						@node.classList.toggle 'opened', @opened
-						if not @focused and @arrow
-							@arrow.focus!
-						# callback
-						e @ if e = @block.onChange
-				# }}}
-				@keydown = (e) !~> # {{{
-					# check enabled
-					if @block.locked or \
-						e.keyCode not in [38 40 37 39 75 74 72 76]
-						###
-						return
-					# fulfil the event
-					e.preventDefault!
-					e.stopPropagation!
-					# operate
-					switch e.keyCode
-					case 38, 75 # Up|k
-						# pass focus up {{{
-						# operate
-						if a = @searchArrow true
-							# ask controller
-							if (e = @block.onRefocus) and (e @, a, true)
-								return
-							# pass
-							a.arrow.focus!
-						# }}}
-					case 40, 74 # Down|j
-						# pass focus down {{{
-						# operate
-						if a = @searchArrow false
-							# ask controller
-							if (e = @block.onRefocus) and (e @, a, false)
-								return
-							# pass
-							a.arrow.focus!
-						# }}}
-					case 37, 72 # Left|h
-						# close section {{{
-						if @opened
-							# operate
-							@opened = false
-							@node.classList.remove 'opened'
-							# callback
-							e @ if e = @block.onChange
-						else if e = @block.onRefocus
-							# refocus
-							e @, null, true
-						# }}}
-					case 39, 76 # Right|l
-						# open section {{{
-						if not @opened
-							# operate
-							@opened = true
-							@node.classList.add 'opened'
-							# callback
-							e @ if e = @block.onChange
-						else if e = @block.onRefocus
-							# refocus
-							e @, null, false
-						# }}}
-					# done
-				# }}}
-				# children
-				# {{{
-				if (a = querySelectorChildren sect, '.item').length
-					# set and recurse
-					@children = a
-					for b,c in a
-						a[c] = new Item block, b, @
-				else
-					# leaf node
-					@children = null
-				# }}}
-			###
-			Item.prototype =
-				attach: !-> # {{{
 					# prepare
-					B = @block
-					# check arrow mode enabled and
-					# set section switch handlers
-					if @block.rootItem.config.mode .&. 4
-						if a = @arrow
-							a.addEventListener 'pointerenter', @hover
-							a.addEventListener 'pointerleave', @unhover
-							a.addEventListener 'focusin', @focus
-							a.addEventListener 'focusout', @unfocus
-							a.addEventListener 'keydown', @keydown
-							a.addEventListener 'click', @switch
+					e.preventDefault!
+					# operate
+					(e = @title.arrow).classList.remove 'f'
+					@onFocus e, false
+				# }}}
+				@keydown = (e) ~> # {{{
+					# check
+					if @locked
+						return false
+					# check
+					switch e.keyCode
+					case 38,75 # Up,k
+						# focus up
+						# find arrow above current item
+						if e = @searchArrow true
+							e.title.arrow.focus!
+						###
+					case 40,74 # Down,j
+						# find arrow below current item
+						if e = @searchArrow false
+							e.title.arrow.focus!
+						###
+					case 37,72,39,76 # Left,h,Right,l
+						# switch section
+						@onSwitch! if @section
+						console.log 'open/close section?'
+						###
+					default
+						return false
+					# handled
+					e.preventDefault!
+					e.stopPropagation!
+					return true
+				# }}}
+			Item.prototype =
+				init: !-> # {{{
+					# configure
+					@opened = @config.opened
+					@title.label.textContent = a if a = @config.name
+					# attach title
+					b = 'addEventListener'
+					a = @title.h3
+					a[b] 'pointerenter', @hover a
+					a[b] 'pointerleave', @unhover a
+					a[b] 'click', @click a
+					a = @title.arrow
+					a[b] 'pointerenter', @hover a
+					a[b] 'pointerleave', @unhover a
+					a[b] 'click', @click a
+					a[b] 'focusin', @focus
+					a[b] 'focusout', @unfocus
+					a[b] 'keydown', @keydown
+					# set styles
+					a = 'e'+((@extra and '1') or '0')
+					b = 'o'+((@opened and '1') or '0')
+					@node.classList.add a, b
+					@title.arrow.classList.add 'v' if @config.arrow
+					@extra.root.classList.add 'extra' if @extra
+					# recurse to children
+					if a = @children
+						for b in a
+							b.init!
+				# }}}
+				lock: (flag) -> # {{{
+					# check
+					if @locked != flag
+						# operate
+						@locked = flag
+						@node.classList.toggle 'v', !flag
 						if a = @title
-							a.addEventListener 'pointerenter', @hover
-							a.addEventListener 'pointerleave', @unhover
-							a.addEventListener 'click', @switch
+							a.arrow.disabled = flag
+						if a = @extra
+							a.lock flag
 					# recurse to children
 					if a = @children
 						for b in a
-							b.attach!
+							b.lock flag
+					# done
+					return flag
 				# }}}
-				detach: !-> # {{{
-					true
+				hover: (o) -> (e) !~> # {{{
+					# prepare
+					e.preventDefault!
+					# operate
+					if not @locked
+						@onHover o, true
 				# }}}
-				setClass: (name, flag = true) !-> # {{{
-					# recurse to children
-					if a = @children
-						for b in a
-							b.setClass name, flag
-					# apply on self
-					@node.classList.toggle name, flag
+				unhover: (o) -> (e) !~> # {{{
+					# prepare
+					e.preventDefault!
+					# operate
+					@onHover o, false
+				# }}}
+				click: (o) -> (e) !~>> # {{{
+					# prepare
+					e.preventDefault!
+					# check
+					if not @locked
+						# operate
+						if @extra and o == @title.h3
+							# trigger extra
+							@extra.event!
+						else if @section
+							# switch value
+							e = !@opened
+							if not @block.onChange or (await @block.onChange @, e)
+								@set e
+							# should be focused
+							@title.arrow.focus! if not @focused
+				# }}}
+				set: (v) -> # {{{
+					# check
+					if @opened == v
+						return false
+					# operate
+					@opened = v
+					v = (v and 1) or 0
+					@node.classList.remove 'o'+(1 - v)
+					@node.classList.add 'o'+v
+					# done
+					return true
 				# }}}
 				searchArrow: (direction) !-> # {{{
 					# WARNING: highly imperative
@@ -417,86 +438,380 @@ smBlocks = do ->
 					return a
 				# }}}
 			# }}}
-			Block = (root, state) !-> # {{{
+			Block = (root) !-> # {{{
 				# base
-				@root     = root
-				@rootBox  = box = root.firstChild
+				@root    = root
+				@rootBox = box = root.firstChild
 				# controls
-				@rootItem = root = new Item @, box, null
-				@lines    = querySelectorChildren box, 'svg'
-				@sect     = sect = {}     # with section (parents)
-				@item     = item = {}     # all
-				@list     = list = [root] # all ordered
-				# assemble tree
-				# {{{
+				@lines   = querySelectorChildren box, 'svg'
+				@item    = root  = new Item @, box, null
+				@sect    = sect  = {}     # with section (parents)
+				@items   = items = {}     # all
+				@list    = list  = [root] # all ordered
+				# assemble items tree in rendered order
 				a = -1
 				while ++a < list.length
 					if (b = list[a]).children
 						sect[b.config.id] = b
 						list.push ...b.children
-					item[b.config.id] = b
-				# }}}
+					items[b.config.id] = b
 				# state
-				@state    = state
+				@hovered  = false
 				@focused  = false
-				@locked   = 1
-				@class    = {}
-				# handlers
-				@onChange  = null
-				@onFocus   = null
-				@onRefocus = null
-				@onAutofocus = (node) !~> # {{{
-					if @rootItem.config.autofocus
-						if @rootItem.arrow
-							@rootItem.arrow.focus!
-						else if node
-							node.focus!
-				# }}}
+				@locked   = true
+				# traps
+				@onHover  = null
+				@onFocus  = null
+				@onChange = null
 			###
 			Block.prototype =
-				init: (title) ->> # {{{
-					# set default title
-					if title and not (a = @rootItem.title.firstChild).textContent
-						a.textContent = title
-					# attach events and complete
-					@rootItem.attach!
-					@root.classList.add 'v'
-					return true
+				init: (title) !-> # {{{
+					# set title
+					if not @item.config.name and title
+						@item.title.label.textContent = title
+					# initialize
+					@item.init!
 				# }}}
-				lock: (level) !-> # {{{
-					###
-					switch level
-					case 1
-						if not @locked
-							@rootItem.setClass 'v', false
-					default
-						if @locked
-							@rootItem.setClass 'v', true
-					# set
-					###
-					@locked = level
-				# }}}
-				setClass: (k, v) !-> # {{{
-					# check
-					a = @class
-					if not (a.hasOwnProperty k) or a[k] != v
-						# set
-						a[k] = v
-						@rootBox.classList.toggle k, !!v
-				# }}}
-				setTitle: (name) !-> # {{{
-					@rootItem.title.firstChild.textContent = name
-				# }}}
-				refresh: !-> # {{{
-					# done
-				# }}}
-				finit: !-> # {{{
-					@root.classList.remove 'v'
-					@rootItem.detach!
+				lock: (flag = true) !-> # {{{
+					if @locked != flag
+						@locked = @item.lock flag
 				# }}}
 			# }}}
-			return (node, state) ->
-				return new Block node, state
+				/***
+				S.onRefocus = (i1, i2, direction) ~> # {{{
+					# prepare
+					a = null
+					# check destination
+					if i2
+						# up/down navigation for root
+						if not i1.parent
+							# pass to checkbox
+							# get item
+							if direction
+								# last
+								a = i1.getLastVisible!
+								a = @checks.get a.config.id
+							else
+								# first
+								a = @checks.get i1.children.0.config.id
+					else
+						# left/right breakout
+						# direction doesn't matter for single checkbox
+						a = @checks.get i1.config.id
+					# custom
+					if a and a.checkbox
+						a.checkbox.focus!
+					# default
+					return !!a
+				# }}}
+				@onFocus = S.onFocus = do ~> # {{{
+					p = null
+					return (item) ~>>
+						# check
+						if p and p.pending
+							p.resolve false
+						# set
+						if item.focused
+							@focused = true
+							@root.classList.add 'f'
+						else if await (p := newDelay 60)
+							@focused = false
+							@root.classList.remove 'f'
+						# done
+						return true
+				# }}}
+				@onAutofocus = S.onAutofocus = (node) !~> # {{{
+					if not @focused and \
+						(a = S.rootItem).config.autofocus
+						###
+						if a.arrow
+							a.arrow.focus!
+						else
+							a.checks.checkbox.focus!
+				# }}}
+				/***/
+			return (o) ->
+				return new Block o
+		# }}}
+		select: do -> # {{{
+			template = parseTemplate !-> # {{{
+				/*
+				<svg preserveAspectRatio="none" shape-rendering="geometricPrecision" viewBox="0 0 48 48">
+					<polygon class="b" points="24,32 34,17 36,16 24,34 "/>
+					<polygon class="b" points="24,34 12,16 14,17 24,32 "/>
+					<polygon class="b" points="34,17 14,17 12,16 36,16 "/>
+					<polygon class="a" points="14,17 34,17 24,32 "/>
+				</svg>
+				*/
+			# }}}
+			Block = (root, select) !-> # {{{
+				# base
+				@root     = root
+				@select   = select
+				# state
+				@current  = -1
+				@hovered  = false
+				@focused  = false
+				@locked   = true
+				# traps
+				@onHover  = null
+				@onFocus  = null
+				@onChange = null
+				# handlers
+				@hover = (e) !~> # {{{
+					# fulfil event
+					e.preventDefault!
+					# operate
+					if not @locked and not @hovered
+						@hovered = true
+						@root.classList.add 'h'
+						e @ if e = @onHover
+				# }}}
+				@unhover = (e) !~> # {{{
+					# fulfil event
+					e.preventDefault!
+					# operate
+					if @hovered
+						@hovered = false
+						@root.classList.remove 'h'
+						e @ if e = @onHover
+				# }}}
+				@focus = (e) !~> # {{{
+					if @locked
+						# try to prevent
+						e.preventDefault!
+						e.stopPropagation!
+					else if not @focused
+						# opearate
+						@focused = true
+						@root.classList.add 'f'
+						e @ if e = @onFocus
+				# }}}
+				@unfocus = (e) !~> # {{{
+					# fulfil event
+					e.preventDefault!
+					# operate
+					if @focused
+						@focused = false
+						@root.classList.remove 'f'
+						e @ if e = @onFocus
+				# }}}
+				@input = (e) !~> # {{{
+					# prepare
+					e.preventDefault!
+					# check
+					if @locked or \
+					   ((e = @onChange) and not (e @select.selectedIndex))
+						###
+						# change is not allowed
+						@select.selectedIndex = @current
+					else
+						# update current
+						@current = @select.selectedIndex
+				# }}}
+			Block.prototype =
+				init: (list = null, index = -1) !-> # {{{
+					# set options
+					if list
+						# create options
+						for a in list
+							b = document.createElement 'option'
+							b.textContent = a
+							@select.appendChild b
+						# set current
+						@current = @select.selectedIndex = index
+					else
+						# reset and clear options
+						@current = @select.selectedIndex = -1
+						@select.innerHTML = ''
+					# set events
+					a = @root
+					b = if list
+						then 'addEventListener'
+						else 'removeEventListener'
+					###
+					a[b] 'pointerenter', @hover
+					a[b] 'pointerleave', @unhover
+					a[b] 'focusin', @focus
+					a[b] 'focusout', @unfocus
+					a[b] 'input', @input
+				# }}}
+				lock: (locked) !-> # {{{
+					if @locked != locked
+						@root.classList.toggle 'v', !(@locked = locked)
+						@select.disabled = locked
+				# }}}
+				set: (i) -> # {{{
+					@current = @select.selectedIndex = i if i != @current
+					return i
+				# }}}
+				get: -> # {{{
+					return @current
+				# }}}
+			# }}}
+			return (o = {}) ->
+				# create a container
+				a = document.createElement 'div'
+				a.className = BRAND+'-select'
+				a.innerHTML = if o.hasOwnProperty 'svg'
+					then o.svg
+					else template
+				# create a select
+				b = document.createElement 'select'
+				a.appendChild b
+				# create block
+				return new Block a, b
+		# }}}
+		checkbox: do -> # {{{
+			template = parseTemplate !-> # {{{
+				/*
+				<svg preserveAspectRatio="none" shape-rendering="geometricPrecision" viewBox="0 0 48 48">
+					<circle class="a" cx="24" cy="24" r="12"/>
+					<path class="b" d="M24 6a18 18 0 110 36 18 18 0 010-36zm0 6a12 12 0 110 24 12 12 0 010-24z"/>
+					<path class="c" d="M24 4a20 20 0 110 40 20 20 0 010-40zm0 2a18 18 0 110 36 18 18 0 010-36z"/>
+					<path class="d" d="M48 27v-6H0v6z"/>
+					<path class="e" d="M27 48V0h-6v48z"/>
+				</svg>
+				*/
+			# }}}
+			Block = (root, cfg) !-> # {{{
+				# base
+				@root = root
+				@cfg  = cfg
+				# state
+				@current  = -2 # -2=initial -1=intermediate, 0=off, 1=on
+				@hovered  = false
+				@focused  = false
+				@locked   = true
+				# traps
+				@onHover  = null
+				@onFocus  = null
+				@onChange = null
+				# handlers
+				@hover = (e) !~>> # {{{
+					# pprepare
+					e.preventDefault!
+					# check
+					if not @locked
+						# operate
+						if not @onHover or (await @onHover @, true)
+							@setHovered true
+				# }}}
+				@unhover = (e) !~>> # {{{
+					# prepare
+					e.preventDefault!
+					# operate
+					if not @onHover or (await @onHover @, false)
+						@setHovered false
+				# }}}
+				@focus = (e) !~>> # {{{
+					# check
+					if @locked
+						# try to prevent
+						e.preventDefault!
+						e.stopPropagation!
+					else
+						# operate
+						if not @onFocus or (await @onFocus @, true)
+							@setFocused true
+				# }}}
+				@unfocus = (e) !~>> # {{{
+					# prepare
+					e.preventDefault!
+					# operate
+					if not @onFocus or (await @onFocus @, false)
+						@setFocused false
+				# }}}
+				@click = (e) !~> # {{{
+					# prepare
+					e.preventDefault!
+					e.stopPropagation!
+					# check
+					if not @locked and (~@current or ~@cfg.intermediate)
+						# operate
+						@event!
+				# }}}
+				@event = !~>> # {{{
+					# determine new current
+					c = if ~(c = @current)
+						then 1 - c # switch 0<=>1
+						else @cfg.intermediate # escape
+					# should be focused
+					@root.focus! if not @focused
+					# operate
+					if not @onChange or (await @onChange @, c)
+						@set c
+					# done
+				# }}}
+			Block.prototype =
+				init: (v = -1) !-> # {{{
+					# set current state
+					@set v
+					@root.classList.add 'i' if ~@cfg.intermediate
+					# set traps
+					if a = @cfg.master
+						@onHover = a.onHover if not @onHover
+						@onFocus = a.onFocus if not @onFocus
+					# set events
+					a = @root
+					b = 'addEventListener'
+					a[b] 'pointerenter', @hover
+					a[b] 'pointerleave', @unhover
+					a[b] 'focusin', @focus
+					a[b] 'focusout', @unfocus
+					a[b] 'click', @click
+					# done
+				# }}}
+				lock: (flag = true) !-> # {{{
+					if @locked != flag
+						@root.classList.toggle 'v', !(@locked = flag)
+						if flag or ~@current or ~@cfg.intermediate
+							@root.disabled = flag
+				# }}}
+				set: (v) -> # {{{
+					# check
+					if @current == v
+						return v
+					# set style
+					if (i = @current + 1) >= 0
+						@root.classList.remove 'x'+i
+					@root.classList.add 'x'+(v + 1)
+					# complete
+					return @current = v
+				# }}}
+				setHovered: (v) -> # {{{
+					# check
+					if @hovered == v
+						return false
+					# operate
+					@hovered = v
+					@root.classList.toggle 'h'
+					return true
+				# }}}
+				setFocused: (v) -> # {{{
+					# check
+					if @focused == v
+						return false
+					# operate
+					@focused = v
+					@root.classList.toggle 'f'
+					return true
+				# }}}
+			# }}}
+			return (o = {}) ->
+				# prepare
+				o.intermediate = if o.intermediate
+					then o.intermediate
+					else -1 # disabled
+				# create a button
+				a = document.createElement 'button'
+				a.type = 'button'
+				a.className = BRAND+'-checkbox'
+				a.innerHTML = if o.svg
+					then o.svg
+					else template
+				# create a block
+				return new Block a, o
 		# }}}
 		productCard: do -> # {{{
 			init  = newPromise!
@@ -935,956 +1250,7 @@ smBlocks = do ->
 				# done
 				return m
 		# }}}
-	TODO =
-		'category-filter': do -> # {{{
-			Checkbox = (block, item, parent = null) !-> # {{{
-				# base
-				@block  = block
-				@item   = item
-				@parent = parent
-				# controls
-				@checkbox = cbox = if item.titleBox
-					then querySelectorChild item.titleBox, '.checkbox'
-					else null
-				# state
-				@hovered = false
-				@focused = false
-				@state   = 0
-				# handlers
-				@hover = (e) !~> # {{{
-					# fulfil the event
-					e.preventDefault!
-					# check
-					if not @block.locked and \
-						not @hovered
-						###
-						@item.node.classList.add 'hovered-2'
-						@hovered = true
-						# autofocus
-						if not @block.focused
-							@block.onAutofocus @checkbox
-				# }}}
-				@unhover = (e) !~> # {{{
-					# fulfil the event
-					e.preventDefault!
-					# check
-					if @hovered
-						@item.node.classList.remove 'hovered-2'
-						@hovered = false
-				# }}}
-				@focus = (e) !~> # {{{
-					# check
-					if not @block.locked and \
-						not @focused
-						###
-						@item.node.classList.add 'focused-2'
-						@focused = true
-						@block.onFocus @
-					else
-						# try to prevent focus
-						e.preventDefault!
-						e.stopImmediatePropagation!
-				# }}}
-				@unfocus = (e) !~> # {{{
-					# fulfil the event
-					e.preventDefault!
-					# check
-					if @focused
-						@item.node.classList.remove 'focused-2'
-						@focused = false
-						@block.onFocus @
-				# }}}
-				@check = (e) !~> # {{{
-					# fulfil the event
-					e.preventDefault!
-					e.stopImmediatePropagation!
-					# check
-					if @block.locked
-						return
-					# switch current and
-					# refresh block state
-					@block.refresh @toggleCheckbox!
-					# done
-					@checkbox.focus!
-				# }}}
-				@keydown = (e) !~> # {{{
-					# check enabled
-					if @block.locked or \
-						e.keyCode not in [38 40 37 39 75 74 72 76]
-						###
-						return
-					# fulfil the event
-					e.preventDefault!
-					e.stopPropagation!
-					# operate
-					switch e.keyCode
-					case 38, 75 # Up|k
-						# pass focus up {{{
-						# get upper item
-						a = @parent.children
-						if (b = a.indexOf @) == 0
-							a = @parent
-						else
-							a = a[b - 1].item.getLastVisible!
-							a = @parent.get a.config.id
-						# operate
-						if a.checkbox
-							a.checkbox.focus!
-						else if a.item.arrow
-							a.item.arrow.focus!
-						# }}}
-					case 40, 74 # Down|j
-						# pass focus down {{{
-						# get lower item
-						a = @item.getNextVisible!
-						a = @block.checks.get a.config.id
-						# operate
-						if a.checkbox
-							a.checkbox.focus!
-						else if a.item.arrow
-							a.item.arrow.focus!
-						# }}}
-					case 37, 72 # Left|h
-						# pass focus left {{{
-						a.focus! if a = @item.arrow
-						# }}}
-					case 39, 76 # Right|l
-						# pass focus right {{{
-						a.focus! if a = @item.arrow
-						# }}}
-					# done
-				# }}}
-				# set children
-				# {{{
-				if item.children
-					@children = a = []
-					for c,b in item.children
-						a[b] = new Checkbox block, c, @
-				else
-					@children = null
-				# }}}
-				# initialize
-				# {{{
-				# to avoid natural focus navigation problem,
-				# re-attach the checkbox
-				if cbox
-					a = cbox.parentNode
-					a.removeChild cbox
-					a.insertBefore cbox, a.firstChild
-				# }}}
-			###
-			Checkbox.prototype =
-				attach: !-> # {{{
-					# operate
-					if a = @checkbox
-						a.addEventListener 'pointerenter', @hover
-						a.addEventListener 'pointerleave', @unhover
-						a.addEventListener 'focusin',  @focus
-						a.addEventListener 'focusout', @unfocus
-						a.addEventListener 'click', @check
-						a.addEventListener 'keydown', @keydown
-						a = @item.title
-						a.addEventListener 'pointerenter', @hover
-						a.addEventListener 'pointerleave', @unhover
-						a.addEventListener 'click', @check
-						a.addEventListener 'keydown', @keydown
-					# recurse
-					if a = @children
-						for c in a
-							c.attach!
-				# }}}
-				detach: !-> # {{{
-					true
-				# }}}
-				get: (id) -> # {{{
-					# check self
-					if id == @item.config.id
-						return @
-					# search children recursively
-					if c = @children
-						for a in c when (a = a.get id)
-							return a
-					# nothing
-					return null
-				# }}}
-				setChildren: (items, v) -> # {{{
-					# create change list
-					list = []
-					# iterate items
-					for a in items when a.state != v
-						# set child
-						a.state = v
-						list[*] = a
-						# recurse
-						if a.children
-							list.push ...(@setChildren a.children, v)
-					# done
-					return list
-				# }}}
-				setParent: (item, v) -> # {{{
-					# check
-					if v == 2
-						# this value may only come from another parent,
-						# no need to check children
-						a = 2
-					else
-						# assume state homogeneity and
-						# iterate children to find the opposite
-						a = v
-						for b in item.children when b.state != a
-							a = 2
-							break
-					# set
-					if item.state == a
-						b = []
-					else
-						item.state = a
-						b = [item]
-					# recurse and complete
-					return if item.parent
-						then (@setParent item.parent, a) ++ b
-						else b
-				# }}}
-				toggleCheckbox: -> # {{{
-					# settle self first
-					@state = if @state == 2
-						then 1 # force determinism
-						else if @state
-							then 0
-							else 1
-					# create change list
-					list = [@]
-					# set parents
-					if @parent
-						list.push ...(@setParent @parent, @state)
-					# set children
-					if @children
-						list.push ...(@setChildren @children, @state)
-					# done
-					return list
-				# }}}
-				getCheckedIds: -> # {{{
-					# check self
-					list = if @state == 1 and @item.config.count > 0
-						then [@item.config.id]
-						else []
-					# check children
-					if @children
-						for a in @children
-							list.push ...(a.getCheckedIds!)
-					# done
-					return list
-				# }}}
-			# }}}
-			Block = (root, index) !-> # {{{
-				# base
-				@group   = 'category'
-				@root    = root
-				@index   = index
-				@rootBox = rootBox = root.firstChild
-				# controls
-				#@section = S = state.f.section root
-				#@checks  = new Checkbox @, S.rootItem
-				# state
-				@locked  = -1
-				@focused = false
-				/***
-				# handlers
-				S.onRefocus = (i1, i2, direction) ~> # {{{
-					# prepare
-					a = null
-					# check destination
-					if i2
-						# up/down navigation for root
-						if not i1.parent
-							# pass to checkbox
-							# get item
-							if direction
-								# last
-								a = i1.getLastVisible!
-								a = @checks.get a.config.id
-							else
-								# first
-								a = @checks.get i1.children.0.config.id
-					else
-						# left/right breakout
-						# direction doesn't matter for single checkbox
-						a = @checks.get i1.config.id
-					# custom
-					if a and a.checkbox
-						a.checkbox.focus!
-					# default
-					return !!a
-				# }}}
-				@onFocus = S.onFocus = do ~> # {{{
-					p = null
-					return (item) ~>>
-						# check
-						if p and p.pending
-							p.resolve false
-						# set
-						if item.focused
-							@focused = true
-							@root.classList.add 'f'
-						else if await (p := newDelay 60)
-							@focused = false
-							@root.classList.remove 'f'
-						# done
-						return true
-				# }}}
-				@onAutofocus = S.onAutofocus = (node) !~> # {{{
-					if not @focused and \
-						(a = S.rootItem).config.autofocus
-						###
-						if a.arrow
-							a.arrow.focus!
-						else
-							a.checks.checkbox.focus!
-				# }}}
-				/***/
-			###
-			Block.prototype =
-				level: 2
-				init: (cfg) ->> # {{{
-					# initialize
-					cfg = cfg.locale.title.0
-					if not (await @section.init cfg)
-						return false
-					# activate controls
-					@checks.attach!
-					# create individual data
-					@group.data[@index] = []
-					# done
-					return true
-				# }}}
-				refresh: (list) -> # {{{
-					# it's assumed that categories doesn't intersect
-					# in the attached UI root, so there may be
-					# only one originator and the refresh is
-					# the only source of the change..
-					# (no external calls needed)
-					if list
-						# iterate change list and set visual state
-						for a in list
-							b = a.item.node.classList
-							switch a.state
-							case 2
-								b.add 'checked', 'c2'
-								b.remove 'c1'
-							case 1
-								b.add 'checked', 'c1'
-								b.remove 'c2'
-							default
-								b.remove 'checked', 'c1', 'c2'
-					# check
-					if @index < 0
-						return true
-					# determine current filter
-					a = @checks.getCheckedIds!
-					b = @group.data[@index]
-					# compare arrays
-					if d = ((c = a.length) == b.length)
-						while --c >= 0
-							if a[c] != b[c]
-								d = false
-								break
-					# check the difference
-					if not d
-						# update array
-						b.length = c = a.length
-						while --c >= 0
-							b[c] = a[c]
-						# change the filter
-						@group.update!
-					# done
-					return true
-				# }}}
-				lock: (level) ->> # {{{
-					await @section.lock level
-					return true
-				# }}}
-			# }}}
-			return Block
-		# }}}
-		'price-filter': do -> # {{{
-			InputNum = (id, box) !-> # {{{
-				# base
-				@id    = id
-				@box   = box
-				@input = box.children.0
-				@label = box.children.1
-				# state
-				@value   = '' # current
-				@state   = ['' '' 0 0] # default/previous/selectionStart/End
-				@changed = false
-				@hovered = false
-				@focused = false
-				@locked  = true
-				@regex   = /^[0-9]{0,9}$/
-				# passive handlers
-				@onHover  = null
-				@onFocus  = null
-				@onSubmit = null
-				@onScroll = null
-				@onChange = null
-				# active handlers
-				@hover = (e) !~> # {{{
-					# fulfil event
-					e.preventDefault!
-					e.stopPropagation!
-					# operate
-					if not @locked
-						@hovered = true
-						@box.classList.add 'hovered'
-						e @ if e = @onHover
-				# }}}
-				@unhover = (e) !~> # {{{
-					# fulfil event
-					e.preventDefault!
-					# operate
-					if @hovered
-						@hovered = false
-						@box.classList.remove 'hovered'
-						e @ if e = @onHover
-				# }}}
-				@focus = (e) !~> # {{{
-					# check
-					if @locked
-						# try to prevent
-						e.preventDefault!
-						e.stopPropagation!
-					else
-						# operate
-						@focused = true
-						@box.classList.add 'focused'
-						@select!
-						e @ if e = @onFocus
-				# }}}
-				@unfocus = (e) !~> # {{{
-					# operate
-					@focused = false
-					@box.classList.remove 'focused'
-					e @ if e = @onFocus
-				# }}}
-				@inputChange = (e) ~> # {{{
-					# prepare
-					s = @state
-					v = @input.value
-					w = @value
-					# check
-					if v.length
-						# non-empty
-						if not @regex.test v
-							# invalid,
-							# restore previous
-							@input.value = s.1
-							@input.setSelectionRange s.2, s.3
-						else
-							# callback (value replacement?)
-							if @onChange and v != @value
-								v = @onChange @, v
-							# save and continue typing..
-							s.1 = @value = v
-							s.2 = @input.selectionStart
-							s.3 = @input.selectionEnd
-							return true
-					else
-						# empty,
-						# restore the default
-						@set s.0
-						@input.select!
-					# dont do the default
-					e.preventDefault!
-					e.stopPropagation!
-					return false
-				# }}}
-				@inputKey = (e) !~> # {{{
-					# check
-					if @locked
-						return
-					# operate
-					if e.keyCode == 13
-						# Enter {{{
-						# check
-						if not @onSubmit
-							return
-						# callback
-						@onSubmit @, e.ctrlKey
-						# }}}
-					else if e.keyCode in [38 40]
-						# Up, Down {{{
-						# check
-						if not @onScroll
-							return
-						# scroll
-						if @onScroll @, (e.keyCode == 38)
-							@input.select!
-						# }}}
-					else
-						return
-					# fulfil the event
-					e.preventDefault!
-					e.stopPropagation!
-				# }}}
-				@inputWheel = (e) !~> # {{{
-					# check
-					if @locked or not @onScroll
-						return false
-					# fulfil the event
-					e.preventDefault!
-					e.stopPropagation!
-					# callback
-					@onScroll @, (e.deltaY < 0)
-					# select text
-					@select! if @focused
-				# }}}
-				@onLabel = (e) !~> # {{{
-					# check
-					if @locked or not @focused or not @onSubmit
-						return
-					# fulfil the event
-					e.preventDefault!
-					e.stopPropagation!
-					# check current against default
-					if @value != @state.0
-						# restore and submit
-						@set @state.0
-						@input.select!
-						@onSubmit @, true
-				# }}}
-			###
-			InputNum.prototype =
-				init: (label, v) !-> # {{{
-					@label.textContent = label
-					@set v
-					@state.0 = v
-				# }}}
-				attach: !-> # {{{
-					###
-					@box.addEventListener 'pointerenter', @hover
-					@box.addEventListener 'pointerleave', @unhover
-					@box.addEventListener 'wheel', @inputWheel
-					###
-					@input.addEventListener 'focusin',  @focus
-					@input.addEventListener 'focusout', @unfocus
-					@input.addEventListener 'input', @inputChange, true
-					@input.addEventListener 'keydown', @inputKey, true
-					###
-					@label.addEventListener 'pointerdown', @labelClick, true
-				# }}}
-				detach: !-> # {{{
-					# done
-				# }}}
-				set: (v) !-> # {{{
-					s = @state
-					s.1 = @input.value = @value = '' + v
-					s.2 = 0
-					s.3 = s.1.length
-				# }}}
-				lock: (flag) !-> # {{{
-					# check
-					if flag == @locked
-						return
-					# operate
-					@locked = flag
-					@input.readOnly = flag
-					@input.value = if flag
-						then ''
-						else @value
-					@box.classList.toggle 'locked', flag
-				# }}}
-				select: !-> # {{{
-					s   = @state
-					s.2 = 0
-					s.3 = @value.length
-					###
-					@input.select!
-				# }}}
-			# }}}
-			TextInputs = (block, box) !-> # {{{
-				# base
-				@block = block
-				@box   = box
-				# controls
-				@n0    = n0 = new InputNum 0, box.children.0
-				@svg   = box.children.1
-				@rst   = querySelectorChild @svg, '.X'
-				@n1    = n1 = new InputNum 1, box.children.2
-				# state
-				@changed = 0
-				@hovered = false
-				@focused = false
-				@locked  = true
-				# handlers
-				@onFocus = null
-				n0.onHover = n1.onHover = (o) !~> # {{{
-					# set
-					@box.classList.toggle 'h'+o.id, o.hovered
-					# callback
-					if not @block.focused
-						@block.onAutofocus o.input
-				# }}}
-				n0.onFocus = n1.onFocus = (o) !~> # {{{
-					# set
-					v = o.focused
-					@box.classList.toggle 'f'+o.id, v
-					if @focused = v
-						# select current
-						o.select!
-					else
-						# checkout and submit
-						@check o.id
-						if @changed
-							@changed = 0
-							@block.submit!
-					# callback
-					o @ if o = @onFocus
-				# }}}
-				n0.onSubmit = n1.onSubmit = (o, strict) !~> # {{{
-					# check
-					if not @check o.id and strict
-						o.select!
-						return
-					# submit
-					if @changed
-						@changed = 0
-						@block.submit!
-					# swap focus
-					if not strict
-						o = if o == @n1
-							then @n0
-							else @n1
-						o.input.focus!
-				# }}}
-				n0.onScroll = n1.onScroll = (o, direction) !~> # {{{
-					# prepare
-					c = @block.current
-					d = c.4 - c.3
-					# determine step and 0-alignment
-					# {{{
-					if d > 200
-						# 1% of the range
-						a = d / 100 .|. 0
-						b = '' + a
-						# check alignment possible
-						if (e = b.length) > 1
-							# determine aligned step
-							e = if e > 2
-								then e - 2
-								else 1
-							b = (b.slice 0, -e) + ('0'.repeat e)
-							a = +b
-						else
-							e = 0
-					else
-						# simpliest
-						e = 0
-						a = 1
-					# }}}
-					# determine current
-					b = +o.value
-					# increment
-					if direction
-						b += a
-					else
-						b -= a
-					# align
-					a = if e
-						then +(((''+b).slice 0, -e) + ('0'.repeat e))
-						else b
-					# determine new range
-					if o.id
-						# right
-						b = a
-						a = +@n0.value
-						if b >= c.4
-							b = c.4
-						else if b <= a
-							b = a + 1
-					else
-						# left
-						b = +@n1.value
-						if a <= c.3
-							a = c.3
-						else if a >= b
-							a = b - 1
-					# apply and submit
-					@set a, b
-					@check o.id
-					if @changed
-						@changed = 0
-						@block.submit!
-					# done
-					return true
-				# }}}
-				@hover = (e) !~> # {{{
-					# fulfil event
-					e.preventDefault!
-					# operate
-					if not @locked and not @hovered
-						@hovered = true
-						@box.classList.add 'hovered'
-						# callback
-						if not @block.focused
-							@block.onAutofocus!
-				# }}}
-				@unhover = (e) !~> # {{{
-					# fulfil event
-					e.preventDefault!
-					# operate
-					if @hovered
-						@hovered = false
-						@box.classList.remove 'hovered'
-				# }}}
-				@reset = (e) !~> # {{{
-					# check
-					if not @locked
-						# fulfil the event
-						if e
-							e.preventDefault!
-							e.stopPropagation!
-						# check
-						if (c = @block.current).0
-							# reset and submit
-							c.0 = false
-							c.1 = c.2 = -1
-							@set c.3, c.4
-							@changed = 0
-							@block.submit!
-				# }}}
-			###
-			TextInputs.prototype =
-				init: (locale) !-> # {{{
-					c = @block.current
-					@n0.init locale.min, c.3
-					@n1.init locale.max, c.4
-				# }}}
-				attach: !-> # {{{
-					###
-					@box.addEventListener 'pointerenter', @hover
-					@box.addEventListener 'pointerleave', @unhover
-					###
-					@n0.attach!
-					@n1.attach!
-					###
-					#@svg.addEventListener 'wheel', @onScroll
-					@rst.addEventListener 'click', @reset if @rst
-				# }}}
-				detach: !-> # {{{
-					# done
-				# }}}
-				set: (min, max) !-> # {{{
-					@n0.set min
-					@n1.set max
-				# }}}
-				check: (id) -> # {{{
-					# get the values
-					a = +@n0.value
-					b = +@n1.value
-					c = @block.current
-					d = true # input is correct
-					# check range numbers
-					if a > b
-						# swap values (if user mixed-up min>max)
-						d = a
-						a = b
-						b = d
-						d = false
-					else if a == b
-						# push inactive border
-						if id
-							if (a = c.3) == b
-								++b
-						else
-							if (b = c.4) == a
-								--a
-						d = false
-					# check out of the valid range
-					if a >= c.4 or a < c.3
-						d = false
-						a = if c.0
-							then c.1
-							else c.3
-					else if a < c.3
-						d = false
-						a = c.3
-					if b <= c.3
-						d = false
-						b = if c.0
-							then c.2
-							else c.4
-					else if b > c.4
-						d = false
-						b = c.4
-					# fix incorrect input
-					@set a, b if not d
-					# determine current state
-					if a == c.3 and b == c.4
-						# inactive
-						# set pending change
-						++@changed if c.0
-						# reset
-						c.0 = false
-						c.1 = c.2 = -1
-					else
-						# active
-						# set pending change
-						++@changed if not c.0 or (a != c.1 or b != c.2)
-						# set filter
-						c.0 = true
-						c.1 = a
-						c.2 = b
-					# done
-					return d
-				# }}}
-				lock: (flag) !-> # {{{
-					# check
-					if @locked == flag
-						return
-					# opearate
-					@locked = flag
-					@n0.lock flag
-					@n1.lock flag
-				# }}}
-				focus: !-> # {{{
-					@n0.input.focus!
-				# }}}
-			# }}}
-			Block = (root, index) !-> # {{{
-				# base
-				@group   = 'price'
-				@root    = root
-				@index   = index
-				@rootBox = box = root.firstChild
-				@config  = JSON.parse root.dataset.cfg
-				/***
-				# controls
-				# determine UI mode
-				mode = if box.classList.contains 'text'
-					then 0
-					else 1
-				@inputs  = I = new TextInputs @, box
-				@section = S = state.f.section root.parentNode.parentNode.parentNode
-				/***/
-				# state
-				@locked  = -1
-				@mode    = mode
-				@focused = false
-				@current = [false,-1,-1,-1,-1]
-				@pending = false
-				# handlers
-				/***
-				@onAutofocus = S.onAutofocus
-				S.onChange = (o) !~> # {{{
-					# check
-					if not @config.sectionSwitch or o.parent
-						return
-					# operate
-					c = @current
-					if o.opened
-						# enable
-						if not c.0 and (~c.1 or ~c.2)
-							c.0 = true
-							@submit!
-					else
-						# disable
-						if c.0
-							c.0 = false
-							@submit!
-				# }}}
-				I.onFocus = S.onFocus = do ~> # {{{
-					p = null
-					return (o) ~>>
-						# check
-						if p and p.pending
-							p.resolve false
-						# set
-						if o.focused
-							@focused = @section.focused = true
-							@section.root.classList.add 'f'
-						else if await (p := newDelay 60)
-							@focused = @section.focused = false
-							@section.root.classList.remove 'f'
-						# done
-						return true
-				# }}}
-				S.onRefocus = (i1, i2, direction) ~> # {{{
-					# check
-					if i2
-						if direction
-							# last
-							@inputs.n1.input.focus!
-						else
-							# first
-							@inputs.n0.input.focus!
-						# done
-						return true
-					# done
-					return false
-				# }}}
-				/***/
-			###
-			Block.prototype =
-				level: 2
-				init: (cfg) ->> # {{{
-					# initialize
-					if not (await @section.init cfg.locale.price.title)
-						return false
-					# copy current
-					@current[0 to 4] = @group.data
-					# initialize controls
-					@inputs.init cfg.locale.price
-					@inputs.attach!
-					# done
-					return true
-				# }}}
-				refresh: -> # {{{
-					# prepare
-					a = @group.data # source
-					b = @current    # destination
-					# sync status changed
-					if a.0 != b.0
-						@rootBox.classList.toggle 'active', a.0
-						@section.setClass 'active', a.0
-					# check current changed
-					if a.0 != b.0 or a.1 != b.1 or a.2 != b.2
-						@inputs.set a.1, a.2
-					# sync
-					b[0 to 4] = a
-					return true
-				# }}}
-				lock: (level) ->> # {{{
-					@inputs.lock level
-					@section.lock level
-					return true
-				# }}}
-				submit: do -> # {{{
-					p = newDelay 0
-					return ->>
-						# reset
-						p.cancel!
-						# prepare
-						a = @current    # source
-						b = @group.data # destination
-						# check status changed
-						if a.0 != b.0
-							@rootBox.classList.toggle 'active', a.0
-							@section.setClass 'active', a.0
-						# sync
-						b[0 to 2] = a
-						@pending = true
-						# throttle
-						if await (p := newDelay 400)
-							# update
-							@pending = false
-							@group.update!
-						# done
-						return true
-				# }}}
-			# }}}
-			return Block
-		# }}}
-	M = # masters (active)
+	M = # masters
 		'products': do -> # {{{
 			Resizer = (block) !-> # {{{
 				# create object shape
@@ -2266,8 +1632,6 @@ smBlocks = do ->
 			###
 			Block.prototype =
 				level: 1
-				configure: (s) !-> # {{{
-				# }}}
 				init: (s, c) -> # {{{
 					# set state and config
 					c.order = a if a = @config.options
@@ -2284,6 +1648,11 @@ smBlocks = do ->
 						else b
 					s = Math.ceil (s / @resizer.sizes.1)
 					@page = 5 * o.0 * s # x5 zoom factor (x4=25% considered max)
+					# create items (page)
+					a = @page + 1
+					b = @items
+					while --a
+						b[*] = @group.f.productCard @
 					# set initial range and items count
 					@setRange 0
 					@setCount c.count
@@ -2335,31 +1704,61 @@ smBlocks = do ->
 					return 0
 				# }}}
 				setCount: (count) -> # {{{
-					# check equal
-					if @count == count
-						return false
-					# check items buffer
+					# prepare
 					a = @items
-					if not a.length or (count / a.length) > 0.8
-						# create more items (add page)
-						c = a.length + @page
-						while a.length < c
-							a[*] = @group.f.productCard @
-					# show more
-					b = @bufA
-					c = @count - 1
-					while ++c < count
-						# set constructed
-						a[c].root.classList.add 'v'
-						# set data
-						if c < b.length and a[c].id != b[c].id
-							a[c].set b[c]
-					# show less
-					while c > count
-						a[--c].root.classList.remove 'v'
-					# update value
+					c = @count
+					n = @group.config.total
+					# check
+					if c == count
+						# no change
+						return false
+						###
+					else if c < count
+						# rise, rise display count
+						# prepare
+						c = c - 1
+						o = @offset
+						# determine initial shift direction and size
+						if (d = o.0 - o.1) >= 0
+							d = d - n if d > @page
+						else
+							d = d + n if d < -@page
+						# operate
+						while ++c < count
+							# determine item's location in the buffer
+							if d >= 0
+								# forward buffer
+								i = d
+								b = @bufA[i]
+							else if (i = c + d) >= 0
+								# last page is not aligned with the total and
+								# wrap around option may prescribe to display
+								# records from the first page, blanks otherwise
+								b = if @config.wrapAround
+									then @bufA[i]
+									else null
+							else
+								# backward buffer
+								i = -i - 1
+								b = @bufB[i]
+							# set content
+							if b
+								# only when needed
+								a[c].set b if b.id != a[c].id
+							else
+								# empty
+								a[c].clear!
+							# set visible
+							a[c].root.classList.add 'v'
+						###
+					else
+						# reduce display count
+						while c > count
+							a[--c].root.classList.remove 'v'
+						###
+					# check group configuration
 					if (@count = c) != @group.config.count
-						# refresh group
+						# refresh other blocks
 						@group.config.count = c
 						@group.refresh @
 					# done
@@ -2381,10 +1780,8 @@ smBlocks = do ->
 						i = i - c # swap to backward
 					else if i < 0 and c + i < -i
 						i = c + i # swap to forward
-					# check out of the buffer
+					# check out of range
 					if (Math.abs i) > d + d - 1
-						# cleanup
-						console.log 'out of buffer'
 						@clearBuffer!
 						return 2
 					# determine steady limit
@@ -2410,23 +1807,24 @@ smBlocks = do ->
 							if k >= 0 and b - k > 0
 								@items[j].set B[k]
 							else if k < 0 and a + k > 0
-								# the count of displayed items may not align
+								# option: the count of displayed items may not align
 								# with the total count, so, the last page may show
 								# records from forward buffer
-								@items[j].set A[-k - 1]
+								if @config.wrapAround
+									@items[j].set A[-k - 1]
+								else
+									@items[j].clear!
 							else
 								@items[j].clear!
 							--k
 						# }}}
 						return 0
-					###
 					# check partial penetration
 					if i > 0 and a - i > 0
 						# forward {{{
 						# [v|v|v|v]
 						#   [v|v|v|x]
 						# avoid creation of sparse array
-						console.log 'front partially penetrated'
 						j = b
 						while j < i
 							B[j++] = null
@@ -2461,7 +1859,6 @@ smBlocks = do ->
 						#   [v|v|v|v]
 						# [x|v|v|v]
 						# avoid creation of sparse array
-						console.log 'back partially penetrated'
 						i = -i
 						j = a
 						while j < i
@@ -2494,7 +1891,6 @@ smBlocks = do ->
 						# }}}
 						return -1
 					# buffer penetrated (wasn't filled enough)
-					console.log 'buffer penetrated'
 					@clearBuffer!
 					return -2
 				# }}}
@@ -3416,7 +2812,7 @@ smBlocks = do ->
 					@range.refresh!
 					return true
 				# }}}
-				lock: (level) ->> # {{{
+				lock: (level) !-> # {{{
 					# terminate activity (dragging, fast forwarding..)
 					if level > 0 and @control.lock.pending
 						@control.lock.resolve 0
@@ -3424,14 +2820,12 @@ smBlocks = do ->
 					if level > 1 and ~(a = @range.current)
 						@range.pages[a].classList.remove 'x'
 					# done
-					return true
 				# }}}
-				unlock: (level) ->> # {{{
+				unlock: (level) !-> # {{{
 					# restore selection style
 					if (level == -1 or level > 1) and ~(a = @range.current)
 						@range.pages[a].classList.add 'x'
 					# done
-					return true
 				# }}}
 				submit: !-> # {{{
 					# set records offset
@@ -3596,29 +2990,25 @@ smBlocks = do ->
 			return Block
 		# }}}
 		'orderer': do -> # {{{
+			template = parseTemplate !-> # {{{
+				/*
+				<svg preserveAspectRatio="none" shape-rendering="geometricPrecision" viewBox="0 0 48 48">
+					<g class="a1">
+						<polygon class="a" points="12,12 24,0 36,12 33,15 27,9 27,45 21,45 21,9 15,15 "/>
+						<polygon class="b" points="13,12 24,1 35,12 33,14 26,7 26,44 22,44 22,7 15,14 "/>
+					</g>
+					<g class="a2">
+						<polygon class="a" points="12,33 24,45 36,33 33,30 27,36 27,12 33,18 36,15 24,3 12,15 15,18 21,12 21,36 15,30 "/>
+						<polygon class="b" points="13,33 24,44 35,33 33,31 26,38 26,10 33,17 35,15 24,4 13,15 15,17 22,10 22,38 15,31 "/>
+					</g>
+				</svg>
+				*/
+			# }}}
 			Control = (block) !-> # {{{
 				# create object shape
 				# data
 				@block   = block
-				@hovered = 0
-				@focused = false
 				# bound handlers
-				@hover = (e) !~> # {{{
-					# fulfil event
-					e.preventDefault!
-					# operate
-					if not @block.locked and not @hovered
-						@hovered = 1
-						@block.rootBox.classList.add 'hovered'
-				# }}}
-				@unhover = (e) !~> # {{{
-					# fulfil event
-					e.preventDefault!
-					# operate
-					if @hovered == 1
-						@hovered = 0
-						@block.rootBox.classList.remove 'hovered'
-				# }}}
 				@switchVariant = (e) !~> # {{{
 					# fulfil event
 					e.preventDefault!
@@ -3694,68 +3084,870 @@ smBlocks = do ->
 				# base
 				@group   = 'order'
 				@root    = root
-				@rootBox = root.firstChild
+				@rootBox = box = root.firstChild
+				@config  = JSON.parse box.dataset.cfg
 				# controls
-				@variant = a = [...(root.querySelectorAll '.variant')]
-				@switch  = a.map (a) -> a.firstChild
-				@select  = root.querySelector 'select'
+				@tag     = null
+				@variant = null
 				# state
+				@current = ['',-2] # tag,variant
+				@options = null    # {option:[tag,variant]}
+				@keys    = null    # option names
+				@hovered = false
+				@focused = false
 				@locked  = -1
-				@current = ['',-1]
-				@options = null
-				@keys    = null
-				@ctrl    = new Control @
 				# handlers
-				@onResize = null
+				@hover = (o) !~> # {{{
+					# check
+					if (h = o.hovered) != @hovered and (not h or not @locked)
+						# operate
+						@hovered = h
+						@rootBox.classList.toggle 'hovered', h
+				# }}}
+				@focus = (o) !~> # {{{
+					if (f = o.focused) != @focused
+						@focused = f
+						@rootBox.classList.toggle 'focused', f
+				# }}}
+				@tagChange = (i) ~> # {{{
+					# get tag name by given index and
+					# change group tag and variant
+					@group.data.0 = i = @keys[i]
+					@group.data.1 = @options[i][1]
+					@group.submit!
+					# complete
+					return true
+				# }}}
+				@variantChange = (i) ~> # {{{
+					# change
+					@group.data.1 = i
+					@group.submit!
+					# complete
+					return true
+				# }}}
 			###
 			Block.prototype =
 				level: 1
-				init: (s, c) -> # {{{
-					# initialize state
-					@options = o = c.locale.order
-					@keys    = k = c.order or (Object.getOwnPropertyNames o)
-					# create select options
-					s = @select
-					for a in k
-						# create
-						a = o[a]
-						b = document.createElement 'option'
-						b.textContent = a.0
-						b.value = a.1
-						# add
-						s.appendChild b
+				init: (s, c) ->> # {{{
+					# initialize
+					s.order    = @config.order if @config.order
+					@options   = o = c.locale.order
+					@keys      = k = c.order or (Object.getOwnPropertyNames o)
+					@tag       = a = @group.f.select!
+					@variant   = b = @group.f.checkbox {svg: template}
+					a.onHover  = b.onHover = @hover
+					a.onFocus  = b.onFocus = @focus
+					a.onChange = @tagChange
+					b.onChange = @variantChange
+					###
+					c = []
+					i = -1
+					while ++i < k.length
+						c[i] = o[k[i]][0] # localized name
+					i = k.indexOf s.order.0
+					k = s.order.1
+					###
+					a.init c, i
+					b.init k
+					# compose self
+					o = @rootBox
+					o.appendChild b.root
+					o.appendChild a.root
+					# done
+					return true
+				# }}}
+				lock: !-> # {{{
+					@tag.lock true
+					@variant.lock true
+				# }}}
+				unlock: !-> # {{{
+					@tag.lock false
+					@variant.lock false
+				# }}}
+				refresh: -> # {{{
+					# prepare
+					a = @group.data
+					b = @current
+					# check
+					if a.0 == b.0 and a.1 == b.1
+						return true
+					# set style
+					if (c = b.1 + 1) <= 2
+						@rootBox.classList.remove (('abc')[c])
+					@rootBox.classList.add (('abc')[a.1 + 1])
+					# set values
+					if a.0 != b.0
+						# backup current variant
+						@options[b.0][1] = b.1 if b.0 and ~b.1
+						# set tag and variant
+						b.0 = @keys[@tag.set @keys.indexOf a.0]
+						b.1 = @variant.set a.1
+					else if a.1 != b.1
+						# set variant only
+						b.1 = @variant.set a.1
+					# done
+					return true
+				# }}}
+			# }}}
+			return Block
+		# }}}
+		'price-filter': do -> # {{{
+			InputNum = (box) !-> # {{{
+				# base
+				@box   = box
+				@input = box.children.0
+				@label = box.children.1
+				# state
+				@current = ['','',0,0] # default/current/selectionStart/End
+				@changed = false
+				@hovered = false
+				@focused = false
+				@locked  = true
+				# traps
+				@onHover  = null
+				@onFocus  = null
+				@onSubmit = null
+				@onScroll = null
+				@onChange = null
+				# private
+				wheelLock = newDelay!
+				eUnsignedInt = /^[0-9]{0,9}$/
+				# handlers
+				@hover = (e) !~> # {{{
+					# prepare
+					e.preventDefault!
+					e.stopPropagation!
+					# operate
+					if not @locked
+						@hovered = true
+						@box.classList.add 'hovered'
+						e @ if e = @onHover
+				# }}}
+				@unhover = (e) !~> # {{{
+					# fulfil event
+					e.preventDefault!
+					# operate
+					if @hovered
+						@hovered = false
+						@box.classList.remove 'hovered'
+						e @ if e = @onHover
+				# }}}
+				@wheel = (e) ~>> # {{{
+					# check
+					if @locked
+						return false
+					# fulfil the event
+					e.preventDefault!
+					e.stopPropagation!
+					# bounce
+					wheelLock.cancel! if wheelLock.pending
+					if not await (wheelLock := newDelay 17)
+						return false
+					# callback
+					@onScroll @, (e.deltaY < 0)
+					return true
+				# }}}
+				@focus = (e) !~> # {{{
+					# check
+					if @locked
+						# try to prevent
+						e.preventDefault!
+						e.stopPropagation!
+					else
+						# operate
+						@focused = true
+						@box.classList.add 'focused'
+						e @ if e = @onFocus
+				# }}}
+				@unfocus = (e) !~> # {{{
+					# operate
+					@focused = false
+					@box.classList.remove 'focused'
+					e @ if e = @onFocus
+				# }}}
+				@change = (e) ~> # {{{
+					# prepare
+					c = @current
+					v = @input.value
+					w = c.1
+					# check
+					if not v.length
+						# empty,
+						# reset to the default
+						@set c.0
+						@input.select!
+						# callback
+						v = if @onChange and w != c.0
+							then @onChange @, c.0
+							else false
+						###
+					else if not eUnsignedInt.test v
+						# invalid,
+						# restore previous
+						@input.value = c.1
+						@input.setSelectionRange c.2, c.3
+						v = false
+						###
+					else
+						# valid,
+						# update current
+						c.1 = v
+						c.2 = @input.selectionStart
+						c.3 = @input.selectionEnd
+						# callback
+						v = if @onChange and w != v
+							then @onChange @, c.1
+							else true
+					# cancel ivalid input
+					if not v
+						e.preventDefault!
+						e.stopPropagation!
+					# done
+					return v
+				# }}}
+				@key = (e) !~> # {{{
+					# check
+					if @locked
+						return
+					# operate
+					if e.keyCode == 13
+						# Enter {{{
+						# check
+						if not @onSubmit
+							return
+						# callback
+						@onSubmit @, e.ctrlKey
+						# }}}
+					else if e.keyCode in [38 40]
+						# Up, Down {{{
+						# check
+						if not @onScroll
+							return
+						# callback
+						@onScroll @, (e.keyCode == 38)
+						# }}}
+					else
+						return
+					# fulfil the event
+					e.preventDefault!
+					e.stopPropagation!
+				# }}}
+				@onLabel = (e) !~> # {{{
+					# prepare
+					e.preventDefault!
+					e.stopPropagation!
+					# check
+					e = @current
+					if not @locked and @focused and @onSubmit and e.1 != e.0
+						# restore default
+						@set e.0
+						@onSubmit @, true
+				# }}}
+			###
+			InputNum.prototype =
+				init: (val, label) !-> # {{{
+					# set content
+					@label.textContent = label
+					@current.0 = '' + (@set val)
+					# set event handlers
+					a = 'addEventListener'
+					@box[a] 'pointerenter', @hover
+					@box[a] 'pointerleave', @unhover
+					@box[a] 'wheel', @wheel if @onScroll
+					@input[a] 'focusin',  @focus
+					@input[a] 'focusout', @unfocus
+					@input[a] 'input', @change, true
+					@input[a] 'keydown', @key, true
+					@label[a] 'pointerdown', @onLabel, true if @onLabel
+					# done
+				# }}}
+				set: (v) -> # {{{
+					c   = @current
+					c.1 = @input.value = '' + v
+					c.2 = 0
+					c.3 = c.1.length
+					return v
+				# }}}
+				lock: (locked) -> # {{{
+					# operate
+					if @locked != locked
+						@locked = locked
+						@input.readOnly = !!locked
+						@input.value = if locked
+							then ''
+							else @current.1
+					# done
+					return locked
+				# }}}
+				select: !-> # {{{
+					c   = @current
+					c.2 = 0
+					c.3 = c.1.length
+					###
+					@input.select!
+				# }}}
+				focus: !-> # {{{
+					@input.focus!
+				# }}}
+				get: -> # {{{
+					return +@current.1
+				# }}}
+			# }}}
+			NumRange = (box) !-> # {{{
+				# base
+				@box = box
+				@num = [
+					new InputNum box.children.0
+					new InputNum box.children.2
+				]
+				@svg = box.children.1
+				@rst = querySelectorChild @svg, '.X'
+				# state
+				@current = null # [fromMin,toMax]
+				@range   = null # [min,max]
+				@hovered = false
+				@focused = false
+				@locked  = true
+				# traps
+				@onFocus  = null
+				@onSubmit = null
+				# handlers
+				@hover = (e) !~> # {{{
+					# fulfil event
+					e.preventDefault!
+					# operate
+					if not @locked and not @hovered
+						@hovered = true
+						@box.classList.add 'hovered'
+				# }}}
+				@unhover = (e) !~> # {{{
+					# fulfil event
+					e.preventDefault!
+					# operate
+					if @hovered
+						@hovered = false
+						@box.classList.remove 'hovered'
+				# }}}
+				@reset = (e) !~> # {{{
+					# prepare
+					e.preventDefault!
+					e.stopPropagation!
+					# check
+					if not @locked
+						# set default
+						for a,b in @num
+							@current[b] = a.set @range[b]
+						# callback
+						@onSubmit @current if @onSubmit
+				# }}}
+				@numFocus = (o) !~> # {{{
+					# prepare
+					v = @focused = o.focused
+					i = @num.indexOf o
+					# operate
+					if v
+						# select focused
+						o.select!
+					else
+						# submit unfocused
+						if @submit o and @onSubmit
+							# callback
+							@onSubmit @current
+					# callback
+					@onFocus @ if @onFocus
+				# }}}
+				@numSubmit = (o, ctrlKey) !~> # {{{
+					# operate
+					if @submit o
+						# callback
+						o.select!
+						@onSubmit @current if @onSubmit
+					else
+						# no change
+						if ctrlKey
+							o.select!
+						else
+							# focus the opposite
+							o = if @num.indexOf o
+								then @num.0
+								else @num.1
+							o.focus!
+					# done
+				# }}}
+				@numScroll = (o, direction) !~> # {{{
+					# prepare
+					v = o.get!
+					i = @num.indexOf o
+					c = @current
+					d = @range.1 - @range.0
+					# determine step and alignment
+					# {{{
+					if d > 200
+						# 1% of the range
+						a = d / 100 .|. 0
+						b = '' + a
+						# check alignment possible
+						if (e = b.length) > 1
+							# determine aligned step
+							e = if e > 2
+								then e - 2
+								else 1
+							b = (b.slice 0, -e) + ('0'.repeat e)
+							a = +b
+						else
+							e = 0
+					else
+						# one by one
+						e = 0
+						a = 1
+					# }}}
+					# apply step
+					if direction
+						v += a
+					else
+						v -= a
+					# apply alignment
+					v = if e
+						then +(((''+v).slice 0, -e) + ('0'.repeat e))
+						else v
+					# apply limit
+					v = c.0 + 1 if i and v <= c.0
+					v = c.1 - 1 if not i and v >= c.1
+					# update
+					@num[i].set v
+					# submit and callback
+					if @submit o and @onSubmit
+						@onSubmit @current
+					# done
+				# }}}
+			###
+			NumRange.prototype =
+				init: (current, range, caption) !-> # {{{
+					@current = current.slice!
+					@range   = range
+					###
+					for a,b in @num
+						a.onFocus  = @numFocus
+						a.onSubmit = @numSubmit
+						a.onScroll = @numScroll
+						a.init current[b], caption[b]
+					###
+					@box.addEventListener 'pointerenter', @hover
+					@box.addEventListener 'pointerleave', @unhover
+					@rst.addEventListener 'click', @reset if @rst
+				# }}}
+				set: (v) !-> # {{{
+					c = @current
+					for a,b in @num
+						c[b] = a.set v[b]
+				# }}}
+				lock: (locked) !-> # {{{
+					@locked = locked
+					for a in @num
+						a.lock locked
+				# }}}
+				focus: !-> # {{{
+					@num.0.focus!
+				# }}}
+				submit: (o) -> # {{{
+					# prepare
+					i = @num.indexOf o
+					v = o.get!
+					r = @range
+					c = @current
+					# check
+					if v == c[i]
+						return false
+					# operate
+					if i
+						if v > r.1
+							# correct upper
+							if c.1 == (@num.1.set r.1)
+								return false
+							# update
+							c.1 = r.1
+							return true
+						else if v == c.0
+							# restore
+							@num.1.set c.1
+							return false
+						else if v <= r.0
+							# correct lower
+							if c.1 == (@num.1.set c.0 + 1)
+								return false
+							# update
+							c.1 = c.0 + 1
+							return true
+						else if v < c.0
+							# swap
+							c.1 = @num.1.set c.0
+							c.0 = @num.0.set v
+							return true
+						# update
+						c.1 = v
+					else
+						if v < r.0
+							# correct lower
+							if c.0 == (@num.0.set r.0)
+								return false
+							# update
+							c.0 = r.0
+							return true
+						else if v == c.1
+							# restore
+							@num.0.set c.0
+							return true
+						else if v >= r.1
+							# correct upper
+							if c.1 == (@num.0.set c.1 - 1)
+								return false
+							# update
+							c.0 = c.1 - 1
+							return true
+						else if v > c.1
+							# swap
+							c.0 = @num.0.set c.1
+							c.1 = @num.1.set v
+							return true
+						# update
+						c.0 = v
+					# done
+					return true
+				# }}}
+			# }}}
+			Block = (root) !-> # {{{
+				# base
+				@group   = 'price'
+				@root    = root
+				@rootBox = box = root.firstChild
+				@config  = JSON.parse box.dataset.cfg
+				# controls
+				@section = null
+				@range   = null
+				# state
+				@current = [-1,-1] # none
+				@prev    = null
+				@focused = false
+				@locked  = -1
+				# handlers
+				@sectionSwitch = (o, v) ~> # {{{
+					# prepare
+					d = @group.data
+					c = @current
+					# check
+					if v
+						if p = @prev
+							# enable
+							d.0 = p.0
+							d.1 = p.1
+							c.0 = c.1 = -1
+							@prev = null
+							@group.submit!
+					else
+						if ~c.0 or ~c.1
+							# disable
+							d.0 = d.1 = -1
+							@prev = c.slice!
+							@group.submit!
+					# done
+					return true
+				# }}}
+				@rangeSubmit = (v) !~> # {{{
+					# set filter values
+					c = @group.data
+					d = @group.config.price
+					c.0 = (v.0 == d.0 and -1) or v.0
+					c.1 = (v.1 == d.1 and -1) or v.1
 					# complete
-					@ctrl.attach!
+					@group.submit!
+				# }}}
+				focusLock = newDelay 0
+				@focus = (o) ~>> # {{{
+					# bounce
+					focusLock.cancel! if focusLock.pending
+					if not await (focusLock := newDelay 60)
+						return false
+					# check
+					if @focused == o.focused
+						return false
+					# operate
+					@focused = o.focused
+					@root.classList.toggle 'f', @focused
+					# done
+					return true
+				# }}}
+			###
+			Block.prototype =
+				level: 2
+				init: (s, c) ->> # {{{
+					# initialize
+					# group state
+					s.price = @current.slice!
+					# section
+					a = @section = @group.f.section @root
+					b = c.locale
+					a.onChange = @sectionSwitch if @config.sectionSwitch
+					a.onFocus  = @focus
+					a.init c.locale.title.1
+					# range
+					a = @range = new NumRange a.item.section.firstChild
+					b = [
+						c.locale.label.3
+						c.locale.label.4
+					]
+					a.onSubmit = @rangeSubmit
+					a.onFocus  = @focus
+					a.init c.price, c.price, b
+					# done
 					return true
 				# }}}
 				refresh: -> # {{{
-					# get data
-					a = @group.data
-					b = @current
-					# sync tag
-					if a.0 != b.0
-						# set controls
-						if (c = @keys.indexOf a.0) != @select.selectedIndex
-							@select.selectedIndex = c
-						if (not a.1 and b.1) or (a.1 and not b.1)
-							c = !a.1
-							@switch.forEach (d) !->
-								d.disabled = c
-						# store
-						b.0 = a.0
-					# sync variant
-					if a.1 != b.1
-						# set controls
-						if b.1 >= 0
-							c = ('abc')[b.1]
-							@variant.forEach (d) !->
-								d.classList.remove c
-						if a.1 >= 0
-							c = ('abc')[a.1]
-							@variant.forEach (d) !->
-								d.classList.add c
-						# store
-						b.1 = a.1
+					# prepare
+					a = @group.data # source
+					b = @current    # destination
+					# check
+					if a.0 == b.0 and a.1 == b.1
+						return true
+					# operate
+					# set active style
+					if b.0 == -1 and b.1 == -1
+						@rootBox.classList.add 'active'
+						@section.rootBox.classList.add 'active'
+					else if a.0 == -1 and a.1 == -1
+						@rootBox.classList.remove 'active'
+						@section.rootBox.classList.remove 'active'
+					# set value
+					b.0 = a.0
+					b.1 = a.1
+					# set inputs
+					c = @group.config.price
+					@range.set [
+						(~a.0 and a.0) or c.0
+						(~b.1 and b.1) or c.1
+					]
+					return true
+				# }}}
+				lock: (level) !-> # {{{
+					@range.lock true
+					@section.lock true
+				# }}}
+				unlock: (level) !-> # {{{
+					@section.lock false
+					@range.lock false
+				# }}}
+			# }}}
+			return Block
+		# }}}
+		'category-filter': do -> # {{{
+			Checks = !-> # {{{
+				@keydown = (e) !~> # {{{
+					# check enabled
+					if @block.locked or \
+						e.keyCode not in [38 40 37 39 75 74 72 76]
+						###
+						return
+					# fulfil the event
+					e.preventDefault!
+					e.stopPropagation!
+					# operate
+					switch e.keyCode
+					case 38, 75 # Up|k
+						# pass focus up {{{
+						# get upper item
+						a = @parent.children
+						if (b = a.indexOf @) == 0
+							a = @parent
+						else
+							a = a[b - 1].item.getLastVisible!
+							a = @parent.get a.config.id
+						# operate
+						if a.checkbox
+							a.checkbox.focus!
+						else if a.item.arrow
+							a.item.arrow.focus!
+						# }}}
+					case 40, 74 # Down|j
+						# pass focus down {{{
+						# get lower item
+						a = @item.getNextVisible!
+						a = @block.checks.get a.config.id
+						# operate
+						if a.checkbox
+							a.checkbox.focus!
+						else if a.item.arrow
+							a.item.arrow.focus!
+						# }}}
+					case 37, 72 # Left|h
+						# pass focus left {{{
+						a.focus! if a = @item.arrow
+						# }}}
+					case 39, 76 # Right|l
+						# pass focus right {{{
+						a.focus! if a = @item.arrow
+						# }}}
+					# done
+				# }}}
+			Checks.prototype =
+				getCheckedIds: -> # {{{
+					# check self
+					list = if @state == 1 and @item.config.count > 0
+						then [@item.config.id]
+						else []
+					# check children
+					if @children
+						for a in @children
+							list.push ...(a.getCheckedIds!)
+					# done
+					return list
+				# }}}
+			# }}}
+			setItem = (item, v) -> # {{{
+				# check
+				if (e = item.extra.current) == v
+					return false
+				# operate
+				item.node.classList.remove 'x'+(e + 1)
+				item.node.classList.add 'x'+(v + 1)
+				item.extra.set v
+				# done
+				return true
+			# }}}
+			setParents = (item, v) -> # {{{
+				# check
+				if not item.parent or not item.extra
+					# complete recursion
+					return []
+				if ~v
+					# normal value (on or off)
+					# check parent siblings for homogenity
+					for a in item.children when v != a.extra.current
+						# change to intermediate
+						v = -1
+						break
+				# change and get changed
+				a = if setItem item, v
+					then [item]
+					else []
+				# recurse and aggregate
+				return (setParents item.parent, v) ++ a
+			# }}}
+			setChildren = (items, v) -> # {{{
+				# create change list
+				list = []
+				# iterate and set
+				for a in items when setItem a, v
+					# collect changed
+					list[*] = a
+					# recurse (assume state homogenity)
+					if a.children
+						list.push ...(setChildren a.children, v)
+				# done
+				return list
+			# }}}
+			Block = (root, index) !-> # {{{
+				# base
+				@group   = 'category'
+				@root    = root
+				@rootBox = box = root.firstChild
+				@index   = index
+				# controls
+				@section = null
+				# state
+				@hovered = false
+				@focused = false
+				@locked  = -1
+				# handlers
+				@event = (check, v) ~> # {{{
+					# create change list
+					item = check.cfg.master
+					list = [item]
+					# set self
+					setItem item, v
+					# set parents
+					if a = item.parent
+						list.push ...(setParents a, v)
+					# set children
+					if a = item.children
+						list.push ...(setChildren a, v)
+					# ...
+					# ...
+					/***
+					# done
+					return list
+					/***/
+					console.log item, v
+					# done
+					return false
+				# }}}
+			###
+			Block.prototype =
+				level: 2
+				init: (s, c) ->> # {{{
+					# create group data entry
+					s.category[@index] = []
+					# create a section
+					@section = s = @group.f.section @root
+					# add extention (exclude root)
+					for a in s.list when a.parent
+						# construct
+						a.extra = b = @group.f.checkbox {
+							master: a
+							intermediate: 1 # set (positive escape)
+						}
+						b.onChange = @event
+						# add into section's title (keep natural focus navigation)
+						a.title.box.insertBefore b.root, a.title.h3
+						b.init 0
+					# done
+					s.init c.locale.title.0
+					return true
+				# }}}
+				lock: (level) !-> # {{{
+					@section.lock true
+				# }}}
+				unlock: (level) !-> # {{{
+					@section.lock false
+				# }}}
+				refresh: (list) -> # {{{
+					return true
+					# it's assumed that categories doesn't intersect
+					# in the attached UI root, so there may be
+					# only one originator and the refresh is
+					# the only source of the change..
+					# (no external calls needed)
+					if list
+						# iterate change list and set visual state
+						for a in list
+							b = a.item.node.classList
+							switch a.state
+							case 2
+								b.add 'checked', 'c2'
+								b.remove 'c1'
+							case 1
+								b.add 'checked', 'c1'
+								b.remove 'c2'
+							default
+								b.remove 'checked', 'c1', 'c2'
+					# check
+					if @index < 0
+						return true
+					# determine current filter
+					a = @checks.getCheckedIds!
+					b = @group.data[@index]
+					# compare arrays
+					if d = ((c = a.length) == b.length)
+						while --c >= 0
+							if a[c] != b[c]
+								d = false
+								break
+					# check the difference
+					if not d
+						# update array
+						b.length = c = a.length
+						while --c >= 0
+							b[c] = a[c]
+						# change the filter
+						@group.update!
 					# done
 					return true
 				# }}}
@@ -3777,7 +3969,7 @@ smBlocks = do ->
 		@lang     = ''    # two-byte language code
 		@range    = null  # [offset,limit,o1,o2,o3,o4]
 		@order    = null  # [tag,variant]
-		@category = null  # [[id-1..N],[..],..]
+		@category = []    # [id-1..N],[..],..
 		@price    = null  # [min,max]
 	# }}}
 	Loader = (s) !-> # {{{
@@ -4083,7 +4275,7 @@ smBlocks = do ->
 		consoleInfo 'new '+s+'supervisor'
 		# }}}
 	SUPERVISOR.prototype =
-		attach: (root, base = '.sm-blocks') ->> # {{{
+		attach: (root) ->> # {{{
 			# check
 			if not root
 				return false
@@ -4107,7 +4299,7 @@ smBlocks = do ->
 			G = {}
 			for b,a of @masters
 				# get and iterate DOM nodes
-				for b,c in [...(root.querySelectorAll base+'.'+b)]
+				for b,c in [...(root.querySelectorAll '.'+BRAND+'.'+b)]
 					# construct
 					B[*] = a = new a b,c
 					# set receiver
@@ -4133,7 +4325,7 @@ smBlocks = do ->
 			for a in (Object.getOwnPropertyNames @state) when G[a]
 				c[a] = new Group @, a, G[a]
 			# create resizer
-			@resizer = newResizer base+'-resizer', B
+			@resizer = newResizer '.'+BRAND+'-resizer', B
 			# initialize
 			if not (await @loader.init!)
 				await @detach!

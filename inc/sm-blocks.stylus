@@ -11,9 +11,9 @@ WebSafeFontHeadline = Times, 'Times New Roman', serif
 	--sm-blocks-factor: 1    // size reduction factor 0-100%
 	--sm-blocks-height: 48px // default vertical base for the frame
 // }}}
-// ===
-.sm-blocks // {{{
-	// base block config
+.sm-blocks
+	// base {{{
+	// configuration
 	--height: calc(var(--sm-blocks-height) * var(--sm-blocks-factor))
 	--font-size: calc(0.3334 * var(--height))
 	// root
@@ -25,8 +25,7 @@ WebSafeFontHeadline = Times, 'Times New Roman', serif
 	margin:     0
 	//overflow:   hidden
 	font-size:  var(--font-size)
-	// common controls/combinations
-	// {{{
+	// common {{{
 	div,button,select,input,label,svg,img,hr,h1,h2,h3
 		box-sizing: border-box
 		min-width:  0
@@ -60,8 +59,41 @@ WebSafeFontHeadline = Times, 'Times New Roman', serif
 			fill:   transparent
 			stroke: transparent
 	// }}}
-	.sm-buttons
-		> button // {{{
+	// rootBox
+	> div
+		position: relative
+		min-width:  0
+		min-height: 0
+		opacity: 0
+		overflow: hidden
+		pointer-events: none
+	// placeholder
+	> svg
+		display:  block
+		position: absolute
+		top:    0
+		left:   0
+		width:  100%
+		height: 100%
+	svg
+		fill: alpha(silver, 0.2)
+	// constructed state
+	&.v
+		> div
+			opacity: 0.6
+			// functional state
+			&.v
+				pointer-events: auto
+				opacity: 1
+		> svg
+			display: none
+		// focused state
+		&.f
+			> div.v
+				box-shadow: inset 0px 0px 4px 1px alpha(slateblue, 0.4)
+				border-radius: 2px
+	// }}}
+	.sm-buttons > button // {{{
 			width:   100%
 			height:  100%
 			display: flex
@@ -96,194 +128,706 @@ WebSafeFontHeadline = Times, 'Times New Roman', serif
 				background-color: silver
 				box-shadow: inset 0 0 0 0.01em white
 		// }}}
-	///
-	// rootBox
-	> div
-		position: relative
-		min-width:  0
-		min-height: 0
-		opacity: 0
-		overflow: hidden
-		pointer-events: none
-	// placeholder
-	> svg
-		display:  block
-		position: absolute
-		top:    0
-		left:   0
-		width:  100%
-		height: 100%
-	svg
-		fill: alpha(silver, 0.2)
-	// constructed state
-	&.v
-		> div
-			opacity: 0.6
-			// functional state
-			&.v
-				pointer-events: auto
-				opacity: 1
-		> svg
-			display: none
-		// focused state
-		&.f
-			> div.v
-				box-shadow: inset 0px 0px 4px 1px alpha(slateblue, 0.15)
-				border-radius: 2px
-// }}}
-.sm-blocks.main-section // {{{
-	// root
-	width:  100%
-	height: auto
-	// rootBox (first item)
-	> div.item
+	.sm-blocks-select // {{{
+		// root
 		font-size: var(--height)
-		> .title
-			height: 1em
-			padding: 0.05em 4px 0.05em 4px
-			> h3
-				order: 1
-				font-size: 0.7em
-			> button.arrow
-				order: 2
-				min-width:  1.2em
-				padding: 0.1em 0.1em 0.1em 0.4em
-		> .section
-			padding: 4px 4px 4px 4px
-		> .sep
-			height: 3px
-			fill: gainsboro
-	////
-	.item
+		width:  auto
+		min-width: 2.1em
+		height: 1em
+		////
+		position: relative
 		display: flex
-		flex-direction: column
+		flex-direction: row
 		align-items: stretch
 		justify-content: flex-start
-		> .title // {{{
-			height: 0.8em
-			padding: 0.05em 0 0.05em 0
+		pointer-events: none
+		> select // {{{
+			flex: 1 1 0
+			font-size: var(--font-size)
+			padding-top:    0
+			padding-bottom: 0
+			padding-left:   1em
+			padding-right:  var(--height)
+			////
+			-webkit-appearance: none
+			-moz-appearance: none
+			appearance: none
+			display: block
+			////
+			background-color: gainsboro
+			color: transparent
+			box-shadow: inset 0 0 0.6em 0 silver
+			border-style: solid
+			border-color: silver
+			border-width: 0.025em
+			border-radius: 0.05em
+			outline: none
+			////
+			font-family: WebSafeFontFat
+			font-weight: bold
+			text-align: left
+			text-decoration: none
+			text-overflow: ellipsis
+			letter-spacing: 0
+			white-space: nowrap
+			&:-ms-expand
+				display: none
+		// }}}
+		> svg // {{{
+			position: absolute
+			top: 0
+			right: 0
+			width:  1em
+			height: 100%
+			pointer-events: none
+			fill: silver
+			> .b
+				fill: transparent
+		// }}}
+		&.a
+			> select
+				color: darkslateblue
+			> svg
+				> .a
+					fill: alpha(slateblue, 0.6)
+		&.v
+			pointer-events: auto
+			> select
+				color: slategray
+				cursor: pointer
+				> option
+					color: darkslategray
+					background-color: gainsboro
+					border: 1px solid red
+					&:checked
+						color: alpha(slateblue, 0.6)
+					&:hover
+						background-color: black
+						color: white
+			> svg
+				> .a
+					fill: silver
+				> .b
+					fill: slategray
+			&.h
+				> select
+					color: darkslategray
+					border-color: darkslategray
+			&.f
+				> select
+					color: darkslategray
+					background-color: silver
+					border-color: darkslategray
+					box-shadow: inset 0 0 0 0.04em white
+				> svg
+					> .a
+						fill: slategray
+					> .b
+						fill: gainsboro
+	// }}}
+	.sm-blocks-checkbox // {{{
+		// root (button)
+		width:  100%
+		height: 100%
+		border-style: none
+		border-width: 0
+		background-color: transparent
+		color: transparent
+		pointer-events: none
+		> svg
+			display: block
+			width:  100%
+			height: 100%
+			> .a
+				fill: transparent
+			> .b
+				fill-rule: evenodd
+				fill: slategray
+			> .c
+				fill-rule: evenodd
+				fill: gainsboro
+			> .d
+				fill: transparent
+			> .e
+				fill: transparent
+		&.x0 > svg
+			// -1=intermediate (disabled)
+			> .d
+				fill: darkslategray
+		&.x0.i > svg
+			// -1=intermediate (changeable)
+			> .e
+				fill: darkslategray
+			> .d
+				fill: transparent
+		&.x1 > svg
+			// 0=off
+		&.x2 > svg
+			// 1=on
+			> .c
+				fill: transparent
+			> .d
+				fill: darkslategray
+			> .e
+				fill: darkslategray
+		&.v
+			pointer-events: auto
+			&.x0
+				pointer-events: none
+				&.i
+					pointer-events: auto
+			&.h
+				&.x1 > svg
+					> .a
+						fill: alpha(slategray, 0.3)
+				&.x2 > svg
+					> .d
+						fill: slategray
+					> .e
+						fill: slategray
+			&.f
+				//filter: brightness(110%)
+				&.x1 > svg
+					> .a
+						fill: alpha(slateblue, 0.3)
+					> .b
+						fill: slateblue
+					> .c
+						fill: silver
+				&.x2 > svg
+					> .d
+						fill: slateblue
+					> .e
+						fill: slateblue
+	// }}}
+	// ===
+	&.section // {{{
+		// root
+		width:  100%
+		height: auto
+		// rootBox
+		> div.item // {{{
+			// closed
+			padding: 2px 2px 2px 2px
+			> .title
+				height: calc(4px + 1em)
+				padding: 2px 3px 2px 3px
+				> div
+					> h3
+						padding-left: 3px
+						> label
+							font-size: 0.66em
+							font-weight: bold
+					> button.arrow
+						min-width: 1.2em
+						padding: 0.25em 0.2em 0.15em 0.4em
+			> .section
+				padding: 4px 4px 4px 4px
+			> .sep
+				height: 5px
+				padding: 0
+				fill: gainsboro
+			// opened
+			&.o1
+				> .title
+					padding-left:  5px
+					padding-right: 5px
+					> div > h3
+						padding-left:  5px
+				> .sep
+					padding-left:  2px
+					padding-right: 2px
+			&.v.f.h1
+				> .section
+					opacity: 0.6
+		// }}}
+		// child
+		.item
+			// locked
+			// {{{
+			font-size: var(--height)
 			display: flex
-			flex-direction: row
+			flex-direction: column
 			align-items: stretch
 			justify-content: flex-start
-			> h3 // {{{
-				order: 1
-				flex: 1 1 0
-				font-size: 0.35em
-				border-radius: 4px
-				display: flex
-				align-items: center
-				font-family: WebSafeFontUI
-				font-weight: bold
-				color: slategray
-				background-color: transparent
-				cursor: pointer
-				user-select: none
-				> label
-					cursor: pointer
-			// }}}
-			> button // {{{
-				background-color: transparent
-				display: none
-				&.v
-					display: block
-				&.arrow
-					order: 2
-					flex: 0 0 0
-					min-width:  1em
-					padding: 0.05em 0.05em 0.05em 0.35em
-					background-color: transparent
-					border-radius: 1%
-					> svg
-						width:  auto
-						height: 100%
-						fill: silver
-						stroke: slategray
-						> .a
-							transform-origin: 50% 50%
-							transform: rotate(90deg)
-			// }}}
-		// }}}
-		> .section // {{{
-			// shift child sections to the right
-			padding: 0 0 0 0.2em
-			min-height: 0
-			height:  0
-			opacity: 0
-			display: none
-			overflow: hidden
-		// }}}
-		////
-		&.opened // {{{
-			> .title > button.arrow
-				> svg
-					fill: slategray
-					stroke: silver
-					> .a
-						transform: rotate(0deg)
+			> .title
+				height: 0.8em
+				padding: 0.05em 0 0.05em 0
+				> div
+					display: flex
+					flex-direction: row
+					align-items: stretch
+					justify-content: flex-start
+					> h3 // {{{
+						flex: 1 1 0
+						padding-left: 0.1em
+						////
+						display: flex
+						align-items: center
+						color: slategray
+						background-color: transparent
+						cursor: pointer
+						user-select: none
+						> label
+							font-family: WebSafeFontUI
+							font-size: 0.36em
+							//font-weight: bold
+							letter-spacing: 0
+							cursor: pointer
+					// }}}
+					> button // {{{
+						flex: 0 0 0
+						min-width: 0.7em
+						padding: 0.025em
+						background-color: transparent
+						&.arrow
+							display: none
+							min-width: 1em
+							padding: 0.12em 0.05em 0.08em 0.45em
+							background-color: transparent
+							border-radius: 1%
+							&.v
+								display: block
+							> svg
+								width:  auto
+								height: 100%
+								transform-origin: 50% 50%
+								transform: rotate(0deg)
+								> .a
+									fill: silver
+								> .b
+									fill: slategray
+					// }}}
 			> .section
-				display: block
-				height:  auto
-				opacity: 1
-		// }}}
-		&.v
-			&.hovered // {{{
-				> .title
-					> h3.h
-						color: darkslategray
-					> h3
-						background-color: alpha(lightslategray, 0.04)
-					> button.arrow.h
-						background-color: alpha(lightslategray, 0.04)
-						> svg
-							fill: darkslategray
-							stroke: gainsboro
-			// }}}
-			&.focused // {{{
-				> .title
-					> h3.f
-						color: darkslateblue
-					> h3
-						background-color: alpha(mediumslateblue, 0.04)
-					> button.arrow.f
-						background-color: alpha(mediumslateblue, 0.04)
-						> svg
-							fill: slateblue
-							stroke: silver
-			// }}}
-			&.opened // {{{
-				> .title
+				// shift child sections to the right
+				padding: 0 0 0 0.2em
+				min-height: 0
+				height:  0
+				opacity: 0
+				display: none
+				overflow: hidden
+			&.o1
+				> .title > div
 					> h3
 						color: darkslategray
-					> button.arrow > svg
-						fill: darkslategray
-				&.hovered
+					> button.arrow
+						> svg
+							transform: rotate(180deg)
+							> .a
+								fill: slategray
+							> .b
+								fill: silver
+				> .section
+					display: block
+					height:  auto
+					opacity: 1
+			// }}}
+			// unlocked
+			&.v
+				&.o0
+					&.e0.h1 // {{{
+						> .title > div
+							background-color: alpha(slategray, 0.04)
+							> h3
+								color: darkslategray
+							> button.arrow
+								> svg
+									> .a
+										fill: darkslategray
+									> .b
+										fill: gainsboro
+					// }}}
+					&.e1.h1 // {{{
+						> .title > div
+							background-color: alpha(slategray, 0.04)
+							> button.arrow
+								> svg
+									> .a
+										fill: darkslategray
+									> .b
+										fill: gainsboro
+					// }}}
+					&.e1.h2 // {{{
+						> .title > div
+							background-color: alpha(slategray, 0.04)
+							> h3
+								color: darkslategray
+					// }}}
+				&.o1
+					&.e0.h1 // {{{
+						> .title > div
+							background-color: alpha(slategray, 0.04)
+							> h3
+								color: alpha(darkslategray, 0.8)
+							> button.arrow
+								> svg
+									> .a
+										fill: silver
+									> .b
+										fill: slategray
+					// }}}
+					&.e1.h1 // {{{
+						> .title > div
+							background-color: alpha(slategray, 0.04)
+							> button.arrow
+								> svg
+									> .a
+										fill: silver
+									> .b
+										fill: slategray
+					// }}}
+					&.e1.h2 // {{{
+						> .title > div
+							background-color: alpha(slategray, 0.04)
+							> h3
+								color: alpha(darkslategray, 0.8)
+					// }}}
+				&.o0,
+				&.o1
+					&.f // {{{
+						> .sep
+							fill: alpha(slateblue, 0.6)
+						&.e0
+							> .title
+								> h3
+									background-color: alpha(mediumslateblue, 0.03)
+								> button.arrow
+									background-color: alpha(mediumslateblue, 0.03)
+									> svg
+										> .a
+											fill: silver
+										> .b
+											fill: alpha(slateblue, 0.5)
+						&.e1
+							> .title
+								> button.arrow.f
+									background-color: alpha(mediumslateblue, 0.03)
+									> svg
+										> .a
+											fill: silver
+										> .b
+											fill: alpha(slateblue, 0.5)
+					// }}}
+				&.active
+					// {{{
+					> .title > h3
+						color: slateblue
+						filter: brightness(80%)
+					// }}}
+				////
+	// }}}
+	&.section.category-filter // {{{
+		.item
+			> .title > div
+				> h3
+					padding: 0
+			&.v
+				&.o0.e1.hhh // {{{
+					> .title
+						> h3.h
+							background-color: alpha(lightslategray, 0.04)
+						> button.sm-blocks-checkbox
+							background-color: alpha(lightslategray, 0.04)
+					// }}}
+				&.o1.e1.hhh // {{{
 					> .title
 						> h3.h
 							color: alpha(darkslategray, 0.8)
-						> button.arrow.h > svg
-							fill: silver
-							stroke: slategray
-				&.focused
+						> button.arrow.h
+							> svg
+								> .a
+									fill: silver
+								> .b
+									fill: slategray
+					// }}}
+				////
+				//=== CLOSED {{{
+				&.checked
+					> .title > h3
+						color: darkslategray
+					&.c1 > .title > button.checkbox > svg
+						background-color: black
+						> .c1
+							fill: white
+					&.c2 > .title > button.checkbox > svg
+						background-color: black
+						> .c2
+							fill: white
+				&.hovered-2
 					> .title
-						> h3.f
-							color: alpha(darkslateblue, 0.8)
-						> button.arrow.f > svg
-							fill: slateblue
-							stroke: mediumslateblue
+						> button.checkbox
+							background-color: alpha(lightslategray, 0.04)
+							> svg
+								background-color: alpha(gainsboro, 0.4)
+								border-color: slateblue
+						> h3
+							color: darkslategray
+							background-color: alpha(lightslategray, 0.04)
+						> button.arrow
+							background-color: transparent
+							> svg
+								fill: silver
+								stroke: slategray
+				&.focused-2
+					> .title
+						> h3
+							color: darkslateblue
+							background-color: alpha(mediumslateblue, 0.04)
+						> button.checkbox
+							background-color: alpha(mediumslateblue, 0.04)
+							> svg
+								box-shadow: inset 0 0 0 1px mediumslateblue
+								border-color: darkslateblue
+					&.checked
+						&.c1 > .title > button.checkbox > svg
+							background-color: darkslateblue
+						&.c2 > .title > button.checkbox > svg
+							background-color: darkslateblue
+				// }}}
+				//=== OPENED {{{
+				&.o
+					> .title
+						> h3
+							color: darkslategray
+						> button.arrow > svg
+							fill: darkslategray
+					&.hovered-2
+						> .title
+							> h3
+								color: alpha(darkslategray, 0.8)
+							> button.arrow > svg
+								fill: silver
+								stroke: slategray
+					&.focused-2
+						> .title
+							> h3
+								color: alpha(darkslateblue, 0.8)
+				// }}}
+	// }}}
+	&.section.price-filter // {{{
+		// rootBox
+		> div > .section > div
+			width:  100%
+			height: var(--height)
+			font-size: var(--font-size)
+			display: flex
+			flex-direction: row
+			align-items: center
+			// text inputs: [left][delimiter][right]
+			> div // {{{
+				position: relative
+				flex: 3 1 0
+				height: 100%
+				display: flex
+				flex-direction: row
+				align-items: center
+				touch-action: none
+				> input
+					width:  100%
+					height: 100%
+					font-family: WebSafeFontMono
+					font-size:   1.2em
+					font-weight: bold
+					padding: 0.6em 0 0.3em 0
+					background-color: gainsboro
+					border: 1px solid silver
+					border-radius: 2px
+					box-shadow: inset 0 0 10px 0 silver
+					touch-action: none
+				> label
+					position:  absolute
+					top:       0
+					width:     100%
+					font-family: WebSafeFontUI
+					font-size:   0.8em
+					font-weight: bold
+					padding: 0.2em 0 0 0
+					background-color: transparent
+					color: slategray
+					user-select: none
+					cursor: text
+				&.L
+					> input
+						border-right-width: 0
+						border-top-right-radius: 0
+						border-bottom-right-radius: 0
+						padding-right: 0.6em
+						text-align: right
+					> label
+						padding-right: 0.4em
+						text-align: right
+				&.R
+					> input
+						border-left-width: 0
+						border-top-left-radius: 0
+						border-bottom-left-radius: 0
+						padding-left: 0.6em
+						text-align: left
+					> label
+						padding-left: 0.4em
+						text-align: left
 			// }}}
-			&.active // {{{
-				> .title
-					> h3
-						color: slateblue
-						filter: brightness(80%)
+			> svg // {{{
+				flex: 1 3 0
+				height: var(--height)
+				max-width: 48px
+				fill: silver
+				touch-action: none
+				> .L
+					fill: darkgray
+				> .X
+					fill: transparent
+				> .R
+					fill: darkgray
+			// }}}
+		////
+		> div.v // {{{
+			> .section > div
 				> svg
-					fill: alpha(slateblue, 0.4)
+					> .X
+						fill: lightgray
+				> div
+					> input
+						color: darkslategray
+						&::selection
+							background-color: darkslateblue
+							color: gainsboro
+					&.hovered
+						> input
+							border-color: gray
+							box-shadow: inset 0 0 0 2px silver
+					&.hovered:not(.focused)
+						> input,
+						> label
+							cursor: ns-resize
+					&.focused
+						> input
+							color: black
+							background-color: alpha(gainsboro, 0.6)
+							border-color: gray
+							box-shadow: inset 0 0 0 2px silver
+						> label
+							cursor: pointer
+							&:hover
+								color: slateblue
+					&.locked
+						> input
+							color: darkslategray
+							background-color: gainsboro
+							border-color: silver
+							&::selection
+								background-color: darkslategray
+								color: gainsboro
+			////
+			&.h
+				> .section > div > svg > .X
+					fill: slategray
+			&.h0 > svg > .L
+				fill: slategray
+				transform: translateX(1px)
+			&.h1 > svg > .R
+				fill: slategray
+				transform: translateX(-1px)
+			&.f0,&.f1
+				> svg > .X
+					fill: slategray
+			&.f0 > svg > .L
+				fill: slateblue
+				transform: translateX(1px)
+			&.f1 > svg > .R
+				fill: slateblue
+				transform: translateX(-1px)
+			&.active
+				> svg
+					filter: brightness(110%)
+					> .X
+						cursor: pointer
+						fill: slateblue
+						&:hover
+							fill: alpha(slateblue, 0.4)
 			// }}}
-// }}}
-.sm-blocks.selector // {{{
-	background-color: red
-// }}}
+		// end
+	// }}}
+	&.orderer // {{{
+		// root
+		width:  100%
+		height: calc(8px + var(--height))
+		padding: 4px 0 4px 0
+		// rootBox
+		> div
+			width:  100%
+			height: 100%
+			> button
+				font-size: var(--height)
+				width:  0.95em
+				height: 100%
+				padding: 0.025em 0 0.025em 0.045em
+				////
+				position: absolute
+				top:  0
+				left: 0
+				z-index: 1
+				opacity: 0
+			> div
+				> select
+					padding-left: calc(0.95 * var(--height))
+					//padding-left: var(--height)
+				> svg
+					fill: transparent
+			////
+			&.a
+				// -1=fixed
+				> button > svg
+					> .a2
+						> .a
+							fill: transparent
+						> .b
+							fill: silver
+			&.b
+				// 0=ascending
+				> button > svg
+					//transform: rotate(45deg)
+					transform: rotate(90deg)
+					> .a1
+						> .a
+							fill: silver
+						> .b
+							fill: slategray
+			&.c
+				// 1=descending
+				> button > svg
+					//transform: rotate(135deg)
+					> .a1
+						> .a
+							fill: silver
+						> .b
+							fill: slategray
+			&.v
+				> button
+					opacity: 1
+				////
+				&.hovered
+					> div > select
+						border-color: darkslategray
+					&.b,
+					&.c
+						> button.h > svg > .a1
+							> .b
+								fill: darkslategray
+				&.focused
+					> div > select
+						background-color: silver
+						border-color: darkslategray
+						box-shadow: inset 0 0 0 0.04em white
+					&.b,
+					&.c
+						> button.f > svg > .a1
+							> .a
+								fill: gainsboro
+							> .b
+								fill: darkslategray
+				////
+	// }}}
 // ===
 .sm-blocks.products // {{{
 	// configuration
@@ -710,362 +1254,6 @@ WebSafeFontHeadline = Times, 'Times New Roman', serif
 					> .sep > svg
 						fill: slategray
 			// }}}
-// }}}
-.sm-blocks.main-section.category-filter // {{{
-	.item
-		> .title
-			> button.checkbox
-				order: 0
-				flex: 0 0 0
-				min-width: 1em
-				padding: 0 0.2em 0 0
-				> svg
-					background-color: alpha(gainsboro, 0.2)
-					border: 1px solid slategray
-					border-radius: 2px
-					fill: transparent
-					stroke: transparent
-		//===
-		&.v
-			//=== CLOSED {{{
-			&.checked
-				> .title > h3
-					color: darkslategray
-				&.c1 > .title > button.checkbox > svg
-					background-color: black
-					> .c1
-						fill: white
-				&.c2 > .title > button.checkbox > svg
-					background-color: black
-					> .c2
-						fill: white
-			&.hovered-2
-				> .title
-					> button.checkbox
-						background-color: alpha(lightslategray, 0.04)
-						> svg
-							background-color: alpha(gainsboro, 0.4)
-							border-color: slateblue
-					> h3
-						color: darkslategray
-						background-color: alpha(lightslategray, 0.04)
-					> button.arrow
-						background-color: transparent
-						> svg
-							fill: silver
-							stroke: slategray
-			&.focused-2
-				> .title
-					> h3
-						color: darkslateblue
-						background-color: alpha(mediumslateblue, 0.04)
-					> button.checkbox
-						background-color: alpha(mediumslateblue, 0.04)
-						> svg
-							box-shadow: inset 0 0 0 1px mediumslateblue
-							border-color: darkslateblue
-				&.checked
-					&.c1 > .title > button.checkbox > svg
-						background-color: darkslateblue
-					&.c2 > .title > button.checkbox > svg
-						background-color: darkslateblue
-			// }}}
-			//=== OPENED {{{
-			&.opened
-				> .title
-					> h3
-						color: darkslategray
-					> button.arrow > svg
-						fill: darkslategray
-				&.hovered-2
-					> .title
-						> h3
-							color: alpha(darkslategray, 0.8)
-						> button.arrow > svg
-							fill: silver
-							stroke: slategray
-				&.focused-2
-					> .title
-						> h3
-							color: alpha(darkslateblue, 0.8)
-			// }}}
-// }}}
-.sm-blocks.price-filter // {{{
-	// root
-	width:  100%
-	//height: calc(8px + var(--height))
-	height: var(--height)
-	// rootBox
-	> div
-		width:  100%
-		height: 100%
-		display: flex
-		flex-direction: row
-		align-items: center
-		// text inputs: [left][delimiter][right]
-		&.text
-			> div // {{{
-				position: relative
-				flex: 3 1 0
-				height: 100%
-				display: flex
-				flex-direction: row
-				align-items: center
-				touch-action: none
-				> input
-					width:  100%
-					height: 100%
-					font-family: WebSafeFontMono
-					font-size:   1.2em
-					font-weight: bold
-					padding: 0.6em 0 0.3em 0
-					background-color: gainsboro
-					border: 1px solid silver
-					border-radius: 2px
-					box-shadow: inset 0 0 10px 0 silver
-					touch-action: none
-				> label
-					position:  absolute
-					top:       0
-					width:     100%
-					font-family: WebSafeFontUI
-					font-size:   0.8em
-					font-weight: bold
-					padding: 0.2em 0 0 0
-					background-color: transparent
-					color: slategray
-					user-select: none
-					cursor: text
-				&.L
-					> input
-						border-right-width: 0
-						border-top-right-radius: 0
-						border-bottom-right-radius: 0
-						padding-right: 0.6em
-						text-align: right
-					> label
-						padding-right: 0.4em
-						text-align: right
-				&.R
-					> input
-						border-left-width: 0
-						border-top-left-radius: 0
-						border-bottom-left-radius: 0
-						padding-left: 0.6em
-						text-align: left
-					> label
-						padding-left: 0.4em
-						text-align: left
-			// }}}
-			> svg // {{{
-				flex: 1 3 0
-				height: var(--height)
-				max-width: 48px
-				fill: silver
-				touch-action: none
-				> .L
-					fill: darkgray
-				> .X
-					fill: transparent
-				> .R
-					fill: darkgray
-			// }}}
-			&.v // {{{
-				> svg
-					//cursor: ew-resize
-					> .X
-						cursor: pointer
-						fill: lightgray
-				> div
-					> input
-						color: darkslategray
-						&::selection
-							background-color: darkslateblue
-							color: gainsboro
-					&.hovered
-						> input
-							border-color: gray
-							box-shadow: inset 0 0 0 2px silver
-					&.hovered:not(.focused)
-						> input,
-						> label
-							cursor: ns-resize
-					&.focused
-						> input
-							color: black
-							background-color: alpha(gainsboro, 0.6)
-							border-color: gray
-							box-shadow: inset 0 0 0 2px silver
-						> label
-							cursor: pointer
-							&:hover
-								color: slateblue
-					&.locked
-						> input
-							color: darkslategray
-							background-color: gainsboro
-							border-color: silver
-							&::selection
-								background-color: darkslategray
-								color: gainsboro
-				////
-				&.hovered
-					> svg > .X
-						fill: slategray
-				&.h0 > svg > .L
-					fill: slategray
-					transform: translateX(1px)
-				&.h1 > svg > .R
-					fill: slategray
-					transform: translateX(-1px)
-				&.f0,&.f1
-					> svg > .X
-						fill: slategray
-				&.f0 > svg > .L
-					fill: slateblue
-					transform: translateX(1px)
-				&.f1 > svg > .R
-					fill: slateblue
-					transform: translateX(-1px)
-				&.active
-					> svg
-						filter: brightness(110%)
-						> .X
-							fill: slateblue
-			// }}}
-	// end
-// }}}
-.sm-blocks.orderer // {{{
-	// root
-	width:  100%
-	height: calc(8px + var(--height))
-	padding: 4px 0 4px 0
-	// rootBox
-	> div
-		width:  100%
-		height: 100%
-		> select // {{{
-			width:  100%
-			height: 100%
-			padding: 0 0 0 var(--font-size)
-			-webkit-appearance: none
-			-moz-appearance: none
-			appearance: none
-			display: block
-			////
-			background-color: gainsboro
-			color: transparent
-			box-shadow: inset 0 0 0.4em 0 silver
-			border-style: solid
-			border-color: silver
-			border-width: 0.05em
-			border-radius: 0.1em
-			outline: none
-			////
-			font-family: WebSafeFontFat
-			font-weight: bold
-			font-size: var(--font-size)
-			text-align: left
-			text-decoration: none
-			text-overflow: ellipsis
-			letter-spacing: 0
-			white-space: nowrap
-			cursor: pointer
-			> option
-				font-weight: bold
-				background-color: gainsboro
-				&:checked
-					color: silver
-				&:hover
-					background-color: black
-					color: white
-			&:focus
-				color: black
-				background-color: silver
-				border-color: darkslategray
-				box-shadow: inset 0 0 0 1px white
-			&:-ms-expand
-				display: none
-			&.left
-				padding-left:  calc(2px + var(--height))
-				padding-right: var(--font-size)
-			&.right
-				padding-left:  var(--font-size)
-				padding-right: calc(2px + var(--height))
-			&.left.right
-				padding-left:  calc(2px + var(--height))
-				text-align: center
-			/***
-			&:disabled
-				color: graytext
-				background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22graytext%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E'),
-					linear-gradient(to bottom, #ffffff 0%,#e5e5e5 100%)
-				&:hover
-					border-color: #aaa
-			/***/
-		// }}}
-		> .variant // {{{
-			position: absolute
-			width:  auto
-			height: 100%
-			opacity: 0
-			&.left
-				top:  0
-				left: 0
-				padding-top:    4px
-				padding-bottom: 4px
-				padding-left:   1px
-				padding-right:  0
-			&.right
-				top:   0
-				right: 0
-				padding-top:    4px
-				padding-bottom: 4px
-				padding-left:   0
-				padding-right:  1px
-			&.a
-				pointer-events: none
-				&.left > button > svg
-					transform: rotate(-90deg)
-				&.right > button > svg
-					transform: rotate(90deg)
-			&.b
-				> button > svg
-					transform: rotate(0deg)
-			&.c
-				&.left > button > svg
-					transform: rotate(-180deg)
-				&.right > button > svg
-					transform: rotate(180deg)
-			////
-			> button
-				width:  var(--height)
-				height: 100%
-				background-color: transparent
-				padding-left:  4px
-				padding-right: 4px
-				> svg
-					display: block
-					width:  100%
-					height: 100%
-					stroke-width: 1
-					fill: slategray
-					stroke: darkslategray
-				&:hover,
-				&:active,
-				&:focus
-					> svg
-						fill: black
-						stroke: slategray
-		// }}}
-		&.v // {{{
-			> .variant
-				opacity: 1
-			> select
-				color: darkslategray
-			&.hovered > select
-				border-color: darkslategray
-		// }}}
 // }}}
 .sm-blocks.rows-selector // {{{
 	// root (horizontal block)

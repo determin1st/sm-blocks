@@ -2,15 +2,16 @@
 "use strict";
 var smBlocks, slice$ = [].slice, arrayFrom$ = Array.from || function(x){return slice$.call(x);};
 smBlocks = function(){
-  var consoleError, consoleInfo, newPromise, newDelay, querySelectorChildren, querySelectorChild, queryFirstChildren, parseTemplate, soFetch, oFetch, S, TODO, M, Config, State, Loader, Group, newResizer, SUPERVISOR;
+  var BRAND, consoleError, consoleInfo, newPromise, newDelay, querySelectorChildren, querySelectorChild, queryFirstChildren, parseTemplate, soFetch, oFetch, S, M, Config, State, Loader, Group, newResizer, SUPERVISOR;
+  BRAND = 'sm-blocks';
   consoleError = function(msg){
     var a;
-    a = '%csm-blocks: %c' + msg;
+    a = '%c' + BRAND + ': %c' + msg;
     console.log(a, 'font-weight:bold;color:slateblue', 'color:orange');
   };
   consoleInfo = function(msg){
     var a;
-    a = '%csm-blocks: %c' + msg;
+    a = '%c' + BRAND + ': %c' + msg;
     console.log(a, 'font-weight:bold;color:slateblue', 'color:aquamarine');
   };
   newPromise = function(id){
@@ -94,13 +95,13 @@ smBlocks = function(){
     return f;
   };
   soFetch = httpFetch.create({
-    baseUrl: '/?rest_route=/sm-blocks/kiss',
+    baseUrl: '/?rest_route=/' + BRAND + '/kiss',
     mounted: true,
     notNull: true,
     method: 'POST'
   });
   oFetch = httpFetch.create({
-    baseUrl: '/?rest_route=/sm-blocks/kiss',
+    baseUrl: '/?rest_route=/' + BRAND + '/kiss',
     mounted: true,
     notNull: true,
     method: 'POST',
@@ -109,205 +110,245 @@ smBlocks = function(){
   });
   S = {
     section: function(){
-      var Item, Block;
+      var Title, Item, Block;
+      Title = function(node){
+        this.root = node;
+        this.box = node = node.firstChild;
+        this.h3 = node.children[0];
+        this.arrow = node.children[1];
+        this.label = this.h3.firstChild;
+      };
       Item = function(block, node, parent){
-        var box, sect, a, i$, len$, c, b, this$ = this;
+        var cfg, sect, c, i$, len$, b, a, hoverBounce, focusBounce, this$ = this;
         this.block = block;
         this.node = node;
         this.parent = parent;
-        this.config = JSON.parse(node.dataset.cfg);
-        this.hovered = false;
-        this.focused = false;
-        this.opened = node.classList.contains('opened');
-        this.titleBox = box = querySelectorChild(node, '.title');
+        this.config = cfg = JSON.parse(node.dataset.cfg);
+        this.title = new Title(querySelectorChild(node, '.title'));
+        this.extra = null;
         this.section = sect = querySelectorChild(node, '.section');
-        if (box) {
-          this.title = querySelectorChild(box, 'h3');
-          this.arrow = querySelectorChild(box, '.arrow');
-        } else {
-          this.title = null;
-          this.arrow = null;
+        this.children = c = querySelectorChildren(sect, '.item');
+        if (c) {
+          for (i$ = 0, len$ = c.length; i$ < len$; ++i$) {
+            b = i$;
+            a = c[i$];
+            c[b] = new Item(block, a, this);
+          }
         }
-        this.hover = function(e){
-          e.preventDefault();
-          if (!this$.block.locked) {
-            e.currentTarget.classList.add('h');
-            if (!this$.hovered && (!this$.config.extra || e.currentTarget === this$.arrow)) {
-              this$.hovered = true;
-              this$.node.classList.add('hovered');
-              if (!this$.config.extra) {
-                if (e.currentTarget === this$.title) {
-                  this$.arrow.classList.add('h');
-                } else {
-                  this$.title.classList.add('h');
+        this.hovered = 0;
+        this.focused = 0;
+        this.opened = false;
+        this.locked = true;
+        hoverBounce = newDelay();
+        focusBounce = newDelay();
+        this.onHover = async function(e, hovered){
+          var a, x, h;
+          if (hoverBounce.pending) {
+            hoverBounce.cancel();
+          }
+          if ((await (hoverBounce = newDelay(66)))) {
+            a = this$.title.arrow;
+            x = this$.extra;
+            hovered = !hovered
+              ? 0
+              : !x || e === a ? 1 : 2;
+            if (hovered !== (h = this$.hovered)) {
+              this$.hovered = hovered;
+              if (hovered === 1) {
+                if (h) {
+                  x.setHovered(false);
                 }
+                a.classList.add('h');
+              } else if (hovered === 2) {
+                x.setHovered(true);
+                if (h) {
+                  a.classList.remove('h');
+                }
+              } else if (h === 2) {
+                x.setHovered(false);
+              } else {
+                a.classList.remove('h');
               }
-              if (!this$.block.focused) {
-                this$.block.onAutofocus(this$.arrow);
+              a = this$.node.classList;
+              if (h) {
+                a.remove('h' + h);
+              }
+              if (hovered) {
+                a.add('h' + hovered);
+              }
+              if ((!hovered || !h) && this$.block.onHover) {
+                this$.block.onHover(this$, hovered);
               }
             }
           }
+          return false;
         };
-        this.unhover = function(e){
-          e.preventDefault();
-          if (!this$.block.locked) {
-            e.currentTarget.classList.remove('h');
-            if (this$.hovered) {
-              this$.hovered = false;
-              this$.node.classList.remove('hovered');
-              if (!this$.config.extra) {
-                if (e.currentTarget === this$.title) {
-                  this$.arrow.classList.remove('h');
-                } else {
-                  this$.title.classList.remove('h');
-                }
+        this.onFocus = async function(e, focused){
+          var a, x, f;
+          if (focusBounce.pending) {
+            focusBounce.cancel();
+          }
+          if ((await (focusBounce = newDelay(66)))) {
+            a = this$.title.arrow;
+            x = this$.extra;
+            focused = !focused
+              ? 0
+              : !x || e === a ? 1 : 2;
+            if (focused !== (f = this$.focused)) {
+              this$.focused = focused;
+              this$.node.classList.toggle('f', !!focused);
+              if (this$.block.onFocus) {
+                this$.block.onFocus(this$);
               }
             }
           }
+          return true;
         };
         this.focus = function(e){
           e.preventDefault();
-          if (!this$.block.locked && !this$.focused) {
-            this$.focused = this$.block.focused = true;
-            if (e = this$.block.onFocus) {
-              e(this$);
-            }
-            this$.node.classList.add('focused');
-            this$.arrow.classList.add('f');
-            if (!this$.config.extra) {
-              this$.title.classList.add('f');
-            }
+          if (!this$.locked) {
+            (e = this$.title.arrow).classList.add('f');
+            this$.onFocus(e, true);
           }
         };
         this.unfocus = function(e){
           e.preventDefault();
-          if (!this$.block.locked && this$.focused) {
-            this$.focused = this$.block.focused = false;
-            if (e = this$.block.onFocus) {
-              e(this$);
-            }
-            this$.node.classList.remove('focused');
-            this$.arrow.classList.remove('f');
-            if (!this$.config.extra) {
-              this$.title.classList.remove('f');
-            }
-          }
-        };
-        this['switch'] = function(e){
-          e.preventDefault();
-          e.stopPropagation();
-          if (!this$.block.locked && this$.config.arrow && (!this$.config.extra || e.currentTarget === this$.arrow)) {
-            this$.opened = !this$.opened;
-            this$.node.classList.toggle('opened', this$.opened);
-            if (!this$.focused && this$.arrow) {
-              this$.arrow.focus();
-            }
-            if (e = this$.block.onChange) {
-              e(this$);
-            }
-          }
+          (e = this$.title.arrow).classList.remove('f');
+          this$.onFocus(e, false);
         };
         this.keydown = function(e){
-          var ref$, a;
-          if (this$.block.locked || ((ref$ = e.keyCode) !== 38 && ref$ !== 40 && ref$ !== 37 && ref$ !== 39 && ref$ !== 75 && ref$ !== 74 && ref$ !== 72 && ref$ !== 76)) {
-            return;
+          if (this$.locked) {
+            return false;
           }
-          e.preventDefault();
-          e.stopPropagation();
           switch (e.keyCode) {
           case 38:
           case 75:
-            if (a = this$.searchArrow(true)) {
-              if ((e = this$.block.onRefocus) && e(this$, a, true)) {
-                return;
-              }
-              a.arrow.focus();
+            if (e = this$.searchArrow(true)) {
+              e.title.arrow.focus();
             }
             break;
           case 40:
           case 74:
-            if (a = this$.searchArrow(false)) {
-              if ((e = this$.block.onRefocus) && e(this$, a, false)) {
-                return;
-              }
-              a.arrow.focus();
+            if (e = this$.searchArrow(false)) {
+              e.title.arrow.focus();
             }
             break;
           case 37:
           case 72:
-            if (this$.opened) {
-              this$.opened = false;
-              this$.node.classList.remove('opened');
-              if (e = this$.block.onChange) {
-                e(this$);
-              }
-            } else if (e = this$.block.onRefocus) {
-              e(this$, null, true);
-            }
-            break;
           case 39:
           case 76:
-            if (!this$.opened) {
-              this$.opened = true;
-              this$.node.classList.add('opened');
-              if (e = this$.block.onChange) {
-                e(this$);
-              }
-            } else if (e = this$.block.onRefocus) {
-              e(this$, null, false);
+            if (this$.section) {
+              this$.onSwitch();
             }
+            console.log('open/close section?');
+            break;
+          default:
+            return false;
           }
+          e.preventDefault();
+          e.stopPropagation();
+          return true;
         };
-        if ((a = querySelectorChildren(sect, '.item')).length) {
-          this.children = a;
-          for (i$ = 0, len$ = a.length; i$ < len$; ++i$) {
-            c = i$;
-            b = a[i$];
-            a[c] = new Item(block, b, this);
-          }
-        } else {
-          this.children = null;
-        }
       };
       Item.prototype = {
-        attach: function(){
-          var B, a, i$, len$, b;
-          B = this.block;
-          if (this.block.rootItem.config.mode & 4) {
-            if (a = this.arrow) {
-              a.addEventListener('pointerenter', this.hover);
-              a.addEventListener('pointerleave', this.unhover);
-              a.addEventListener('focusin', this.focus);
-              a.addEventListener('focusout', this.unfocus);
-              a.addEventListener('keydown', this.keydown);
-              a.addEventListener('click', this['switch']);
-            }
-            if (a = this.title) {
-              a.addEventListener('pointerenter', this.hover);
-              a.addEventListener('pointerleave', this.unhover);
-              a.addEventListener('click', this['switch']);
-            }
+        init: function(){
+          var a, b, i$, len$;
+          this.opened = this.config.opened;
+          if (a = this.config.name) {
+            this.title.label.textContent = a;
+          }
+          b = 'addEventListener';
+          a = this.title.h3;
+          a[b]('pointerenter', this.hover(a));
+          a[b]('pointerleave', this.unhover(a));
+          a[b]('click', this.click(a));
+          a = this.title.arrow;
+          a[b]('pointerenter', this.hover(a));
+          a[b]('pointerleave', this.unhover(a));
+          a[b]('click', this.click(a));
+          a[b]('focusin', this.focus);
+          a[b]('focusout', this.unfocus);
+          a[b]('keydown', this.keydown);
+          a = 'e' + ((this.extra && '1') || '0');
+          b = 'o' + ((this.opened && '1') || '0');
+          this.node.classList.add(a, b);
+          if (this.config.arrow) {
+            this.title.arrow.classList.add('v');
+          }
+          if (this.extra) {
+            this.extra.root.classList.add('extra');
           }
           if (a = this.children) {
             for (i$ = 0, len$ = a.length; i$ < len$; ++i$) {
               b = a[i$];
-              b.attach();
+              b.init();
             }
           }
         },
-        detach: function(){
-          true;
-        },
-        setClass: function(name, flag){
+        lock: function(flag){
           var a, i$, len$, b;
-          flag == null && (flag = true);
+          if (this.locked !== flag) {
+            this.locked = flag;
+            this.node.classList.toggle('v', !flag);
+            if (a = this.title) {
+              a.arrow.disabled = flag;
+            }
+            if (a = this.extra) {
+              a.lock(flag);
+            }
+          }
           if (a = this.children) {
             for (i$ = 0, len$ = a.length; i$ < len$; ++i$) {
               b = a[i$];
-              b.setClass(name, flag);
+              b.lock(flag);
             }
           }
-          this.node.classList.toggle(name, flag);
+          return flag;
+        },
+        hover: function(o){
+          var this$ = this;
+          return function(e){
+            e.preventDefault();
+            if (!this$.locked) {
+              this$.onHover(o, true);
+            }
+          };
+        },
+        unhover: function(o){
+          var this$ = this;
+          return function(e){
+            e.preventDefault();
+            this$.onHover(o, false);
+          };
+        },
+        click: function(o){
+          var this$ = this;
+          return async function(e){
+            e.preventDefault();
+            if (!this$.locked) {
+              if (this$.extra && o === this$.title.h3) {
+                this$.extra.event();
+              } else if (this$.section) {
+                e = !this$.opened;
+                if (!this$.block.onChange || (await this$.block.onChange(this$, e))) {
+                  this$.set(e);
+                }
+                if (!this$.focused) {
+                  this$.title.arrow.focus();
+                }
+              }
+            }
+          };
+        },
+        set: function(v){
+          if (this.opened === v) {
+            return false;
+          }
+          this.opened = v;
+          v = (v && 1) || 0;
+          this.node.classList.remove('o' + (1 - v));
+          this.node.classList.add('o' + v);
+          return true;
         },
         searchArrow: function(direction){
           var a, b, c, d;
@@ -389,14 +430,14 @@ smBlocks = function(){
           return a;
         }
       };
-      Block = function(root, state){
-        var box, sect, item, list, a, b, this$ = this;
+      Block = function(root){
+        var box, sect, items, list, a, b;
         this.root = root;
         this.rootBox = box = root.firstChild;
-        this.rootItem = root = new Item(this, box, null);
         this.lines = querySelectorChildren(box, 'svg');
+        this.item = root = new Item(this, box, null);
         this.sect = sect = {};
-        this.item = item = {};
+        this.items = items = {};
         this.list = list = [root];
         a = -1;
         while (++a < list.length) {
@@ -404,68 +445,358 @@ smBlocks = function(){
             sect[b.config.id] = b;
             list.push.apply(list, b.children);
           }
-          item[b.config.id] = b;
+          items[b.config.id] = b;
         }
-        this.state = state;
+        this.hovered = false;
         this.focused = false;
-        this.locked = 1;
-        this['class'] = {};
-        this.onChange = null;
+        this.locked = true;
+        this.onHover = null;
         this.onFocus = null;
-        this.onRefocus = null;
-        this.onAutofocus = function(node){
-          if (this$.rootItem.config.autofocus) {
-            if (this$.rootItem.arrow) {
-              this$.rootItem.arrow.focus();
-            } else if (node) {
-              node.focus();
+        this.onChange = null;
+      };
+      Block.prototype = {
+        init: function(title){
+          if (!this.item.config.name && title) {
+            this.item.title.label.textContent = title;
+          }
+          this.item.init();
+        },
+        lock: function(flag){
+          flag == null && (flag = true);
+          if (this.locked !== flag) {
+            this.locked = this.item.lock(flag);
+          }
+        }
+        /***
+        S.onRefocus = (i1, i2, direction) ~> # {{{
+        	# prepare
+        	a = null
+        	# check destination
+        	if i2
+        		# up/down navigation for root
+        		if not i1.parent
+        			# pass to checkbox
+        			# get item
+        			if direction
+        				# last
+        				a = i1.getLastVisible!
+        				a = @checks.get a.config.id
+        			else
+        				# first
+        				a = @checks.get i1.children.0.config.id
+        	else
+        		# left/right breakout
+        		# direction doesn't matter for single checkbox
+        		a = @checks.get i1.config.id
+        	# custom
+        	if a and a.checkbox
+        		a.checkbox.focus!
+        	# default
+        	return !!a
+        # }}}
+        @onFocus = S.onFocus = do ~> # {{{
+        	p = null
+        	return (item) ~>>
+        		# check
+        		if p and p.pending
+        			p.resolve false
+        		# set
+        		if item.focused
+        			@focused = true
+        			@root.classList.add 'f'
+        		else if await (p := newDelay 60)
+        			@focused = false
+        			@root.classList.remove 'f'
+        		# done
+        		return true
+        # }}}
+        @onAutofocus = S.onAutofocus = (node) !~> # {{{
+        	if not @focused and \
+        		(a = S.rootItem).config.autofocus
+        		###
+        		if a.arrow
+        			a.arrow.focus!
+        		else
+        			a.checks.checkbox.focus!
+        # }}}
+        /***/
+      };
+      return function(o){
+        return new Block(o);
+      };
+    }(),
+    select: function(){
+      var template, Block;
+      template = parseTemplate(function(){
+        /*
+        <svg preserveAspectRatio="none" shape-rendering="geometricPrecision" viewBox="0 0 48 48">
+        	<polygon class="b" points="24,32 34,17 36,16 24,34 "/>
+        	<polygon class="b" points="24,34 12,16 14,17 24,32 "/>
+        	<polygon class="b" points="34,17 14,17 12,16 36,16 "/>
+        	<polygon class="a" points="14,17 34,17 24,32 "/>
+        </svg>
+        */
+      });
+      Block = function(root, select){
+        var this$ = this;
+        this.root = root;
+        this.select = select;
+        this.current = -1;
+        this.hovered = false;
+        this.focused = false;
+        this.locked = true;
+        this.onHover = null;
+        this.onFocus = null;
+        this.onChange = null;
+        this.hover = function(e){
+          e.preventDefault();
+          if (!this$.locked && !this$.hovered) {
+            this$.hovered = true;
+            this$.root.classList.add('h');
+            if (e = this$.onHover) {
+              e(this$);
             }
+          }
+        };
+        this.unhover = function(e){
+          e.preventDefault();
+          if (this$.hovered) {
+            this$.hovered = false;
+            this$.root.classList.remove('h');
+            if (e = this$.onHover) {
+              e(this$);
+            }
+          }
+        };
+        this.focus = function(e){
+          if (this$.locked) {
+            e.preventDefault();
+            e.stopPropagation();
+          } else if (!this$.focused) {
+            this$.focused = true;
+            this$.root.classList.add('f');
+            if (e = this$.onFocus) {
+              e(this$);
+            }
+          }
+        };
+        this.unfocus = function(e){
+          e.preventDefault();
+          if (this$.focused) {
+            this$.focused = false;
+            this$.root.classList.remove('f');
+            if (e = this$.onFocus) {
+              e(this$);
+            }
+          }
+        };
+        this.input = function(e){
+          e.preventDefault();
+          if (this$.locked || ((e = this$.onChange) && !e(this$.select.selectedIndex))) {
+            this$.select.selectedIndex = this$.current;
+          } else {
+            this$.current = this$.select.selectedIndex;
           }
         };
       };
       Block.prototype = {
-        init: async function(title){
-          var a;
-          if (title && !(a = this.rootItem.title.firstChild).textContent) {
-            a.textContent = title;
-          }
-          this.rootItem.attach();
-          this.root.classList.add('v');
-          return true;
-        },
-        lock: function(level){
-          switch (level) {
-          case 1:
-            if (!this.locked) {
-              this.rootItem.setClass('v', false);
+        init: function(list, index){
+          var i$, len$, a, b;
+          list == null && (list = null);
+          index == null && (index = -1);
+          if (list) {
+            for (i$ = 0, len$ = list.length; i$ < len$; ++i$) {
+              a = list[i$];
+              b = document.createElement('option');
+              b.textContent = a;
+              this.select.appendChild(b);
             }
-            break;
-          default:
-            if (this.locked) {
-              this.rootItem.setClass('v', true);
-            }
+            this.current = this.select.selectedIndex = index;
+          } else {
+            this.current = this.select.selectedIndex = -1;
+            this.select.innerHTML = '';
           }
-          this.locked = level;
+          a = this.root;
+          b = list ? 'addEventListener' : 'removeEventListener';
+          a[b]('pointerenter', this.hover);
+          a[b]('pointerleave', this.unhover);
+          a[b]('focusin', this.focus);
+          a[b]('focusout', this.unfocus);
+          a[b]('input', this.input);
         },
-        setClass: function(k, v){
-          var a;
-          a = this['class'];
-          if (!a.hasOwnProperty(k) || a[k] !== v) {
-            a[k] = v;
-            this.rootBox.classList.toggle(k, !!v);
+        lock: function(locked){
+          if (this.locked !== locked) {
+            this.root.classList.toggle('v', !(this.locked = locked));
+            this.select.disabled = locked;
           }
         },
-        setTitle: function(name){
-          this.rootItem.title.firstChild.textContent = name;
+        set: function(i){
+          if (i !== this.current) {
+            this.current = this.select.selectedIndex = i;
+          }
+          return i;
         },
-        refresh: function(){},
-        finit: function(){
-          this.root.classList.remove('v');
-          this.rootItem.detach();
+        get: function(){
+          return this.current;
         }
       };
-      return function(node, state){
-        return new Block(node, state);
+      return function(o){
+        var a, b;
+        o == null && (o = {});
+        a = document.createElement('div');
+        a.className = BRAND + '-select';
+        a.innerHTML = o.hasOwnProperty('svg') ? o.svg : template;
+        b = document.createElement('select');
+        a.appendChild(b);
+        return new Block(a, b);
+      };
+    }(),
+    checkbox: function(){
+      var template, Block;
+      template = parseTemplate(function(){
+        /*
+        <svg preserveAspectRatio="none" shape-rendering="geometricPrecision" viewBox="0 0 48 48">
+        	<circle class="a" cx="24" cy="24" r="12"/>
+        	<path class="b" d="M24 6a18 18 0 110 36 18 18 0 010-36zm0 6a12 12 0 110 24 12 12 0 010-24z"/>
+        	<path class="c" d="M24 4a20 20 0 110 40 20 20 0 010-40zm0 2a18 18 0 110 36 18 18 0 010-36z"/>
+        	<path class="d" d="M48 27v-6H0v6z"/>
+        	<path class="e" d="M27 48V0h-6v48z"/>
+        </svg>
+        */
+      });
+      Block = function(root, cfg){
+        var this$ = this;
+        this.root = root;
+        this.cfg = cfg;
+        this.current = -2;
+        this.hovered = false;
+        this.focused = false;
+        this.locked = true;
+        this.onHover = null;
+        this.onFocus = null;
+        this.onChange = null;
+        this.hover = async function(e){
+          e.preventDefault();
+          if (!this$.locked) {
+            if (!this$.onHover || (await this$.onHover(this$, true))) {
+              this$.setHovered(true);
+            }
+          }
+        };
+        this.unhover = async function(e){
+          e.preventDefault();
+          if (!this$.onHover || (await this$.onHover(this$, false))) {
+            this$.setHovered(false);
+          }
+        };
+        this.focus = async function(e){
+          if (this$.locked) {
+            e.preventDefault();
+            e.stopPropagation();
+          } else {
+            if (!this$.onFocus || (await this$.onFocus(this$, true))) {
+              this$.setFocused(true);
+            }
+          }
+        };
+        this.unfocus = async function(e){
+          e.preventDefault();
+          if (!this$.onFocus || (await this$.onFocus(this$, false))) {
+            this$.setFocused(false);
+          }
+        };
+        this.click = function(e){
+          e.preventDefault();
+          e.stopPropagation();
+          if (!this$.locked && (~this$.current || ~this$.cfg.intermediate)) {
+            this$.event();
+          }
+        };
+        this.event = async function(){
+          var c;
+          c = ~(c = this$.current)
+            ? 1 - c
+            : this$.cfg.intermediate;
+          if (!this$.focused) {
+            this$.root.focus();
+          }
+          if (!this$.onChange || (await this$.onChange(this$, c))) {
+            this$.set(c);
+          }
+        };
+      };
+      Block.prototype = {
+        init: function(v){
+          var a, b;
+          v == null && (v = -1);
+          this.set(v);
+          if (~this.cfg.intermediate) {
+            this.root.classList.add('i');
+          }
+          if (a = this.cfg.master) {
+            if (!this.onHover) {
+              this.onHover = a.onHover;
+            }
+            if (!this.onFocus) {
+              this.onFocus = a.onFocus;
+            }
+          }
+          a = this.root;
+          b = 'addEventListener';
+          a[b]('pointerenter', this.hover);
+          a[b]('pointerleave', this.unhover);
+          a[b]('focusin', this.focus);
+          a[b]('focusout', this.unfocus);
+          a[b]('click', this.click);
+        },
+        lock: function(flag){
+          flag == null && (flag = true);
+          if (this.locked !== flag) {
+            this.root.classList.toggle('v', !(this.locked = flag));
+            if (flag || ~this.current || ~this.cfg.intermediate) {
+              this.root.disabled = flag;
+            }
+          }
+        },
+        set: function(v){
+          var i;
+          if (this.current === v) {
+            return v;
+          }
+          if ((i = this.current + 1) >= 0) {
+            this.root.classList.remove('x' + i);
+          }
+          this.root.classList.add('x' + (v + 1));
+          return this.current = v;
+        },
+        setHovered: function(v){
+          if (this.hovered === v) {
+            return false;
+          }
+          this.hovered = v;
+          this.root.classList.toggle('h');
+          return true;
+        },
+        setFocused: function(v){
+          if (this.focused === v) {
+            return false;
+          }
+          this.focused = v;
+          this.root.classList.toggle('f');
+          return true;
+        }
+      };
+      return function(o){
+        var a;
+        o == null && (o = {});
+        o.intermediate = o.intermediate
+          ? o.intermediate
+          : -1;
+        a = document.createElement('button');
+        a.type = 'button';
+        a.className = BRAND + '-checkbox';
+        a.innerHTML = o.svg ? o.svg : template;
+        return new Block(a, o);
       };
     }(),
     productCard: function(){
@@ -853,887 +1184,6 @@ smBlocks = function(){
       };
     }()
   };
-  TODO = {
-    'category-filter': function(){
-      var Checkbox, Block;
-      Checkbox = function(block, item, parent){
-        var cbox, a, i$, ref$, len$, b, c, this$ = this;
-        parent == null && (parent = null);
-        this.block = block;
-        this.item = item;
-        this.parent = parent;
-        this.checkbox = cbox = item.titleBox ? querySelectorChild(item.titleBox, '.checkbox') : null;
-        this.hovered = false;
-        this.focused = false;
-        this.state = 0;
-        this.hover = function(e){
-          e.preventDefault();
-          if (!this$.block.locked && !this$.hovered) {
-            this$.item.node.classList.add('hovered-2');
-            this$.hovered = true;
-            if (!this$.block.focused) {
-              this$.block.onAutofocus(this$.checkbox);
-            }
-          }
-        };
-        this.unhover = function(e){
-          e.preventDefault();
-          if (this$.hovered) {
-            this$.item.node.classList.remove('hovered-2');
-            this$.hovered = false;
-          }
-        };
-        this.focus = function(e){
-          if (!this$.block.locked && !this$.focused) {
-            this$.item.node.classList.add('focused-2');
-            this$.focused = true;
-            this$.block.onFocus(this$);
-          } else {
-            e.preventDefault();
-            e.stopImmediatePropagation();
-          }
-        };
-        this.unfocus = function(e){
-          e.preventDefault();
-          if (this$.focused) {
-            this$.item.node.classList.remove('focused-2');
-            this$.focused = false;
-            this$.block.onFocus(this$);
-          }
-        };
-        this.check = function(e){
-          e.preventDefault();
-          e.stopImmediatePropagation();
-          if (this$.block.locked) {
-            return;
-          }
-          this$.block.refresh(this$.toggleCheckbox());
-          this$.checkbox.focus();
-        };
-        this.keydown = function(e){
-          var ref$, a, b;
-          if (this$.block.locked || ((ref$ = e.keyCode) !== 38 && ref$ !== 40 && ref$ !== 37 && ref$ !== 39 && ref$ !== 75 && ref$ !== 74 && ref$ !== 72 && ref$ !== 76)) {
-            return;
-          }
-          e.preventDefault();
-          e.stopPropagation();
-          switch (e.keyCode) {
-          case 38:
-          case 75:
-            a = this$.parent.children;
-            if ((b = a.indexOf(this$)) === 0) {
-              a = this$.parent;
-            } else {
-              a = a[b - 1].item.getLastVisible();
-              a = this$.parent.get(a.config.id);
-            }
-            if (a.checkbox) {
-              a.checkbox.focus();
-            } else if (a.item.arrow) {
-              a.item.arrow.focus();
-            }
-            break;
-          case 40:
-          case 74:
-            a = this$.item.getNextVisible();
-            a = this$.block.checks.get(a.config.id);
-            if (a.checkbox) {
-              a.checkbox.focus();
-            } else if (a.item.arrow) {
-              a.item.arrow.focus();
-            }
-            break;
-          case 37:
-          case 72:
-            if (a = this$.item.arrow) {
-              a.focus();
-            }
-            break;
-          case 39:
-          case 76:
-            if (a = this$.item.arrow) {
-              a.focus();
-            }
-          }
-        };
-        if (item.children) {
-          this.children = a = [];
-          for (i$ = 0, len$ = (ref$ = item.children).length; i$ < len$; ++i$) {
-            b = i$;
-            c = ref$[i$];
-            a[b] = new Checkbox(block, c, this);
-          }
-        } else {
-          this.children = null;
-        }
-        if (cbox) {
-          a = cbox.parentNode;
-          a.removeChild(cbox);
-          a.insertBefore(cbox, a.firstChild);
-        }
-      };
-      Checkbox.prototype = {
-        attach: function(){
-          var a, i$, len$, c;
-          if (a = this.checkbox) {
-            a.addEventListener('pointerenter', this.hover);
-            a.addEventListener('pointerleave', this.unhover);
-            a.addEventListener('focusin', this.focus);
-            a.addEventListener('focusout', this.unfocus);
-            a.addEventListener('click', this.check);
-            a.addEventListener('keydown', this.keydown);
-            a = this.item.title;
-            a.addEventListener('pointerenter', this.hover);
-            a.addEventListener('pointerleave', this.unhover);
-            a.addEventListener('click', this.check);
-            a.addEventListener('keydown', this.keydown);
-          }
-          if (a = this.children) {
-            for (i$ = 0, len$ = a.length; i$ < len$; ++i$) {
-              c = a[i$];
-              c.attach();
-            }
-          }
-        },
-        detach: function(){
-          true;
-        },
-        get: function(id){
-          var c, i$, len$, a;
-          if (id === this.item.config.id) {
-            return this;
-          }
-          if (c = this.children) {
-            for (i$ = 0, len$ = c.length; i$ < len$; ++i$) {
-              a = c[i$];
-              if (a = a.get(id)) {
-                return a;
-              }
-            }
-          }
-          return null;
-        },
-        setChildren: function(items, v){
-          var list, i$, len$, a;
-          list = [];
-          for (i$ = 0, len$ = items.length; i$ < len$; ++i$) {
-            a = items[i$];
-            if (a.state !== v) {
-              a.state = v;
-              list[list.length] = a;
-              if (a.children) {
-                list.push.apply(list, this.setChildren(a.children, v));
-              }
-            }
-          }
-          return list;
-        },
-        setParent: function(item, v){
-          var a, i$, ref$, len$, b;
-          if (v === 2) {
-            a = 2;
-          } else {
-            a = v;
-            for (i$ = 0, len$ = (ref$ = item.children).length; i$ < len$; ++i$) {
-              b = ref$[i$];
-              if (b.state !== a) {
-                a = 2;
-                break;
-              }
-            }
-          }
-          if (item.state === a) {
-            b = [];
-          } else {
-            item.state = a;
-            b = [item];
-          }
-          return item.parent ? this.setParent(item.parent, a).concat(b) : b;
-        },
-        toggleCheckbox: function(){
-          var list;
-          this.state = this.state === 2
-            ? 1
-            : this.state ? 0 : 1;
-          list = [this];
-          if (this.parent) {
-            list.push.apply(list, this.setParent(this.parent, this.state));
-          }
-          if (this.children) {
-            list.push.apply(list, this.setChildren(this.children, this.state));
-          }
-          return list;
-        },
-        getCheckedIds: function(){
-          var list, i$, ref$, len$, a;
-          list = this.state === 1 && this.item.config.count > 0
-            ? [this.item.config.id]
-            : [];
-          if (this.children) {
-            for (i$ = 0, len$ = (ref$ = this.children).length; i$ < len$; ++i$) {
-              a = ref$[i$];
-              list.push.apply(list, a.getCheckedIds());
-            }
-          }
-          return list;
-        }
-      };
-      Block = function(root, index){
-        var rootBox;
-        this.group = 'category';
-        this.root = root;
-        this.index = index;
-        this.rootBox = rootBox = root.firstChild;
-        this.locked = -1;
-        this.focused = false;
-        /***
-        # handlers
-        S.onRefocus = (i1, i2, direction) ~> # {{{
-        	# prepare
-        	a = null
-        	# check destination
-        	if i2
-        		# up/down navigation for root
-        		if not i1.parent
-        			# pass to checkbox
-        			# get item
-        			if direction
-        				# last
-        				a = i1.getLastVisible!
-        				a = @checks.get a.config.id
-        			else
-        				# first
-        				a = @checks.get i1.children.0.config.id
-        	else
-        		# left/right breakout
-        		# direction doesn't matter for single checkbox
-        		a = @checks.get i1.config.id
-        	# custom
-        	if a and a.checkbox
-        		a.checkbox.focus!
-        	# default
-        	return !!a
-        # }}}
-        @onFocus = S.onFocus = do ~> # {{{
-        	p = null
-        	return (item) ~>>
-        		# check
-        		if p and p.pending
-        			p.resolve false
-        		# set
-        		if item.focused
-        			@focused = true
-        			@root.classList.add 'f'
-        		else if await (p := newDelay 60)
-        			@focused = false
-        			@root.classList.remove 'f'
-        		# done
-        		return true
-        # }}}
-        @onAutofocus = S.onAutofocus = (node) !~> # {{{
-        	if not @focused and \
-        		(a = S.rootItem).config.autofocus
-        		###
-        		if a.arrow
-        			a.arrow.focus!
-        		else
-        			a.checks.checkbox.focus!
-        # }}}
-        /***/
-      };
-      Block.prototype = {
-        level: 2,
-        init: async function(cfg){
-          cfg = cfg.locale.title[0];
-          if (!(await this.section.init(cfg))) {
-            return false;
-          }
-          this.checks.attach();
-          this.group.data[this.index] = [];
-          return true;
-        },
-        refresh: function(list){
-          var i$, len$, a, b, d, c;
-          if (list) {
-            for (i$ = 0, len$ = list.length; i$ < len$; ++i$) {
-              a = list[i$];
-              b = a.item.node.classList;
-              switch (a.state) {
-              case 2:
-                b.add('checked', 'c2');
-                b.remove('c1');
-                break;
-              case 1:
-                b.add('checked', 'c1');
-                b.remove('c2');
-                break;
-              default:
-                b.remove('checked', 'c1', 'c2');
-              }
-            }
-          }
-          if (this.index < 0) {
-            return true;
-          }
-          a = this.checks.getCheckedIds();
-          b = this.group.data[this.index];
-          if (d = (c = a.length) === b.length) {
-            while (--c >= 0) {
-              if (a[c] !== b[c]) {
-                d = false;
-                break;
-              }
-            }
-          }
-          if (!d) {
-            b.length = c = a.length;
-            while (--c >= 0) {
-              b[c] = a[c];
-            }
-            this.group.update();
-          }
-          return true;
-        },
-        lock: async function(level){
-          (await this.section.lock(level));
-          return true;
-        }
-      };
-      return Block;
-    }(),
-    'price-filter': function(){
-      var InputNum, TextInputs, Block;
-      InputNum = function(id, box){
-        var this$ = this;
-        this.id = id;
-        this.box = box;
-        this.input = box.children[0];
-        this.label = box.children[1];
-        this.value = '';
-        this.state = ['', '', 0, 0];
-        this.changed = false;
-        this.hovered = false;
-        this.focused = false;
-        this.locked = true;
-        this.regex = /^[0-9]{0,9}$/;
-        this.onHover = null;
-        this.onFocus = null;
-        this.onSubmit = null;
-        this.onScroll = null;
-        this.onChange = null;
-        this.hover = function(e){
-          e.preventDefault();
-          e.stopPropagation();
-          if (!this$.locked) {
-            this$.hovered = true;
-            this$.box.classList.add('hovered');
-            if (e = this$.onHover) {
-              e(this$);
-            }
-          }
-        };
-        this.unhover = function(e){
-          e.preventDefault();
-          if (this$.hovered) {
-            this$.hovered = false;
-            this$.box.classList.remove('hovered');
-            if (e = this$.onHover) {
-              e(this$);
-            }
-          }
-        };
-        this.focus = function(e){
-          if (this$.locked) {
-            e.preventDefault();
-            e.stopPropagation();
-          } else {
-            this$.focused = true;
-            this$.box.classList.add('focused');
-            this$.select();
-            if (e = this$.onFocus) {
-              e(this$);
-            }
-          }
-        };
-        this.unfocus = function(e){
-          this$.focused = false;
-          this$.box.classList.remove('focused');
-          if (e = this$.onFocus) {
-            e(this$);
-          }
-        };
-        this.inputChange = function(e){
-          var s, v, w;
-          s = this$.state;
-          v = this$.input.value;
-          w = this$.value;
-          if (v.length) {
-            if (!this$.regex.test(v)) {
-              this$.input.value = s[1];
-              this$.input.setSelectionRange(s[2], s[3]);
-            } else {
-              if (this$.onChange && v !== this$.value) {
-                v = this$.onChange(this$, v);
-              }
-              s[1] = this$.value = v;
-              s[2] = this$.input.selectionStart;
-              s[3] = this$.input.selectionEnd;
-              return true;
-            }
-          } else {
-            this$.set(s[0]);
-            this$.input.select();
-          }
-          e.preventDefault();
-          e.stopPropagation();
-          return false;
-        };
-        this.inputKey = function(e){
-          var ref$;
-          if (this$.locked) {
-            return;
-          }
-          if (e.keyCode === 13) {
-            if (!this$.onSubmit) {
-              return;
-            }
-            this$.onSubmit(this$, e.ctrlKey);
-          } else if ((ref$ = e.keyCode) === 38 || ref$ === 40) {
-            if (!this$.onScroll) {
-              return;
-            }
-            if (this$.onScroll(this$, e.keyCode === 38)) {
-              this$.input.select();
-            }
-          } else {
-            return;
-          }
-          e.preventDefault();
-          e.stopPropagation();
-        };
-        this.inputWheel = function(e){
-          if (this$.locked || !this$.onScroll) {
-            return false;
-          }
-          e.preventDefault();
-          e.stopPropagation();
-          this$.onScroll(this$, e.deltaY < 0);
-          if (this$.focused) {
-            this$.select();
-          }
-        };
-        this.onLabel = function(e){
-          if (this$.locked || !this$.focused || !this$.onSubmit) {
-            return;
-          }
-          e.preventDefault();
-          e.stopPropagation();
-          if (this$.value !== this$.state[0]) {
-            this$.set(this$.state[0]);
-            this$.input.select();
-            this$.onSubmit(this$, true);
-          }
-        };
-      };
-      InputNum.prototype = {
-        init: function(label, v){
-          this.label.textContent = label;
-          this.set(v);
-          this.state[0] = v;
-        },
-        attach: function(){
-          this.box.addEventListener('pointerenter', this.hover);
-          this.box.addEventListener('pointerleave', this.unhover);
-          this.box.addEventListener('wheel', this.inputWheel);
-          this.input.addEventListener('focusin', this.focus);
-          this.input.addEventListener('focusout', this.unfocus);
-          this.input.addEventListener('input', this.inputChange, true);
-          this.input.addEventListener('keydown', this.inputKey, true);
-          this.label.addEventListener('pointerdown', this.labelClick, true);
-        },
-        detach: function(){},
-        set: function(v){
-          var s;
-          s = this.state;
-          s[1] = this.input.value = this.value = '' + v;
-          s[2] = 0;
-          s[3] = s[1].length;
-        },
-        lock: function(flag){
-          if (flag === this.locked) {
-            return;
-          }
-          this.locked = flag;
-          this.input.readOnly = flag;
-          this.input.value = flag
-            ? ''
-            : this.value;
-          this.box.classList.toggle('locked', flag);
-        },
-        select: function(){
-          var s;
-          s = this.state;
-          s[2] = 0;
-          s[3] = this.value.length;
-          this.input.select();
-        }
-      };
-      TextInputs = function(block, box){
-        var n0, n1, this$ = this;
-        this.block = block;
-        this.box = box;
-        this.n0 = n0 = new InputNum(0, box.children[0]);
-        this.svg = box.children[1];
-        this.rst = querySelectorChild(this.svg, '.X');
-        this.n1 = n1 = new InputNum(1, box.children[2]);
-        this.changed = 0;
-        this.hovered = false;
-        this.focused = false;
-        this.locked = true;
-        this.onFocus = null;
-        n0.onHover = n1.onHover = function(o){
-          this$.box.classList.toggle('h' + o.id, o.hovered);
-          if (!this$.block.focused) {
-            this$.block.onAutofocus(o.input);
-          }
-        };
-        n0.onFocus = n1.onFocus = function(o){
-          var v;
-          v = o.focused;
-          this$.box.classList.toggle('f' + o.id, v);
-          if (this$.focused = v) {
-            o.select();
-          } else {
-            this$.check(o.id);
-            if (this$.changed) {
-              this$.changed = 0;
-              this$.block.submit();
-            }
-          }
-          if (o = this$.onFocus) {
-            o(this$);
-          }
-        };
-        n0.onSubmit = n1.onSubmit = function(o, strict){
-          if (!this$.check(o.id) && strict) {
-            o.select();
-            return;
-          }
-          if (this$.changed) {
-            this$.changed = 0;
-            this$.block.submit();
-          }
-          if (!strict) {
-            o = o === this$.n1
-              ? this$.n0
-              : this$.n1;
-            o.input.focus();
-          }
-        };
-        n0.onScroll = n1.onScroll = function(o, direction){
-          var c, d, a, b, e;
-          c = this$.block.current;
-          d = c[4] - c[3];
-          if (d > 200) {
-            a = d / 100 | 0;
-            b = '' + a;
-            if ((e = b.length) > 1) {
-              e = e > 2 ? e - 2 : 1;
-              b = b.slice(0, -e) + '0'.repeat(e);
-              a = +b;
-            } else {
-              e = 0;
-            }
-          } else {
-            e = 0;
-            a = 1;
-          }
-          b = +o.value;
-          if (direction) {
-            b += a;
-          } else {
-            b -= a;
-          }
-          a = e ? +(('' + b).slice(0, -e) + '0'.repeat(e)) : b;
-          if (o.id) {
-            b = a;
-            a = +this$.n0.value;
-            if (b >= c[4]) {
-              b = c[4];
-            } else if (b <= a) {
-              b = a + 1;
-            }
-          } else {
-            b = +this$.n1.value;
-            if (a <= c[3]) {
-              a = c[3];
-            } else if (a >= b) {
-              a = b - 1;
-            }
-          }
-          this$.set(a, b);
-          this$.check(o.id);
-          if (this$.changed) {
-            this$.changed = 0;
-            this$.block.submit();
-          }
-          return true;
-        };
-        this.hover = function(e){
-          e.preventDefault();
-          if (!this$.locked && !this$.hovered) {
-            this$.hovered = true;
-            this$.box.classList.add('hovered');
-            if (!this$.block.focused) {
-              this$.block.onAutofocus();
-            }
-          }
-        };
-        this.unhover = function(e){
-          e.preventDefault();
-          if (this$.hovered) {
-            this$.hovered = false;
-            this$.box.classList.remove('hovered');
-          }
-        };
-        this.reset = function(e){
-          var c;
-          if (!this$.locked) {
-            if (e) {
-              e.preventDefault();
-              e.stopPropagation();
-            }
-            if ((c = this$.block.current)[0]) {
-              c[0] = false;
-              c[1] = c[2] = -1;
-              this$.set(c[3], c[4]);
-              this$.changed = 0;
-              this$.block.submit();
-            }
-          }
-        };
-      };
-      TextInputs.prototype = {
-        init: function(locale){
-          var c;
-          c = this.block.current;
-          this.n0.init(locale.min, c[3]);
-          this.n1.init(locale.max, c[4]);
-        },
-        attach: function(){
-          this.box.addEventListener('pointerenter', this.hover);
-          this.box.addEventListener('pointerleave', this.unhover);
-          this.n0.attach();
-          this.n1.attach();
-          if (this.rst) {
-            this.rst.addEventListener('click', this.reset);
-          }
-        },
-        detach: function(){},
-        set: function(min, max){
-          this.n0.set(min);
-          this.n1.set(max);
-        },
-        check: function(id){
-          var a, b, c, d;
-          a = +this.n0.value;
-          b = +this.n1.value;
-          c = this.block.current;
-          d = true;
-          if (a > b) {
-            d = a;
-            a = b;
-            b = d;
-            d = false;
-          } else if (a === b) {
-            if (id) {
-              if ((a = c[3]) === b) {
-                ++b;
-              }
-            } else {
-              if ((b = c[4]) === a) {
-                --a;
-              }
-            }
-            d = false;
-          }
-          if (a >= c[4] || a < c[3]) {
-            d = false;
-            a = c[0]
-              ? c[1]
-              : c[3];
-          } else if (a < c[3]) {
-            d = false;
-            a = c[3];
-          }
-          if (b <= c[3]) {
-            d = false;
-            b = c[0]
-              ? c[2]
-              : c[4];
-          } else if (b > c[4]) {
-            d = false;
-            b = c[4];
-          }
-          if (!d) {
-            this.set(a, b);
-          }
-          if (a === c[3] && b === c[4]) {
-            if (c[0]) {
-              ++this.changed;
-            }
-            c[0] = false;
-            c[1] = c[2] = -1;
-          } else {
-            if (!c[0] || (a !== c[1] || b !== c[2])) {
-              ++this.changed;
-            }
-            c[0] = true;
-            c[1] = a;
-            c[2] = b;
-          }
-          return d;
-        },
-        lock: function(flag){
-          if (this.locked === flag) {
-            return;
-          }
-          this.locked = flag;
-          this.n0.lock(flag);
-          this.n1.lock(flag);
-        },
-        focus: function(){
-          this.n0.input.focus();
-        }
-      };
-      Block = function(root, index){
-        var box;
-        this.group = 'price';
-        this.root = root;
-        this.index = index;
-        this.rootBox = box = root.firstChild;
-        this.config = JSON.parse(root.dataset.cfg);
-        /***
-        # controls
-        # determine UI mode
-        mode = if box.classList.contains 'text'
-        	then 0
-        	else 1
-        @inputs  = I = new TextInputs @, box
-        @section = S = state.f.section root.parentNode.parentNode.parentNode
-        /***/
-        this.locked = -1;
-        this.mode = mode;
-        this.focused = false;
-        this.current = [false, -1, -1, -1, -1];
-        this.pending = false;
-        /***
-        @onAutofocus = S.onAutofocus
-        S.onChange = (o) !~> # {{{
-        	# check
-        	if not @config.sectionSwitch or o.parent
-        		return
-        	# operate
-        	c = @current
-        	if o.opened
-        		# enable
-        		if not c.0 and (~c.1 or ~c.2)
-        			c.0 = true
-        			@submit!
-        	else
-        		# disable
-        		if c.0
-        			c.0 = false
-        			@submit!
-        # }}}
-        I.onFocus = S.onFocus = do ~> # {{{
-        	p = null
-        	return (o) ~>>
-        		# check
-        		if p and p.pending
-        			p.resolve false
-        		# set
-        		if o.focused
-        			@focused = @section.focused = true
-        			@section.root.classList.add 'f'
-        		else if await (p := newDelay 60)
-        			@focused = @section.focused = false
-        			@section.root.classList.remove 'f'
-        		# done
-        		return true
-        # }}}
-        S.onRefocus = (i1, i2, direction) ~> # {{{
-        	# check
-        	if i2
-        		if direction
-        			# last
-        			@inputs.n1.input.focus!
-        		else
-        			# first
-        			@inputs.n0.input.focus!
-        		# done
-        		return true
-        	# done
-        	return false
-        # }}}
-        /***/
-      };
-      Block.prototype = {
-        level: 2,
-        init: async function(cfg){
-          var ref$, ref1$;
-          if (!(await this.section.init(cfg.locale.price.title))) {
-            return false;
-          }
-          ref1$ = this.group.data, (ref$ = this.current)[0] = ref1$[0], ref$[1] = ref1$[1], ref$[2] = ref1$[2], ref$[3] = ref1$[3], ref$[4] = ref1$[4];
-          this.inputs.init(cfg.locale.price);
-          this.inputs.attach();
-          return true;
-        },
-        refresh: function(){
-          var a, b;
-          a = this.group.data;
-          b = this.current;
-          if (a[0] !== b[0]) {
-            this.rootBox.classList.toggle('active', a[0]);
-            this.section.setClass('active', a[0]);
-          }
-          if (a[0] !== b[0] || a[1] !== b[1] || a[2] !== b[2]) {
-            this.inputs.set(a[1], a[2]);
-          }
-          b[0] = a[0], b[1] = a[1], b[2] = a[2], b[3] = a[3], b[4] = a[4];
-          return true;
-        },
-        lock: async function(level){
-          this.inputs.lock(level);
-          this.section.lock(level);
-          return true;
-        },
-        submit: function(){
-          var p;
-          p = newDelay(0);
-          return async function(){
-            var a, b;
-            p.cancel();
-            a = this.current;
-            b = this.group.data;
-            if (a[0] !== b[0]) {
-              this.rootBox.classList.toggle('active', a[0]);
-              this.section.setClass('active', a[0]);
-            }
-            b[0] = a[0], b[1] = a[1], b[2] = a[2];
-            this.pending = true;
-            if ((await (p = newDelay(400)))) {
-              this.pending = false;
-              this.group.update();
-            }
-            return true;
-          };
-        }()
-      };
-      return Block;
-    }()
-  };
   M = {
     'products': function(){
       var Resizer, Block;
@@ -2046,7 +1496,6 @@ smBlocks = function(){
       };
       Block.prototype = {
         level: 1,
-        configure: function(s){},
         init: function(s, c){
           var a, o, b;
           if (a = this.config.options) {
@@ -2063,6 +1512,11 @@ smBlocks = function(){
           s = (a = s.availWidth) > (b = s.availHeight) ? a : b;
           s = Math.ceil(s / this.resizer.sizes[1]);
           this.page = 5 * o[0] * s;
+          a = this.page + 1;
+          b = this.items;
+          while (--a) {
+            b[b.length] = this.group.f.productCard(this);
+          }
           this.setRange(0);
           this.setCount(c.count);
           return true;
@@ -2106,27 +1560,47 @@ smBlocks = function(){
           return 0;
         },
         setCount: function(count){
-          var a, c, b;
-          if (this.count === count) {
-            return false;
-          }
+          var a, c, n, o, d, i, b;
           a = this.items;
-          if (!a.length || count / a.length > 0.8) {
-            c = a.length + this.page;
-            while (a.length < c) {
-              a[a.length] = this.group.f.productCard(this);
+          c = this.count;
+          n = this.group.config.total;
+          if (c === count) {
+            return false;
+          } else if (c < count) {
+            c = c - 1;
+            o = this.offset;
+            if ((d = o[0] - o[1]) >= 0) {
+              if (d > this.page) {
+                d = d - n;
+              }
+            } else {
+              if (d < -this.page) {
+                d = d + n;
+              }
             }
-          }
-          b = this.bufA;
-          c = this.count - 1;
-          while (++c < count) {
-            a[c].root.classList.add('v');
-            if (c < b.length && a[c].id !== b[c].id) {
-              a[c].set(b[c]);
+            while (++c < count) {
+              if (d >= 0) {
+                i = d;
+                b = this.bufA[i];
+              } else if ((i = c + d) >= 0) {
+                b = this.config.wrapAround ? this.bufA[i] : null;
+              } else {
+                i = -i - 1;
+                b = this.bufB[i];
+              }
+              if (b) {
+                if (b.id !== a[c].id) {
+                  a[c].set(b);
+                }
+              } else {
+                a[c].clear();
+              }
+              a[c].root.classList.add('v');
             }
-          }
-          while (c > count) {
-            a[--c].root.classList.remove('v');
+          } else {
+            while (c > count) {
+              a[--c].root.classList.remove('v');
+            }
           }
           if ((this.count = c) !== this.group.config.count) {
             this.group.config.count = c;
@@ -2151,7 +1625,6 @@ smBlocks = function(){
             i = c + i;
           }
           if (Math.abs(i) > d + d - 1) {
-            console.log('out of buffer');
             this.clearBuffer();
             return 2;
           }
@@ -2174,7 +1647,11 @@ smBlocks = function(){
               if (k >= 0 && b - k > 0) {
                 this.items[j].set(B[k]);
               } else if (k < 0 && a + k > 0) {
-                this.items[j].set(A[-k - 1]);
+                if (this.config.wrapAround) {
+                  this.items[j].set(A[-k - 1]);
+                } else {
+                  this.items[j].clear();
+                }
               } else {
                 this.items[j].clear();
               }
@@ -2183,7 +1660,6 @@ smBlocks = function(){
             return 0;
           }
           if (i > 0 && a - i > 0) {
-            console.log('front partially penetrated');
             j = b;
             while (j < i) {
               B[j++] = null;
@@ -2215,7 +1691,6 @@ smBlocks = function(){
             return 1;
           }
           if (i < 0 && b + i > 0) {
-            console.log('back partially penetrated');
             i = -i;
             j = a;
             while (j < i) {
@@ -2248,7 +1723,6 @@ smBlocks = function(){
             this.setRange(o, true);
             return -1;
           }
-          console.log('buffer penetrated');
           this.clearBuffer();
           return -2;
         },
@@ -3022,7 +2496,7 @@ smBlocks = function(){
           this.range.refresh();
           return true;
         },
-        lock: async function(level){
+        lock: function(level){
           var a;
           if (level > 0 && this.control.lock.pending) {
             this.control.lock.resolve(0);
@@ -3030,14 +2504,12 @@ smBlocks = function(){
           if (level > 1 && ~(a = this.range.current)) {
             this.range.pages[a].classList.remove('x');
           }
-          return true;
         },
-        unlock: async function(level){
+        unlock: function(level){
           var a;
           if ((level === -1 || level > 1) && ~(a = this.range.current)) {
             this.range.pages[a].classList.add('x');
           }
-          return true;
         },
         submit: function(){
           this.group.data[0] = this.current[0] * this.group.config.count;
@@ -3186,26 +2658,24 @@ smBlocks = function(){
       return Block;
     }(),
     'orderer': function(){
-      var Control, Block;
+      var template, Control, Block;
+      template = parseTemplate(function(){
+        /*
+        <svg preserveAspectRatio="none" shape-rendering="geometricPrecision" viewBox="0 0 48 48">
+        	<g class="a1">
+        		<polygon class="a" points="12,12 24,0 36,12 33,15 27,9 27,45 21,45 21,9 15,15 "/>
+        		<polygon class="b" points="13,12 24,1 35,12 33,14 26,7 26,44 22,44 22,7 15,14 "/>
+        	</g>
+        	<g class="a2">
+        		<polygon class="a" points="12,33 24,45 36,33 33,30 27,36 27,12 33,18 36,15 24,3 12,15 15,18 21,12 21,36 15,30 "/>
+        		<polygon class="b" points="13,33 24,44 35,33 33,31 26,38 26,10 33,17 35,15 24,4 13,15 15,17 22,10 22,38 15,31 "/>
+        	</g>
+        </svg>
+        */
+      });
       Control = function(block){
         var this$ = this;
         this.block = block;
-        this.hovered = 0;
-        this.focused = false;
-        this.hover = function(e){
-          e.preventDefault();
-          if (!this$.block.locked && !this$.hovered) {
-            this$.hovered = 1;
-            this$.block.rootBox.classList.add('hovered');
-          }
-        };
-        this.unhover = function(e){
-          e.preventDefault();
-          if (this$.hovered === 1) {
-            this$.hovered = 0;
-            this$.block.rootBox.classList.remove('hovered');
-          }
-        };
         this.switchVariant = function(e){
           var B, D, a, b;
           e.preventDefault();
@@ -3269,70 +2739,810 @@ smBlocks = function(){
         }
       };
       Block = function(root){
-        var a;
+        var box, this$ = this;
         this.group = 'order';
         this.root = root;
-        this.rootBox = root.firstChild;
-        this.variant = a = arrayFrom$(root.querySelectorAll('.variant'));
-        this['switch'] = a.map(function(a){
-          return a.firstChild;
-        });
-        this.select = root.querySelector('select');
-        this.locked = -1;
-        this.current = ['', -1];
+        this.rootBox = box = root.firstChild;
+        this.config = JSON.parse(box.dataset.cfg);
+        this.tag = null;
+        this.variant = null;
+        this.current = ['', -2];
         this.options = null;
         this.keys = null;
-        this.ctrl = new Control(this);
-        this.onResize = null;
+        this.hovered = false;
+        this.focused = false;
+        this.locked = -1;
+        this.hover = function(o){
+          var h;
+          if ((h = o.hovered) !== this$.hovered && (!h || !this$.locked)) {
+            this$.hovered = h;
+            this$.rootBox.classList.toggle('hovered', h);
+          }
+        };
+        this.focus = function(o){
+          var f;
+          if ((f = o.focused) !== this$.focused) {
+            this$.focused = f;
+            this$.rootBox.classList.toggle('focused', f);
+          }
+        };
+        this.tagChange = function(i){
+          this$.group.data[0] = i = this$.keys[i];
+          this$.group.data[1] = this$.options[i][1];
+          this$.group.submit();
+          return true;
+        };
+        this.variantChange = function(i){
+          this$.group.data[1] = i;
+          this$.group.submit();
+          return true;
+        };
       };
       Block.prototype = {
         level: 1,
-        init: function(s, c){
-          var o, k, i$, len$, a, b;
+        init: async function(s, c){
+          var o, k, a, b, i;
+          if (this.config.order) {
+            s.order = this.config.order;
+          }
           this.options = o = c.locale.order;
           this.keys = k = c.order || Object.getOwnPropertyNames(o);
-          s = this.select;
-          for (i$ = 0, len$ = k.length; i$ < len$; ++i$) {
-            a = k[i$];
-            a = o[a];
-            b = document.createElement('option');
-            b.textContent = a[0];
-            b.value = a[1];
-            s.appendChild(b);
+          this.tag = a = this.group.f.select();
+          this.variant = b = this.group.f.checkbox({
+            svg: template
+          });
+          a.onHover = b.onHover = this.hover;
+          a.onFocus = b.onFocus = this.focus;
+          a.onChange = this.tagChange;
+          b.onChange = this.variantChange;
+          c = [];
+          i = -1;
+          while (++i < k.length) {
+            c[i] = o[k[i]][0];
           }
-          this.ctrl.attach();
+          i = k.indexOf(s.order[0]);
+          k = s.order[1];
+          a.init(c, i);
+          b.init(k);
+          o = this.rootBox;
+          o.appendChild(b.root);
+          o.appendChild(a.root);
+          return true;
+        },
+        lock: function(){
+          this.tag.lock(true);
+          this.variant.lock(true);
+        },
+        unlock: function(){
+          this.tag.lock(false);
+          this.variant.lock(false);
+        },
+        refresh: function(){
+          var a, b, c;
+          a = this.group.data;
+          b = this.current;
+          if (a[0] === b[0] && a[1] === b[1]) {
+            return true;
+          }
+          if ((c = b[1] + 1) <= 2) {
+            this.rootBox.classList.remove('abc'[c]);
+          }
+          this.rootBox.classList.add('abc'[a[1] + 1]);
+          if (a[0] !== b[0]) {
+            if (b[0] && ~b[1]) {
+              this.options[b[0]][1] = b[1];
+            }
+            b[0] = this.keys[this.tag.set(this.keys.indexOf(a[0]))];
+            b[1] = this.variant.set(a[1]);
+          } else if (a[1] !== b[1]) {
+            b[1] = this.variant.set(a[1]);
+          }
+          return true;
+        }
+      };
+      return Block;
+    }(),
+    'price-filter': function(){
+      var InputNum, NumRange, Block;
+      InputNum = function(box){
+        var wheelLock, eUnsignedInt, this$ = this;
+        this.box = box;
+        this.input = box.children[0];
+        this.label = box.children[1];
+        this.current = ['', '', 0, 0];
+        this.changed = false;
+        this.hovered = false;
+        this.focused = false;
+        this.locked = true;
+        this.onHover = null;
+        this.onFocus = null;
+        this.onSubmit = null;
+        this.onScroll = null;
+        this.onChange = null;
+        wheelLock = newDelay();
+        eUnsignedInt = /^[0-9]{0,9}$/;
+        this.hover = function(e){
+          e.preventDefault();
+          e.stopPropagation();
+          if (!this$.locked) {
+            this$.hovered = true;
+            this$.box.classList.add('hovered');
+            if (e = this$.onHover) {
+              e(this$);
+            }
+          }
+        };
+        this.unhover = function(e){
+          e.preventDefault();
+          if (this$.hovered) {
+            this$.hovered = false;
+            this$.box.classList.remove('hovered');
+            if (e = this$.onHover) {
+              e(this$);
+            }
+          }
+        };
+        this.wheel = async function(e){
+          if (this$.locked) {
+            return false;
+          }
+          e.preventDefault();
+          e.stopPropagation();
+          if (wheelLock.pending) {
+            wheelLock.cancel();
+          }
+          if (!(await (wheelLock = newDelay(17)))) {
+            return false;
+          }
+          this$.onScroll(this$, e.deltaY < 0);
+          return true;
+        };
+        this.focus = function(e){
+          if (this$.locked) {
+            e.preventDefault();
+            e.stopPropagation();
+          } else {
+            this$.focused = true;
+            this$.box.classList.add('focused');
+            if (e = this$.onFocus) {
+              e(this$);
+            }
+          }
+        };
+        this.unfocus = function(e){
+          this$.focused = false;
+          this$.box.classList.remove('focused');
+          if (e = this$.onFocus) {
+            e(this$);
+          }
+        };
+        this.change = function(e){
+          var c, v, w;
+          c = this$.current;
+          v = this$.input.value;
+          w = c[1];
+          if (!v.length) {
+            this$.set(c[0]);
+            this$.input.select();
+            v = this$.onChange && w !== c[0] ? this$.onChange(this$, c[0]) : false;
+          } else if (!eUnsignedInt.test(v)) {
+            this$.input.value = c[1];
+            this$.input.setSelectionRange(c[2], c[3]);
+            v = false;
+          } else {
+            c[1] = v;
+            c[2] = this$.input.selectionStart;
+            c[3] = this$.input.selectionEnd;
+            v = this$.onChange && w !== v ? this$.onChange(this$, c[1]) : true;
+          }
+          if (!v) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+          return v;
+        };
+        this.key = function(e){
+          var ref$;
+          if (this$.locked) {
+            return;
+          }
+          if (e.keyCode === 13) {
+            if (!this$.onSubmit) {
+              return;
+            }
+            this$.onSubmit(this$, e.ctrlKey);
+          } else if ((ref$ = e.keyCode) === 38 || ref$ === 40) {
+            if (!this$.onScroll) {
+              return;
+            }
+            this$.onScroll(this$, e.keyCode === 38);
+          } else {
+            return;
+          }
+          e.preventDefault();
+          e.stopPropagation();
+        };
+        this.onLabel = function(e){
+          e.preventDefault();
+          e.stopPropagation();
+          e = this$.current;
+          if (!this$.locked && this$.focused && this$.onSubmit && e[1] !== e[0]) {
+            this$.set(e[0]);
+            this$.onSubmit(this$, true);
+          }
+        };
+      };
+      InputNum.prototype = {
+        init: function(val, label){
+          var a;
+          this.label.textContent = label;
+          this.current[0] = '' + this.set(val);
+          a = 'addEventListener';
+          this.box[a]('pointerenter', this.hover);
+          this.box[a]('pointerleave', this.unhover);
+          if (this.onScroll) {
+            this.box[a]('wheel', this.wheel);
+          }
+          this.input[a]('focusin', this.focus);
+          this.input[a]('focusout', this.unfocus);
+          this.input[a]('input', this.change, true);
+          this.input[a]('keydown', this.key, true);
+          if (this.onLabel) {
+            this.label[a]('pointerdown', this.onLabel, true);
+          }
+        },
+        set: function(v){
+          var c;
+          c = this.current;
+          c[1] = this.input.value = '' + v;
+          c[2] = 0;
+          c[3] = c[1].length;
+          return v;
+        },
+        lock: function(locked){
+          if (this.locked !== locked) {
+            this.locked = locked;
+            this.input.readOnly = !!locked;
+            this.input.value = locked
+              ? ''
+              : this.current[1];
+          }
+          return locked;
+        },
+        select: function(){
+          var c;
+          c = this.current;
+          c[2] = 0;
+          c[3] = c[1].length;
+          this.input.select();
+        },
+        focus: function(){
+          this.input.focus();
+        },
+        get: function(){
+          return +this.current[1];
+        }
+      };
+      NumRange = function(box){
+        var this$ = this;
+        this.box = box;
+        this.num = [new InputNum(box.children[0]), new InputNum(box.children[2])];
+        this.svg = box.children[1];
+        this.rst = querySelectorChild(this.svg, '.X');
+        this.current = null;
+        this.range = null;
+        this.hovered = false;
+        this.focused = false;
+        this.locked = true;
+        this.onFocus = null;
+        this.onSubmit = null;
+        this.hover = function(e){
+          e.preventDefault();
+          if (!this$.locked && !this$.hovered) {
+            this$.hovered = true;
+            this$.box.classList.add('hovered');
+          }
+        };
+        this.unhover = function(e){
+          e.preventDefault();
+          if (this$.hovered) {
+            this$.hovered = false;
+            this$.box.classList.remove('hovered');
+          }
+        };
+        this.reset = function(e){
+          var i$, ref$, len$, b, a;
+          e.preventDefault();
+          e.stopPropagation();
+          if (!this$.locked) {
+            for (i$ = 0, len$ = (ref$ = this$.num).length; i$ < len$; ++i$) {
+              b = i$;
+              a = ref$[i$];
+              this$.current[b] = a.set(this$.range[b]);
+            }
+            if (this$.onSubmit) {
+              this$.onSubmit(this$.current);
+            }
+          }
+        };
+        this.numFocus = function(o){
+          var v, i;
+          v = this$.focused = o.focused;
+          i = this$.num.indexOf(o);
+          if (v) {
+            o.select();
+          } else {
+            if (this$.submit(o) && this$.onSubmit) {
+              this$.onSubmit(this$.current);
+            }
+          }
+          if (this$.onFocus) {
+            this$.onFocus(this$);
+          }
+        };
+        this.numSubmit = function(o, ctrlKey){
+          if (this$.submit(o)) {
+            o.select();
+            if (this$.onSubmit) {
+              this$.onSubmit(this$.current);
+            }
+          } else {
+            if (ctrlKey) {
+              o.select();
+            } else {
+              o = this$.num.indexOf(o)
+                ? this$.num[0]
+                : this$.num[1];
+              o.focus();
+            }
+          }
+        };
+        this.numScroll = function(o, direction){
+          var v, i, c, d, a, b, e;
+          v = o.get();
+          i = this$.num.indexOf(o);
+          c = this$.current;
+          d = this$.range[1] - this$.range[0];
+          if (d > 200) {
+            a = d / 100 | 0;
+            b = '' + a;
+            if ((e = b.length) > 1) {
+              e = e > 2 ? e - 2 : 1;
+              b = b.slice(0, -e) + '0'.repeat(e);
+              a = +b;
+            } else {
+              e = 0;
+            }
+          } else {
+            e = 0;
+            a = 1;
+          }
+          if (direction) {
+            v += a;
+          } else {
+            v -= a;
+          }
+          v = e ? +(('' + v).slice(0, -e) + '0'.repeat(e)) : v;
+          if (i && v <= c[0]) {
+            v = c[0] + 1;
+          }
+          if (!i && v >= c[1]) {
+            v = c[1] - 1;
+          }
+          this$.num[i].set(v);
+          if (this$.submit(o) && this$.onSubmit) {
+            this$.onSubmit(this$.current);
+          }
+        };
+      };
+      NumRange.prototype = {
+        init: function(current, range, caption){
+          var i$, ref$, len$, b, a;
+          this.current = current.slice();
+          this.range = range;
+          for (i$ = 0, len$ = (ref$ = this.num).length; i$ < len$; ++i$) {
+            b = i$;
+            a = ref$[i$];
+            a.onFocus = this.numFocus;
+            a.onSubmit = this.numSubmit;
+            a.onScroll = this.numScroll;
+            a.init(current[b], caption[b]);
+          }
+          this.box.addEventListener('pointerenter', this.hover);
+          this.box.addEventListener('pointerleave', this.unhover);
+          if (this.rst) {
+            this.rst.addEventListener('click', this.reset);
+          }
+        },
+        set: function(v){
+          var c, i$, ref$, len$, b, a;
+          c = this.current;
+          for (i$ = 0, len$ = (ref$ = this.num).length; i$ < len$; ++i$) {
+            b = i$;
+            a = ref$[i$];
+            c[b] = a.set(v[b]);
+          }
+        },
+        lock: function(locked){
+          var i$, ref$, len$, a;
+          this.locked = locked;
+          for (i$ = 0, len$ = (ref$ = this.num).length; i$ < len$; ++i$) {
+            a = ref$[i$];
+            a.lock(locked);
+          }
+        },
+        focus: function(){
+          this.num[0].focus();
+        },
+        submit: function(o){
+          var i, v, r, c;
+          i = this.num.indexOf(o);
+          v = o.get();
+          r = this.range;
+          c = this.current;
+          if (v === c[i]) {
+            return false;
+          }
+          if (i) {
+            if (v > r[1]) {
+              if (c[1] === this.num[1].set(r[1])) {
+                return false;
+              }
+              c[1] = r[1];
+              return true;
+            } else if (v === c[0]) {
+              this.num[1].set(c[1]);
+              return false;
+            } else if (v <= r[0]) {
+              if (c[1] === this.num[1].set(c[0] + 1)) {
+                return false;
+              }
+              c[1] = c[0] + 1;
+              return true;
+            } else if (v < c[0]) {
+              c[1] = this.num[1].set(c[0]);
+              c[0] = this.num[0].set(v);
+              return true;
+            }
+            c[1] = v;
+          } else {
+            if (v < r[0]) {
+              if (c[0] === this.num[0].set(r[0])) {
+                return false;
+              }
+              c[0] = r[0];
+              return true;
+            } else if (v === c[1]) {
+              this.num[0].set(c[0]);
+              return true;
+            } else if (v >= r[1]) {
+              if (c[1] === this.num[0].set(c[1] - 1)) {
+                return false;
+              }
+              c[0] = c[1] - 1;
+              return true;
+            } else if (v > c[1]) {
+              c[0] = this.num[0].set(c[1]);
+              c[1] = this.num[1].set(v);
+              return true;
+            }
+            c[0] = v;
+          }
+          return true;
+        }
+      };
+      Block = function(root){
+        var box, focusLock, this$ = this;
+        this.group = 'price';
+        this.root = root;
+        this.rootBox = box = root.firstChild;
+        this.config = JSON.parse(box.dataset.cfg);
+        this.section = null;
+        this.range = null;
+        this.current = [-1, -1];
+        this.prev = null;
+        this.focused = false;
+        this.locked = -1;
+        this.sectionSwitch = function(o, v){
+          var d, c, p;
+          d = this$.group.data;
+          c = this$.current;
+          if (v) {
+            if (p = this$.prev) {
+              d[0] = p[0];
+              d[1] = p[1];
+              c[0] = c[1] = -1;
+              this$.prev = null;
+              this$.group.submit();
+            }
+          } else {
+            if (~c[0] || ~c[1]) {
+              d[0] = d[1] = -1;
+              this$.prev = c.slice();
+              this$.group.submit();
+            }
+          }
+          return true;
+        };
+        this.rangeSubmit = function(v){
+          var c, d;
+          c = this$.group.data;
+          d = this$.group.config.price;
+          c[0] = (v[0] === d[0] && -1) || v[0];
+          c[1] = (v[1] === d[1] && -1) || v[1];
+          this$.group.submit();
+        };
+        focusLock = newDelay(0);
+        this.focus = async function(o){
+          if (focusLock.pending) {
+            focusLock.cancel();
+          }
+          if (!(await (focusLock = newDelay(60)))) {
+            return false;
+          }
+          if (this$.focused === o.focused) {
+            return false;
+          }
+          this$.focused = o.focused;
+          this$.root.classList.toggle('f', this$.focused);
+          return true;
+        };
+      };
+      Block.prototype = {
+        level: 2,
+        init: async function(s, c){
+          var a, b;
+          s.price = this.current.slice();
+          a = this.section = this.group.f.section(this.root);
+          b = c.locale;
+          if (this.config.sectionSwitch) {
+            a.onChange = this.sectionSwitch;
+          }
+          a.onFocus = this.focus;
+          a.init(c.locale.title[1]);
+          a = this.range = new NumRange(a.item.section.firstChild);
+          b = [c.locale.label[3], c.locale.label[4]];
+          a.onSubmit = this.rangeSubmit;
+          a.onFocus = this.focus;
+          a.init(c.price, c.price, b);
           return true;
         },
         refresh: function(){
           var a, b, c;
           a = this.group.data;
           b = this.current;
-          if (a[0] !== b[0]) {
-            if ((c = this.keys.indexOf(a[0])) !== this.select.selectedIndex) {
-              this.select.selectedIndex = c;
-            }
-            if ((!a[1] && b[1]) || (a[1] && !b[1])) {
-              c = !a[1];
-              this['switch'].forEach(function(d){
-                d.disabled = c;
-              });
-            }
-            b[0] = a[0];
+          if (a[0] === b[0] && a[1] === b[1]) {
+            return true;
           }
-          if (a[1] !== b[1]) {
-            if (b[1] >= 0) {
-              c = 'abc'[b[1]];
-              this.variant.forEach(function(d){
-                d.classList.remove(c);
-              });
+          if (b[0] === -1 && b[1] === -1) {
+            this.rootBox.classList.add('active');
+            this.section.rootBox.classList.add('active');
+          } else if (a[0] === -1 && a[1] === -1) {
+            this.rootBox.classList.remove('active');
+            this.section.rootBox.classList.remove('active');
+          }
+          b[0] = a[0];
+          b[1] = a[1];
+          c = this.group.config.price;
+          this.range.set([(~a[0] && a[0]) || c[0], (~b[1] && b[1]) || c[1]]);
+          return true;
+        },
+        lock: function(level){
+          this.range.lock(true);
+          this.section.lock(true);
+        },
+        unlock: function(level){
+          this.section.lock(false);
+          this.range.lock(false);
+        }
+      };
+      return Block;
+    }(),
+    'category-filter': function(){
+      var Checks, setItem, setParents, setChildren, Block;
+      Checks = function(){
+        var this$ = this;
+        this.keydown = function(e){
+          var ref$, a, b;
+          if (this$.block.locked || ((ref$ = e.keyCode) !== 38 && ref$ !== 40 && ref$ !== 37 && ref$ !== 39 && ref$ !== 75 && ref$ !== 74 && ref$ !== 72 && ref$ !== 76)) {
+            return;
+          }
+          e.preventDefault();
+          e.stopPropagation();
+          switch (e.keyCode) {
+          case 38:
+          case 75:
+            a = this$.parent.children;
+            if ((b = a.indexOf(this$)) === 0) {
+              a = this$.parent;
+            } else {
+              a = a[b - 1].item.getLastVisible();
+              a = this$.parent.get(a.config.id);
             }
-            if (a[1] >= 0) {
-              c = 'abc'[a[1]];
-              this.variant.forEach(function(d){
-                d.classList.add(c);
-              });
+            if (a.checkbox) {
+              a.checkbox.focus();
+            } else if (a.item.arrow) {
+              a.item.arrow.focus();
             }
-            b[1] = a[1];
+            break;
+          case 40:
+          case 74:
+            a = this$.item.getNextVisible();
+            a = this$.block.checks.get(a.config.id);
+            if (a.checkbox) {
+              a.checkbox.focus();
+            } else if (a.item.arrow) {
+              a.item.arrow.focus();
+            }
+            break;
+          case 37:
+          case 72:
+            if (a = this$.item.arrow) {
+              a.focus();
+            }
+            break;
+          case 39:
+          case 76:
+            if (a = this$.item.arrow) {
+              a.focus();
+            }
+          }
+        };
+      };
+      Checks.prototype = {
+        getCheckedIds: function(){
+          var list, i$, ref$, len$, a;
+          list = this.state === 1 && this.item.config.count > 0
+            ? [this.item.config.id]
+            : [];
+          if (this.children) {
+            for (i$ = 0, len$ = (ref$ = this.children).length; i$ < len$; ++i$) {
+              a = ref$[i$];
+              list.push.apply(list, a.getCheckedIds());
+            }
+          }
+          return list;
+        }
+      };
+      setItem = function(item, v){
+        var e;
+        if ((e = item.extra.current) === v) {
+          return false;
+        }
+        item.node.classList.remove('x' + (e + 1));
+        item.node.classList.add('x' + (v + 1));
+        item.extra.set(v);
+        return true;
+      };
+      setParents = function(item, v){
+        var i$, ref$, len$, a;
+        if (!item.parent || !item.extra) {
+          return [];
+        }
+        if (~v) {
+          for (i$ = 0, len$ = (ref$ = item.children).length; i$ < len$; ++i$) {
+            a = ref$[i$];
+            if (v !== a.extra.current) {
+              v = -1;
+              break;
+            }
+          }
+        }
+        a = setItem(item, v)
+          ? [item]
+          : [];
+        return setParents(item.parent, v).concat(a);
+      };
+      setChildren = function(items, v){
+        var list, i$, len$, a;
+        list = [];
+        for (i$ = 0, len$ = items.length; i$ < len$; ++i$) {
+          a = items[i$];
+          if (setItem(a, v)) {
+            list[list.length] = a;
+            if (a.children) {
+              list.push.apply(list, setChildren(a.children, v));
+            }
+          }
+        }
+        return list;
+      };
+      Block = function(root, index){
+        var box;
+        this.group = 'category';
+        this.root = root;
+        this.rootBox = box = root.firstChild;
+        this.index = index;
+        this.section = null;
+        this.hovered = false;
+        this.focused = false;
+        this.locked = -1;
+        this.event = function(check, v){
+          var item, list, a;
+          item = check.cfg.master;
+          list = [item];
+          setItem(item, v);
+          if (a = item.parent) {
+            list.push.apply(list, setParents(a, v));
+          }
+          if (a = item.children) {
+            list.push.apply(list, setChildren(a, v));
+          }
+          /***
+          # done
+          return list
+          /***/
+          console.log(item, v);
+          return false;
+        };
+      };
+      Block.prototype = {
+        level: 2,
+        init: async function(s, c){
+          var i$, ref$, len$, a, b;
+          s.category[this.index] = [];
+          this.section = s = this.group.f.section(this.root);
+          for (i$ = 0, len$ = (ref$ = s.list).length; i$ < len$; ++i$) {
+            a = ref$[i$];
+            if (a.parent) {
+              a.extra = b = this.group.f.checkbox({
+                master: a,
+                intermediate: 1
+              });
+              b.onChange = this.event;
+              a.title.box.insertBefore(b.root, a.title.h3);
+              b.init(0);
+            }
+          }
+          s.init(c.locale.title[0]);
+          return true;
+        },
+        lock: function(level){
+          this.section.lock(true);
+        },
+        unlock: function(level){
+          this.section.lock(false);
+        },
+        refresh: function(list){
+          var i$, len$, a, b, d, c;
+          return true;
+          if (list) {
+            for (i$ = 0, len$ = list.length; i$ < len$; ++i$) {
+              a = list[i$];
+              b = a.item.node.classList;
+              switch (a.state) {
+              case 2:
+                b.add('checked', 'c2');
+                b.remove('c1');
+                break;
+              case 1:
+                b.add('checked', 'c1');
+                b.remove('c2');
+                break;
+              default:
+                b.remove('checked', 'c1', 'c2');
+              }
+            }
+          }
+          if (this.index < 0) {
+            return true;
+          }
+          a = this.checks.getCheckedIds();
+          b = this.group.data[this.index];
+          if (d = (c = a.length) === b.length) {
+            while (--c >= 0) {
+              if (a[c] !== b[c]) {
+                d = false;
+                break;
+              }
+            }
+          }
+          if (!d) {
+            b.length = c = a.length;
+            while (--c >= 0) {
+              b[c] = a[c];
+            }
+            this.group.update();
           }
           return true;
         }
@@ -3354,7 +3564,7 @@ smBlocks = function(){
     this.lang = '';
     this.range = null;
     this.order = null;
-    this.category = null;
+    this.category = [];
     this.price = null;
   };
   Loader = function(s){
@@ -3648,9 +3858,8 @@ smBlocks = function(){
     consoleInfo('new ' + s + 'supervisor');
   };
   SUPERVISOR.prototype = {
-    attach: async function(root, base){
+    attach: async function(root){
       var B, G, b, ref$, a, i$, ref1$, len$, c;
-      base == null && (base = '.sm-blocks');
       if (!root) {
         return false;
       } else if (this.state) {
@@ -3671,7 +3880,7 @@ smBlocks = function(){
       G = {};
       for (b in ref$ = this.masters) {
         a = ref$[b];
-        for (i$ = 0, len$ = (ref1$ = arrayFrom$(root.querySelectorAll(base + '.' + b))).length; i$ < len$; ++i$) {
+        for (i$ = 0, len$ = (ref1$ = arrayFrom$(root.querySelectorAll('.' + BRAND + '.' + b))).length; i$ < len$; ++i$) {
           c = i$;
           b = ref1$[i$];
           B[B.length] = a = new a(b, c);
@@ -3701,7 +3910,7 @@ smBlocks = function(){
           c[a] = new Group(this, a, G[a]);
         }
       }
-      this.resizer = newResizer(base + '-resizer', B);
+      this.resizer = newResizer('.' + BRAND + '-resizer', B);
       if (!(await this.loader.init())) {
         (await this.detach());
         consoleError('attachment failed');

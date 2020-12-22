@@ -9,7 +9,6 @@ $og  = json_encode([ # products grid {{{
 ]);
 # }}}
 $opf = json_encode([ # price filter {{{
-  'sectionMode' => 1|2|4|8|16,
 ]);
 # }}}
 $ocf = json_encode([ # category filter {{{
@@ -33,7 +32,8 @@ $o = <<<EOD
       <div class="title"><h3>...</h3></div>
       <div class="sep"><hr /></div>
       <div class="content">
-        <!-- wp:sm-blocks/price-filter {$opf} /-->
+        <!-- wp:sm-blocks/price-filter {
+        } /-->
         <!-- wp:sm-blocks/category-filter {$ocf} /-->
         <!-- :sm-blocks/category-filter {"baseCategory":"37"} /-->
       </div>
@@ -61,7 +61,8 @@ $o = <<<EOD
       <div class="sep"><hr /></div>
       <!-- wp:sm-blocks/products {
 
-        "layout":"4:2:1:0"
+        "layout":"4:2:1:0",
+        "wrapAround":false
 
       } /-->
       <div class="sep"><hr /></div>

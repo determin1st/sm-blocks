@@ -79,6 +79,7 @@ html {
 }
 #sm-page > .body > .panel > .content {
   flex: 1 1 auto;
+  padding: 2px 0 0 0;
 }
 #sm-page > .body > .content {
   flex: 1 1 0;
