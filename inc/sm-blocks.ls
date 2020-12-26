@@ -4,6 +4,7 @@ smBlocks = do ->
 	# helpers {{{
 	###
 	# TODO
+	# - unified focus handlers
 	# - section => treeview
 	# - new slave: selector (simple dropdown)
 	# - category count display (extra)
@@ -101,6 +102,57 @@ smBlocks = do ->
 		f = (f.substring a, b).trim!replace />\s+</g, '><'
 		return f
 		###
+	# }}}
+	slaveFocusInOut = (block, node) -> # {{{
+		debugger
+		return [
+			(e) !~>
+				# focusin handler
+				# check
+				if block.locked
+					# prevent
+					e.preventDefault!
+					e.stopPropagation!
+				else
+					# operate
+					block.focused = true
+					node.classList.add 'f'
+					# callback
+					if block.onFocus
+						block.onFocus true, block
+				###
+			(e) !~>
+				# focusout handler
+				# operate
+				block.focused = false
+				node.classList.remove 'f'
+				# callback
+				e @, false if e = @onFocus
+				###
+		]
+	# }}}
+	slaveFocusAggregator = (block) -> # {{{
+		bounce = newDelay!
+		return (v, o) ->>
+			# bounce
+			bounce.cancel! if bounce.pending
+			if o and not (await bounce := newDelay 64)
+				return false
+			# check
+			if (w = block.focused) == v
+				return false
+			# callback
+			if o and block.onFocus and not (await block.onFocus v, o)
+				return false
+			# operate
+			if o and block.setFocus
+				block.setFocus v
+			else
+				block.focused = v
+				block.root.classList.remove 'f'+w if w
+				block.root.classList.add 'f'+v
+			# done
+			return true
 	# }}}
 	# }}}
 	# fetchers {{{
@@ -207,7 +259,8 @@ smBlocks = do ->
 							@focused = focused
 							@node.classList.toggle 'f', !!focused
 							# callback
-							@block.onFocus @ if @block.onFocus
+							if @block.onFocus
+								@block.onFocus @, focused
 					# done
 					return true
 				# }}}
@@ -3192,7 +3245,7 @@ smBlocks = do ->
 			return Block
 		# }}}
 		'price-filter': do -> # {{{
-			InputNum = (box) !-> # {{{
+			NumInput = (box) !-> # {{{
 				# base
 				@box   = box
 				@input = box.children.0
@@ -3257,13 +3310,13 @@ smBlocks = do ->
 						# operate
 						@focused = true
 						@box.classList.add 'focused'
-						e @ if e = @onFocus
+						e @, true if e = @onFocus
 				# }}}
 				@unfocus = (e) !~> # {{{
 					# operate
 					@focused = false
 					@box.classList.remove 'focused'
-					e @ if e = @onFocus
+					e @, false if e = @onFocus
 				# }}}
 				@change = (e) ~> # {{{
 					# prepare
@@ -3344,7 +3397,7 @@ smBlocks = do ->
 						@onSubmit @, true
 				# }}}
 			###
-			InputNum.prototype =
+			NumInput.prototype =
 				init: (val, label) !-> # {{{
 					# set content
 					@label.textContent = label
@@ -3397,8 +3450,8 @@ smBlocks = do ->
 				# base
 				@box = box
 				@num = [
-					new InputNum box.children.0
-					new InputNum box.children.2
+					new NumInput box.children.0
+					new NumInput box.children.2
 				]
 				@svg = box.children.1
 				@rst = querySelectorChild @svg, '.X'
@@ -3440,11 +3493,19 @@ smBlocks = do ->
 						# callback
 						@onSubmit @current if @onSubmit
 				# }}}
-				@numFocus = (o) !~> # {{{
-					# prepare
-					v = @focused = o.focused
-					i = @num.indexOf o
+				focusBounce = newDelay 0
+				@numFocus = (v, o) ~>> # {{{
+					/***/
+					# bounce
+					focusBounce.cancel! if focusBounce.pending
+					if not (await focusBounce := newDelay 66) or @focused == v
+						return false
 					# operate
+					@focused = v
+					# callback
+					@onFocus @, v if @onFocus
+					# done
+					return true
 					if v
 						# select focused
 						o.select!
@@ -3453,8 +3514,7 @@ smBlocks = do ->
 						if @submit o and @onSubmit
 							# callback
 							@onSubmit @current
-					# callback
-					@onFocus @ if @onFocus
+					/***/
 				# }}}
 				@numSubmit = (o, ctrlKey) !~> # {{{
 					# operate
@@ -3548,6 +3608,29 @@ smBlocks = do ->
 				# }}}
 				focus: !-> # {{{
 					@num.0.focus!
+				# }}}
+				setFocus: (v, o) !-> # {{{
+					true
+					/***
+					# bounce
+					focusBounce.cancel! if focusBounce.pending
+					if not (await focusBounce := newDelay 66) or @focused == v
+						return false
+					# operate
+					@focused = v
+					# callback
+					@onFocus @, v if @onFocus
+					# done
+					return true
+					if v
+						# select focused
+						o.select!
+					else
+						# submit unfocused
+						if @submit o and @onSubmit
+							# callback
+							@onSubmit @current
+					/***/
 				# }}}
 				submit: (o) -> # {{{
 					# prepare
@@ -3661,19 +3744,28 @@ smBlocks = do ->
 					# complete
 					@group.submit!
 				# }}}
-				focusLock = newDelay 0
-				@focus = (o) ~>> # {{{
-					# bounce
-					focusLock.cancel! if focusLock.pending
-					if not await (focusLock := newDelay 60)
+				focusBounce = newDelay 0
+				focusLast   = null
+				@onFocus = (o, v) ~>> # {{{
+					# bounce range only
+					if o == @range
+						focusBounce.cancel! if focusBounce.pending
+						if not (await focusBounce := newDelay 66)
+							focusLast := o
+							return false
+					# aggregator guard
+					if @focused == v
+						# fast focusing
+						focusLast := o
 						return false
-					# check
-					if @focused == o.focused
+					else if not v and focusLast != o
+						# slow unfocusing
 						return false
 					# operate
-					@focused = o.focused
-					@root.classList.toggle 'f', @focused
+					@focused = v
+					@root.classList.toggle 'f', v
 					# done
+					focusLast := o
 					return true
 				# }}}
 			###
@@ -3687,7 +3779,7 @@ smBlocks = do ->
 					a = @section = @group.f.section @root
 					b = c.locale
 					a.onChange = @sectionSwitch if @config.sectionSwitch
-					a.onFocus  = @focus
+					a.onFocus  = @onFocus
 					a.init c.locale.title.1
 					# range
 					a = @range = new NumRange a.item.section.firstChild
@@ -3696,7 +3788,7 @@ smBlocks = do ->
 						c.locale.label.4
 					]
 					a.onSubmit = @rangeSubmit
-					a.onFocus  = @focus
+					a.onFocus  = @onFocus
 					a.init c.price, c.price, b
 					# done
 					return true
@@ -3787,19 +3879,6 @@ smBlocks = do ->
 						# }}}
 					# done
 				# }}}
-			Checks.prototype =
-				getCheckedIds: -> # {{{
-					# check self
-					list = if @state == 1 and @item.config.count > 0
-						then [@item.config.id]
-						else []
-					# check children
-					if @children
-						for a in @children
-							list.push ...(a.getCheckedIds!)
-					# done
-					return list
-				# }}}
 			# }}}
 			setItem = (item, v) -> # {{{
 				# check
@@ -3844,6 +3923,13 @@ smBlocks = do ->
 				# done
 				return list
 			# }}}
+			sortAsc = (a, b) -> # {{{
+				return if a < b
+					then -1
+					else if a == b
+						then 0
+						else 1
+			# }}}
 			Block = (root, index) !-> # {{{
 				# base
 				@group   = 'category'
@@ -3869,13 +3955,20 @@ smBlocks = do ->
 					# set children
 					if a = item.children
 						list.push ...(setChildren a, v)
-					# ...
-					# ...
-					/***
-					# done
-					return list
-					/***/
-					console.log item, v
+					# update filter data
+					a = @group.data[@index]
+					if v
+						# add
+						for item in list when ~item.extra.current
+							a[*] = item.config.id
+						# sort result
+						a.sort sortAsc
+					else
+						# remove
+						for item in list when ~item.extra.current
+							a.splice (a.indexOf item.config.id), 1
+					# submit group
+					@group.submit @
 					# done
 					return false
 				# }}}
@@ -3895,8 +3988,10 @@ smBlocks = do ->
 							intermediate: 1 # set (positive escape)
 						}
 						b.onChange = @event
-						# add into section's title (keep natural focus navigation)
+						# add into section's title (natural focus navigation)
 						a.title.box.insertBefore b.root, a.title.h3
+						# initialize (not checked by default)
+						setItem a, 0
 						b.init 0
 					# done
 					s.init c.locale.title.0
@@ -4087,15 +4182,16 @@ smBlocks = do ->
 			# }}}
 			# startup {{{
 			# send the request
-			consoleInfo 'fetcher charged at '+c
 			f = await (@fetch = oFetch s.state)
 			@fetch = null
 			# check the result
 			if f instanceof Error
+				# cancelled
+				if f.id == 4
+					return true
+				# fatal
 				consoleError f.message
-				return if f.id == 4
-					then true  # cancelled
-					else false # fatal
+				return false
 			# read total records count
 			if (s.config.total = a = await f.readInt!) == null
 				consoleError 'fetch stream failed'

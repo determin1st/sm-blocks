@@ -431,10 +431,6 @@ class StorefrontModernBlocks {
     $cache     = [
       'categoryTree' => [], # key  => tree
       'categorySlug' => [], # slug => id
-    ],
-    $cfg       = [
-      'enableDemoShop' => true,
-      'purgeTimeout'   => 86400,
     ];
   # }}}
   # construction {{{
@@ -445,15 +441,7 @@ class StorefrontModernBlocks {
     $this->db     = $wpdb->dbh;
     $this->prefix = $wpdb->prefix;
     $this->lang   = substr(get_locale(), 0, 2);
-    # load configuration
-    $a = $this->dir_data.'config.txt';
-    if (file_exists($a)) {
-      $this->cfg = unserialize(file_get_contents($a));
-    }
-    else {
-      file_put_contents($a, serialize($this->cfg));
-    }
-    # initialize block data
+    # initialize block renderers
     foreach ($this->blocks as &$a) {
       $a['render_callback'][0] = $this;
     }
@@ -484,6 +472,7 @@ class StorefrontModernBlocks {
       ['http-fetch'],
       false, true
     );
+    /***
     wp_register_script(
       $this->name.'-gutenberg-js',
       $a.'inc/'.$this->name.'-gutenberg.js',
@@ -493,6 +482,7 @@ class StorefrontModernBlocks {
       ],
       false, true
     );
+    /***/
     # set registration hooks
     $me = $this;
     add_action('init', function() use ($me) {
@@ -509,33 +499,34 @@ class StorefrontModernBlocks {
     add_action('enqueue_block_assets', function() use ($me) {
       if (is_admin())
       {
-        # gutenberg mode
-        wp_enqueue_script($me->name.'-gutenberg-js');
+        #wp_enqueue_script($me->name.'-gutenberg-js');
       }
-      else
+      else if (is_shop())
       {
-        # standard
         wp_enqueue_style($me->name.'-css');
         wp_enqueue_script($me->name.'-js');
-        # check demo-shop
-        if ($me->cfg['enableDemoShop'] && is_shop()) {
-          wp_enqueue_style($me->name.'-demo-css');
-        }
+        wp_enqueue_style($me->name.'-demo-css');
         # remove gutenberg's default/core blocks:
         #wp_dequeue_style('wp-block-library');
         #wp_deregister_style('wp-block-library');
       }
     });
-    # set demo-shop template
-    if ($this->cfg['enableDemoShop'])
-    {
-      add_filter('template_include', function($t) use ($me) {
-        return is_shop()
-          ? $me->dir_inc.'pages'.DIRECTORY_SEPARATOR.'demo.php'
-          : $t;
-        ###
-      }, 11, 1);
-    }
+    add_action('wp_enqueue_scripts', function() use ($me) {
+      # make sure base woo's on
+      if (is_shop()) {
+        #wp_dequeue_style('woocommerce-general');
+        #wp_enqueue_style(
+        #  'woocommerce-sm', WC()->plugin_url().'/assets/css/woocommerce.css'
+        #);
+      }
+    }, 11);
+    # set shop template
+    add_filter('template_include', function($t) use ($me) {
+      return is_shop()
+        ? $me->dir_inc.'pages'.DIRECTORY_SEPARATOR.'demo.php'
+        : $t;
+      ###
+    }, 11, 1);
   }
   public static function init()
   {

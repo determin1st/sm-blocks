@@ -2,7 +2,7 @@
 "use strict";
 var smBlocks, slice$ = [].slice, arrayFrom$ = Array.from || function(x){return slice$.call(x);};
 smBlocks = function(){
-  var BRAND, consoleError, consoleInfo, newPromise, newDelay, querySelectorChildren, querySelectorChild, queryFirstChildren, parseTemplate, soFetch, oFetch, S, M, Config, State, Loader, Group, newResizer, SUPERVISOR;
+  var BRAND, consoleError, consoleInfo, newPromise, newDelay, querySelectorChildren, querySelectorChild, queryFirstChildren, parseTemplate, slaveFocusInOut, slaveFocusAggregator, soFetch, oFetch, S, M, Config, State, Loader, Group, newResizer, SUPERVISOR;
   BRAND = 'sm-blocks';
   consoleError = function(msg){
     var a;
@@ -93,6 +93,59 @@ smBlocks = function(){
     b = f.lastIndexOf('*/') - 1;
     f = f.substring(a, b).trim().replace(/>\s+</g, '><');
     return f;
+  };
+  slaveFocusInOut = function(block, node){
+    debugger;
+    var this$ = this;
+    return [
+      function(e){
+        if (block.locked) {
+          e.preventDefault();
+          e.stopPropagation();
+        } else {
+          block.focused = true;
+          node.classList.add('f');
+          if (block.onFocus) {
+            block.onFocus(true, block);
+          }
+        }
+      }, function(e){
+        block.focused = false;
+        node.classList.remove('f');
+        if (e = this$.onFocus) {
+          e(this$, false);
+        }
+      }
+    ];
+  };
+  slaveFocusAggregator = function(block){
+    var bounce;
+    bounce = newDelay();
+    return async function(v, o){
+      var w;
+      if (bounce.pending) {
+        bounce.cancel();
+      }
+      if (o && !(await (bounce = newDelay(64)))) {
+        return false;
+      }
+      if ((w = block.focused) === v) {
+        return false;
+      }
+      if (o && block.onFocus && !(await block.onFocus(v, o))) {
+        return false;
+      }
+      if (o && block.setFocus) {
+        block.setFocus(v);
+      } else {
+        block.focused = v;
+        if (w) {
+          block.root.classList.remove('f' + w);
+        }
+        block.root.classList.add('f' + v);
+      }
+      return true;
+    };
   };
   soFetch = httpFetch.create({
     baseUrl: '/?rest_route=/' + BRAND + '/kiss',
@@ -198,7 +251,7 @@ smBlocks = function(){
               this$.focused = focused;
               this$.node.classList.toggle('f', !!focused);
               if (this$.block.onFocus) {
-                this$.block.onFocus(this$);
+                this$.block.onFocus(this$, focused);
               }
             }
           }
@@ -2843,8 +2896,8 @@ smBlocks = function(){
       return Block;
     }(),
     'price-filter': function(){
-      var InputNum, NumRange, Block;
-      InputNum = function(box){
+      var NumInput, NumRange, Block;
+      NumInput = function(box){
         var wheelLock, eUnsignedInt, this$ = this;
         this.box = box;
         this.input = box.children[0];
@@ -2905,7 +2958,7 @@ smBlocks = function(){
             this$.focused = true;
             this$.box.classList.add('focused');
             if (e = this$.onFocus) {
-              e(this$);
+              e(this$, true);
             }
           }
         };
@@ -2913,7 +2966,7 @@ smBlocks = function(){
           this$.focused = false;
           this$.box.classList.remove('focused');
           if (e = this$.onFocus) {
-            e(this$);
+            e(this$, false);
           }
         };
         this.change = function(e){
@@ -2972,7 +3025,7 @@ smBlocks = function(){
           }
         };
       };
-      InputNum.prototype = {
+      NumInput.prototype = {
         init: function(val, label){
           var a;
           this.label.textContent = label;
@@ -3024,9 +3077,9 @@ smBlocks = function(){
         }
       };
       NumRange = function(box){
-        var this$ = this;
+        var focusBounce, this$ = this;
         this.box = box;
-        this.num = [new InputNum(box.children[0]), new InputNum(box.children[2])];
+        this.num = [new NumInput(box.children[0]), new NumInput(box.children[2])];
         this.svg = box.children[1];
         this.rst = querySelectorChild(this.svg, '.X');
         this.current = null;
@@ -3065,19 +3118,26 @@ smBlocks = function(){
             }
           }
         };
-        this.numFocus = function(o){
-          var v, i;
-          v = this$.focused = o.focused;
-          i = this$.num.indexOf(o);
+        focusBounce = newDelay(0);
+        this.numFocus = async function(v, o){
+          /***/
+          if (focusBounce.pending) {
+            focusBounce.cancel();
+          }
+          if (!(await (focusBounce = newDelay(66))) || this$.focused === v) {
+            return false;
+          }
+          this$.focused = v;
+          if (this$.onFocus) {
+            this$.onFocus(this$, v);
+          }
+          return true;
           if (v) {
-            o.select();
+            return o.select();
           } else {
             if (this$.submit(o) && this$.onSubmit) {
-              this$.onSubmit(this$.current);
+              return this$.onSubmit(this$.current);
             }
-          }
-          if (this$.onFocus) {
-            this$.onFocus(this$);
           }
         };
         this.numSubmit = function(o, ctrlKey){
@@ -3174,6 +3234,29 @@ smBlocks = function(){
         focus: function(){
           this.num[0].focus();
         },
+        setFocus: function(v, o){
+          true;
+          /***
+          # bounce
+          focusBounce.cancel! if focusBounce.pending
+          if not (await focusBounce := newDelay 66) or @focused == v
+          	return false
+          # operate
+          @focused = v
+          # callback
+          @onFocus @, v if @onFocus
+          # done
+          return true
+          if v
+          	# select focused
+          	o.select!
+          else
+          	# submit unfocused
+          	if @submit o and @onSubmit
+          		# callback
+          		@onSubmit @current
+          /***/
+        },
         submit: function(o){
           var i, v, r, c;
           i = this.num.indexOf(o);
@@ -3232,7 +3315,7 @@ smBlocks = function(){
         }
       };
       Block = function(root){
-        var box, focusLock, this$ = this;
+        var box, focusBounce, focusLast, this$ = this;
         this.group = 'price';
         this.root = root;
         this.rootBox = box = root.firstChild;
@@ -3272,19 +3355,27 @@ smBlocks = function(){
           c[1] = (v[1] === d[1] && -1) || v[1];
           this$.group.submit();
         };
-        focusLock = newDelay(0);
-        this.focus = async function(o){
-          if (focusLock.pending) {
-            focusLock.cancel();
+        focusBounce = newDelay(0);
+        focusLast = null;
+        this.onFocus = async function(o, v){
+          if (o === this$.range) {
+            if (focusBounce.pending) {
+              focusBounce.cancel();
+            }
+            if (!(await (focusBounce = newDelay(66)))) {
+              focusLast = o;
+              return false;
+            }
           }
-          if (!(await (focusLock = newDelay(60)))) {
+          if (this$.focused === v) {
+            focusLast = o;
+            return false;
+          } else if (!v && focusLast !== o) {
             return false;
           }
-          if (this$.focused === o.focused) {
-            return false;
-          }
-          this$.focused = o.focused;
-          this$.root.classList.toggle('f', this$.focused);
+          this$.focused = v;
+          this$.root.classList.toggle('f', v);
+          focusLast = o;
           return true;
         };
       };
@@ -3298,12 +3389,12 @@ smBlocks = function(){
           if (this.config.sectionSwitch) {
             a.onChange = this.sectionSwitch;
           }
-          a.onFocus = this.focus;
+          a.onFocus = this.onFocus;
           a.init(c.locale.title[1]);
           a = this.range = new NumRange(a.item.section.firstChild);
           b = [c.locale.label[3], c.locale.label[4]];
           a.onSubmit = this.rangeSubmit;
-          a.onFocus = this.focus;
+          a.onFocus = this.onFocus;
           a.init(c.price, c.price, b);
           return true;
         },
@@ -3339,7 +3430,7 @@ smBlocks = function(){
       return Block;
     }(),
     'category-filter': function(){
-      var Checks, setItem, setParents, setChildren, Block;
+      var Checks, setItem, setParents, setChildren, sortAsc, Block;
       Checks = function(){
         var this$ = this;
         this.keydown = function(e){
@@ -3389,21 +3480,6 @@ smBlocks = function(){
           }
         };
       };
-      Checks.prototype = {
-        getCheckedIds: function(){
-          var list, i$, ref$, len$, a;
-          list = this.state === 1 && this.item.config.count > 0
-            ? [this.item.config.id]
-            : [];
-          if (this.children) {
-            for (i$ = 0, len$ = (ref$ = this.children).length; i$ < len$; ++i$) {
-              a = ref$[i$];
-              list.push.apply(list, a.getCheckedIds());
-            }
-          }
-          return list;
-        }
-      };
       setItem = function(item, v){
         var e;
         if ((e = item.extra.current) === v) {
@@ -3447,8 +3523,13 @@ smBlocks = function(){
         }
         return list;
       };
+      sortAsc = function(a, b){
+        return a < b
+          ? -1
+          : a === b ? 0 : 1;
+      };
       Block = function(root, index){
-        var box;
+        var box, this$ = this;
         this.group = 'category';
         this.root = root;
         this.rootBox = box = root.firstChild;
@@ -3458,7 +3539,7 @@ smBlocks = function(){
         this.focused = false;
         this.locked = -1;
         this.event = function(check, v){
-          var item, list, a;
+          var item, list, a, i$, len$;
           item = check.cfg.master;
           list = [item];
           setItem(item, v);
@@ -3468,11 +3549,24 @@ smBlocks = function(){
           if (a = item.children) {
             list.push.apply(list, setChildren(a, v));
           }
-          /***
-          # done
-          return list
-          /***/
-          console.log(item, v);
+          a = this$.group.data[this$.index];
+          if (v) {
+            for (i$ = 0, len$ = list.length; i$ < len$; ++i$) {
+              item = list[i$];
+              if (~item.extra.current) {
+                a[a.length] = item.config.id;
+              }
+            }
+            a.sort(sortAsc);
+          } else {
+            for (i$ = 0, len$ = list.length; i$ < len$; ++i$) {
+              item = list[i$];
+              if (~item.extra.current) {
+                a.splice(a.indexOf(item.config.id), 1);
+              }
+            }
+          }
+          this$.group.submit(this$);
           return false;
         };
       };
@@ -3491,6 +3585,7 @@ smBlocks = function(){
               });
               b.onChange = this.event;
               a.title.box.insertBefore(b.root, a.title.h3);
+              setItem(a, 0);
               b.init(0);
             }
           }
@@ -3678,12 +3773,14 @@ smBlocks = function(){
           }
         }
       }
-      consoleInfo('fetcher charged at ' + c);
       f = (await (this.fetch = oFetch(s.state)));
       this.fetch = null;
       if (f instanceof Error) {
+        if (f.id === 4) {
+          return true;
+        }
         consoleError(f.message);
-        return f.id === 4 ? true : false;
+        return false;
       }
       if ((s.config.total = a = (await f.readInt())) === null) {
         consoleError('fetch stream failed');

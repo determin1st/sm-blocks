@@ -49,7 +49,10 @@ WebSafeFontHeadline = Times, 'Times New Roman', serif
 		white-space:   nowrap
 		word-break:    break-all
 		overflow-wrap: anywhere // modern word-break
+		&:focus
+			outline: 0
 	svg
+		display: block
 		width:  100%
 		height: 100%
 	button
@@ -307,17 +310,14 @@ WebSafeFontHeadline = Times, 'Times New Roman', serif
 		height: auto
 		// rootBox
 		> div.item // {{{
-			// closed
 			padding: 2px 2px 2px 2px
 			> .title
 				height: calc(4px + 1em)
-				padding: 2px 3px 2px 3px
+				padding: 2px 5px 2px 5px
 				> div
-					> h3
-						padding-left: 3px
-						> label
-							font-size: 0.66em
-							font-weight: bold
+					> h3 > label
+						font-size: 0.66em
+						font-weight: bold
 					> button.arrow
 						min-width: 1.2em
 						padding: 0.25em 0.2em 0.15em 0.4em
@@ -327,16 +327,25 @@ WebSafeFontHeadline = Times, 'Times New Roman', serif
 				height: 5px
 				padding: 0
 				fill: gainsboro
+			// closed
+			&.o0
+				> .title
+					padding-left:  3px
+					padding-right: 3px
+					> div > h3
+						padding-left: 6px
+				> .sep
+					padding-left:  0
+					padding-right: 0
 			// opened
 			&.o1
 				> .title
-					padding-left:  5px
-					padding-right: 5px
 					> div > h3
-						padding-left:  5px
+						padding-left: 8px
 				> .sep
 					padding-left:  2px
 					padding-right: 2px
+			// focused and hovered
 			&.v.f.h1
 				> .section
 					opacity: 0.6
@@ -354,10 +363,13 @@ WebSafeFontHeadline = Times, 'Times New Roman', serif
 				height: 0.8em
 				padding: 0.05em 0 0.05em 0
 				> div
+					width:  100%
+					height: 100%
 					display: flex
 					flex-direction: row
 					align-items: stretch
 					justify-content: flex-start
+					border-radius: 2%
 					> h3 // {{{
 						flex: 1 1 0
 						padding-left: 0.1em
@@ -485,12 +497,12 @@ WebSafeFontHeadline = Times, 'Times New Roman', serif
 				&.o0,
 				&.o1
 					&.f // {{{
+						> .title > div
+							background-color: alpha(slateblue, 0.04)
 						> .sep
 							fill: alpha(slateblue, 0.6)
 						&.e0
 							> .title
-								> h3
-									background-color: alpha(mediumslateblue, 0.03)
 								> button.arrow
 									background-color: alpha(mediumslateblue, 0.03)
 									> svg
@@ -518,9 +530,14 @@ WebSafeFontHeadline = Times, 'Times New Roman', serif
 	// }}}
 	&.section.category-filter // {{{
 		.item
-			> .title > div
-				> h3
-					padding: 0
+			// unchecked/intermediate
+			> .title > div > h3
+				padding-left: 0
+			// checked
+			&.x2
+				> .title > div > h3
+					padding-left: 0.1em
+					color: darkslategray
 			&.v
 				&.o0.e1.hhh // {{{
 					> .title
