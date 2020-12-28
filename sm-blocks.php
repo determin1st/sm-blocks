@@ -1,11 +1,11 @@
 <?php
 /***
 * Plugin Name: sm-blocks
-* Description: A fully-asynchronous e-commerce catalogue
+* Description: A fully-asynchronous e-commerce catalogue blocks
 * Plugin URI: github.com/determin1st/sm-blocks
 * Author: determin1st
 * Version: 1
-* Requires at least: 5.4
+* Requires at least: 5.5
 * Requires PHP: 7.2
 * License: UNLICENSE
 * License URI: https://unlicense.org/
@@ -14,15 +14,15 @@ class StorefrontModernBlocks {
   # base
   # data {{{
   private static
-    $ref       = null;
+    $I = null;
   private
-    $name      = 'sm-blocks',
+    $BRAND     = 'sm-blocks',
+    $active    = false,
+    $dir       = __DIR__.DIRECTORY_SEPARATOR.'inc'.DIRECTORY_SEPARATOR,
     $db        = null,
     $prefix    = null,
     $lang      = 'en',
     $unique_id = 0,
-    $dir_data  = __DIR__.DIRECTORY_SEPARATOR.'data'.DIRECTORY_SEPARATOR,
-    $dir_inc   = __DIR__.DIRECTORY_SEPARATOR.'inc'.DIRECTORY_SEPARATOR,
     $base_attr = [
       'customClass',
       'class',
@@ -86,10 +86,6 @@ class StorefrontModernBlocks {
             'type'        => 'string',
             'default'     => 'custom',
           ],
-          'focusGreedy'   => [
-            'type'        => 'boolean',
-            'default'     => true,
-          ],
           ### controls
           'rangeMode'     => [
             'type'        => 'number',
@@ -138,19 +134,15 @@ class StorefrontModernBlocks {
             'type'        => 'string',
             'default'     => 'custom',
           ],
-          'focusGreedy'   => [
+          'sectionOpened' => [
             'type'        => 'boolean',
             'default'     => false,
           ],
-          'sectionMode'   => [
-            'type'        => 'number',
-            'default'     => 1|2|4,
-          ],
-          ### specific
           'sectionSwitch' => [
             'type'        => 'boolean',
             'default'     => true,
           ],
+          ### specific
           'sliceGroups'   => [
             'type'        => 'number',
             'default'     => 0,
@@ -166,18 +158,13 @@ class StorefrontModernBlocks {
             'type'        => 'string',
             'default'     => 'custom',
           ],
-          'focusGreedy'   => [
-            'type'        => 'boolean',
-            'default'     => false,
-          ],
-          ### section
-          'sectionMode'   => [
-            'type'        => 'number',
-            'default'     => 1|2|4,
-          ],
           'sectionOpened' => [
             'type'        => 'boolean',
             'default'     => false,
+          ],
+          'sectionSwitch' => [
+            'type'        => 'boolean',
+            'default'     => true,
           ],
           ### specific
           'baseCategory'  => [
@@ -433,108 +420,80 @@ class StorefrontModernBlocks {
       'categorySlug' => [], # slug => id
     ];
   # }}}
-  # construction {{{
+  # constructor {{{
   private function __construct()
   {
     global $wpdb;
     # prepare
-    $this->db     = $wpdb->dbh;
-    $this->prefix = $wpdb->prefix;
-    $this->lang   = substr(get_locale(), 0, 2);
-    # initialize block renderers
-    foreach ($this->blocks as &$a) {
-      $a['render_callback'][0] = $this;
+    $I = $this;
+    $I->db     = $wpdb->dbh;
+    $I->prefix = $wpdb->prefix;
+    $I->lang   = substr(get_locale(), 0, 2);
+    # initialize renderers
+    foreach ($I->blocks as &$a) {
+      $a['render_callback'][0] = $I;
     }
     unset($a);
-    # register dependency scripts
+    # register scripts and styles
     # some scripts are separate projects that may be included
     # locally (from the same-origin) or remotely (from cdn)
-    $a = plugins_url().'/'.$this->name.'/';
+    $a = plugins_url().'/'.$I->BRAND.'/';
     wp_register_script(
       'http-fetch',
-      file_exists($this->dir_inc.'httpFetch')
+      file_exists($I->dir.'httpFetch')
         ? $a.'inc/httpFetch/httpFetch.js'
         : 'https://cdn.jsdelivr.net/npm/http-fetch-json@2/httpFetch.js',
       [], false, true
     );
-    # register styles and scripts
-    wp_register_style(
-      $this->name.'-css',
-      $a.'inc/'.$this->name.'.css'
-    );
-    wp_register_style(
-      $this->name.'-demo-css',
-      $a.'inc/pages/demo.css'
-    );
     wp_register_script(
-      $this->name.'-js',
-      $a.'inc/'.$this->name.'.js',
+      $I->BRAND,
+      $a.'inc/'.$I->BRAND.'.js',
       ['http-fetch'],
       false, true
     );
-    /***
-    wp_register_script(
-      $this->name.'-gutenberg-js',
-      $a.'inc/'.$this->name.'-gutenberg.js',
-      [
-        'wp-blocks', 'wp-element',
-        'wp-editor', 'wp-components'
-      ],
-      false, true
+    wp_register_style(
+      $I->BRAND,
+      $a.'inc/'.$I->BRAND.'.css'
     );
-    /***/
-    # set registration hooks
-    $me = $this;
-    add_action('init', function() use ($me) {
-      foreach ($me->blocks as $a => $b) {
-        register_block_type($me->name.'/'.$a, $b);
+    # set hooks
+    add_action('init', function() use ($I) {
+      foreach ($I->blocks as $a => $b) {
+        register_block_type($I->BRAND.'/'.$a, $b);
       }
     });
-    add_action('rest_api_init', function() use ($me) {
-      register_rest_route($me->name, 'kiss', [
+    add_action('rest_api_init', function() use ($I) {
+      register_rest_route($I->BRAND, 'kiss', [
         'methods'  => 'POST',
-        'callback' => [$me, 'apiEntry'],
+        'callback' => [$I, 'apiEntry'],
       ]);
     });
-    add_action('enqueue_block_assets', function() use ($me) {
-      if (is_admin())
-      {
-        #wp_enqueue_script($me->name.'-gutenberg-js');
-      }
-      else if (is_shop())
-      {
-        wp_enqueue_style($me->name.'-css');
-        wp_enqueue_script($me->name.'-js');
-        wp_enqueue_style($me->name.'-demo-css');
-        # remove gutenberg's default/core blocks:
-        #wp_dequeue_style('wp-block-library');
-        #wp_deregister_style('wp-block-library');
-      }
-    });
-    add_action('wp_enqueue_scripts', function() use ($me) {
-      # make sure base woo's on
-      if (is_shop()) {
-        #wp_dequeue_style('woocommerce-general');
-        #wp_enqueue_style(
-        #  'woocommerce-sm', WC()->plugin_url().'/assets/css/woocommerce.css'
-        #);
-      }
-    }, 11);
-    # set shop template
-    add_filter('template_include', function($t) use ($me) {
-      return is_shop()
-        ? $me->dir_inc.'pages'.DIRECTORY_SEPARATOR.'demo.php'
-        : $t;
-      ###
-    }, 11, 1);
   }
+  # }}}
+  # api {{{
   public static function init()
   {
-    # construct once (singleton)
-    if (self::$ref === null) {
-      self::$ref = new StorefrontModernBlocks();
+    if (!($I = self::$I))
+    {
+      # ready
+      #echo '<h1>init 1</h1>';
+      self::$I = new StorefrontModernBlocks();
     }
-    return self::$ref;
+    else if (!$I->active)
+    {
+      # steady
+      #echo '<h1>init 2</h1>';
+      add_action('enqueue_block_assets', function() use ($I) {
+        wp_enqueue_script($I->BRAND);
+        wp_enqueue_style($I->BRAND);
+      });
+      $I->active = true;
+    }
+  }
+  public static function parse($html)
+  {
+    return (self::$I && self::$I->active)
+      ? apply_filters('the_content', $html)
+      : '';
   }
   # }}}
   # csr rendering
@@ -670,10 +629,8 @@ class StorefrontModernBlocks {
       'cfg'       => [
         'sectionSwitch' => $attr['sectionSwitch'],
       ],
-      'mode'      => $attr['sectionMode'],
-      'autofocus' => $attr['focusGreedy'],
+      'opened'    => $attr['sectionOpened'],
       'items'     => $this->parseTemplate($T['root'], $T, []),
-      'opened'    => true,
     ]);
   }
   # }}}
@@ -687,49 +644,37 @@ class StorefrontModernBlocks {
     );
     # create a section
     return $this->renderSection([
-      'custom'    => trim('category-filter '.$attr['customClass']),
-      'mode'      => $attr['sectionMode'],
-      'autofocus' => $attr['focusGreedy'],
-      'items'     => $content,
-      'opened'    => $attr['sectionOpened'],
+      'custom' => trim('category-filter '.$attr['customClass']),
+      'opened' => $attr['sectionOpened'],
+      'items'  => $content,
     ]);
   }
   private function renderSection($attr)
   {
     # preapre
     $T = $this->templates['section'];
-    # determine main section parameters
-    $mode    = $attr['mode'];
-    $content = $attr['items'];
-    $custom  = !!$attr['custom']
-      ? $attr['custom']
-      : 'custom';
-    # check items
-    if (is_array($content))
+    # create items (sub-sections)
+    if (($content = $attr['items']) && is_array($content))
     {
-      # fantom root section
       $id = $content['id'];
       $content = $this->renderSectionItem($content, $T, $attr);
     }
     else
     {
-      # zero section (foreign content)
       $id = -1;
     }
-    # determine root configuration
+    # create configuration
     $config = !!$attr['cfg']
       ? $attr['cfg']
       : [];
     $config = json_encode(array_merge($config, [
-      'mode'   => $mode,
       'id'     => $id,
-      'arrow'  => !!($mode &  4), # allow to open/close
-      'opened' => !!($mode &  1), # section opened/closed
-      'autofocus' => $attr['autofocus'],
+      'opened' => $attr['opened'],
+      'arrow'  => true,
     ]));
     # compose
     return $this->parseTemplate($T['main'], $T, [
-      'custom' => $custom,
+      'custom' => ($attr['custom'] ? $attr['custom'] : 'custom'),
       'cfg'    => $config,
       'items'  => $content,
       'placeholder' => $this->templates['svg']['placeholder'],
@@ -805,8 +750,8 @@ class StorefrontModernBlocks {
       $this->apiFail(400, 'incorrect language');
     }
     else if (!$a) {
-      #$p['lang'] = $this->lang;
-      $p['lang'] = 'en';
+      $p['lang'] = $this->lang;
+      #$p['lang'] = 'en';
     }
     # records range
     if ($R = $p['range'])
@@ -1005,7 +950,7 @@ class StorefrontModernBlocks {
         $this->apiFail(500, 'failed to get');
       }
       # get locale and language
-      $locale = __DIR__.DIRECTORY_SEPARATOR.$this->name.'-locale.php';
+      $locale = __DIR__.DIRECTORY_SEPARATOR.$this->BRAND.'-locale.php';
       $locale = (include $locale);
       $lang   = array_key_exists($p['lang'], $locale)
         ? $p['lang']
@@ -1602,7 +1547,7 @@ EOD;
           switch(substr($a, 0, 4)) {
           case 'UID=':
             ++$this->unique_id;
-            $attr[$a] = $b = $this->name.'-'.$this->unique_id;
+            $attr[$a] = $b = $this->BRAND.'-'.$this->unique_id;
             break;
           }
         }
@@ -1689,16 +1634,18 @@ EOD;
   }
   # }}}
 }
-# hooks (wp) {{{
+# activation hook {{{
 function_exists('register_activation_hook') && register_activation_hook(__FILE__, function() {
-  # activate woocommerce plugin
   if (!class_exists('WooCommerce', false))
   {
     $a = 'woocommerce';
     $a = activate_plugin($a.DIRECTORY_SEPARATOR.$a.'.php');
   }
 });
-function_exists('add_action') && add_action('plugins_loaded', function() {
+# }}}
+# load hook {{{
+function_exists('add_action') && add_action('plugins_loaded', function()
+{
   if (class_exists('WooCommerce', false)) {
     StorefrontModernBlocks::init();
   }
