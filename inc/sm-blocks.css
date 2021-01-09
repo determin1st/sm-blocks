@@ -4,6 +4,14 @@
 :root {
   --sm-blocks-factor: 1;
   --sm-blocks-height: 48px;
+  --sm-color-0: 0,0,0;
+  --sm-color-1: 255,255,255;
+  --sm-color-2: 192,192,192;
+  --sm-color-3: 220,220,220;
+  --sm-color-4: 47,79,79;
+  --sm-color-5: 112,128,144;
+  --sm-color-6: 72,61,139;
+  --sm-color-7: 106,90,205;
 }
 .sm-blocks {
   --height: calc(var(--sm-blocks-height) * var(--sm-blocks-factor));
@@ -110,6 +118,182 @@
 .sm-blocks.v.f > div.v {
   box-shadow: inset 0px 0px 4px 1px rgba(106,90,205,0.4);
   border-radius: 2px;
+}
+.sm-blocks button.w3-button {
+  font-size: var(--height);
+  width: 100%;
+  height: 1.05em;
+  background-color: rgba(var(--sm-color-3),1);
+  box-shadow: inset 0 0 0.2em 0 rgba(var(--sm-color-2),1);
+  border-style: solid;
+  border-color: rgba(var(--sm-color-2),1);
+  border-width: 0.025em;
+  border-radius: 0.04em;
+  touch-action: none;
+  cursor: default;
+}
+.sm-blocks button.w3-button > label {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  user-select: none;
+  pointer-events: none;
+  font-size: 0.334em;
+  font-family: 'Arial Black', 'Arial Bold', Gadget, sans-serif;
+  font-weight: bold;
+  text-decoration: none;
+  letter-spacing: 0;
+  background-color: transparent;
+  color: rgba(var(--sm-color-5),1);
+}
+.sm-blocks button.w3-button > svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  fill: rgba(var(--sm-color-5),1);
+}
+.sm-blocks button.w3-button.v {
+  cursor: pointer;
+}
+.sm-blocks button.w3-button.v.h {
+  border-color: rgba(var(--sm-color-0),0.65);
+}
+.sm-blocks button.w3-button.v.h > label {
+  font-weight: bolder;
+  color: rgba(var(--sm-color-4),1);
+}
+.sm-blocks button.w3-button.v.h > svg {
+  fill: rgba(var(--sm-color-4),1);
+}
+.sm-blocks button.w3-button.v.f {
+  background-color: rgba(var(--sm-color-2),0.5);
+  border-color: rgba(var(--sm-color-6),0.65);
+  border-width: 0.05em;
+  box-shadow: inset 0 0 0 0.02em rgba(var(--sm-color-1),1);
+}
+.sm-blocks button.w3-button.v.f > label {
+  font-weight: bolder;
+  color: rgba(var(--sm-color-7),1);
+}
+.sm-blocks button.w3-button.v.f > svg {
+  fill: rgba(var(--sm-color-7),1);
+}
+.sm-blocks button.w3-button.v.f.h {
+  background-color: rgba(var(--sm-color-6),0.125);
+}
+.sm-blocks button.w3-button.v.f.h > label {
+  color: rgba(var(--sm-color-6),1);
+}
+.sm-blocks button.w3-button.v.f.h > svg {
+  fill: rgba(var(--sm-color-6),1);
+}
+.sm-blocks button.w3-button.v.w,
+.sm-blocks button.w3-button.v.w.h,
+.sm-blocks button.w3-button.v.w.f {
+  cursor: default;
+  background-color: rgba(var(--sm-color-3),0.5);
+  box-shadow: inset 0 0 0 0.02em rgba(var(--sm-color-1),1);
+  border-color: rgba(var(--sm-color-0),1);
+}
+.sm-blocks button.w3-button.v.w > label,
+.sm-blocks button.w3-button.v.w.h > label,
+.sm-blocks button.w3-button.v.w.f > label {
+  font-size: 0.313em;
+  color: rgba(var(--sm-color-2),1);
+}
+.sm-blocks button.w3-button.v.w > svg,
+.sm-blocks button.w3-button.v.w.h > svg,
+.sm-blocks button.w3-button.v.w.f > svg {
+  filter: none;
+}
+.sm-blocks button.w3-button.v.w.f {
+  background-color: rgba(var(--sm-color-6),0.125);
+}
+.sm-blocks button.sm-checkbox {
+  width: 100%;
+  height: 100%;
+  border-style: none;
+  border-width: 0;
+  background-color: transparent;
+  color: transparent;
+  pointer-events: none;
+}
+.sm-blocks button.sm-checkbox > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.sm-blocks button.sm-checkbox > svg > .a {
+  fill: transparent;
+}
+.sm-blocks button.sm-checkbox > svg > .b {
+  fill-rule: evenodd;
+  fill: #708090;
+}
+.sm-blocks button.sm-checkbox > svg > .c {
+  fill-rule: evenodd;
+  fill: #dcdcdc;
+}
+.sm-blocks button.sm-checkbox > svg > .d {
+  fill: transparent;
+}
+.sm-blocks button.sm-checkbox > svg > .e {
+  fill: transparent;
+}
+.sm-blocks button.sm-checkbox.x0 > svg > .d {
+  fill: #2f4f4f;
+}
+.sm-blocks button.sm-checkbox.x0.i > svg > .e {
+  fill: #2f4f4f;
+}
+.sm-blocks button.sm-checkbox.x0.i > svg > .d {
+  fill: transparent;
+}
+.sm-blocks button.sm-checkbox.x2 > svg > .c {
+  fill: transparent;
+}
+.sm-blocks button.sm-checkbox.x2 > svg > .d {
+  fill: #2f4f4f;
+}
+.sm-blocks button.sm-checkbox.x2 > svg > .e {
+  fill: #2f4f4f;
+}
+.sm-blocks button.sm-checkbox.v {
+  pointer-events: auto;
+}
+.sm-blocks button.sm-checkbox.v.x0 {
+  pointer-events: none;
+}
+.sm-blocks button.sm-checkbox.v.x0.i {
+  pointer-events: auto;
+}
+.sm-blocks button.sm-checkbox.v.h.x1 > svg > .a {
+  fill: rgba(112,128,144,0.3);
+}
+.sm-blocks button.sm-checkbox.v.h.x2 > svg > .d {
+  fill: #708090;
+}
+.sm-blocks button.sm-checkbox.v.h.x2 > svg > .e {
+  fill: #708090;
+}
+.sm-blocks button.sm-checkbox.v.f.x1 > svg > .a {
+  fill: rgba(106,90,205,0.3);
+}
+.sm-blocks button.sm-checkbox.v.f.x1 > svg > .b {
+  fill: #6a5acd;
+}
+.sm-blocks button.sm-checkbox.v.f.x1 > svg > .c {
+  fill: #c0c0c0;
+}
+.sm-blocks button.sm-checkbox.v.f.x2 > svg > .d {
+  fill: #6a5acd;
+}
+.sm-blocks button.sm-checkbox.v.f.x2 > svg > .e {
+  fill: #6a5acd;
 }
 .sm-blocks .sm-buttons > button {
   width: 100%;
@@ -250,88 +434,6 @@
 }
 .sm-blocks .sm-blocks-select.v.f > svg > .b {
   fill: #dcdcdc;
-}
-.sm-blocks .sm-blocks-checkbox {
-  width: 100%;
-  height: 100%;
-  border-style: none;
-  border-width: 0;
-  background-color: transparent;
-  color: transparent;
-  pointer-events: none;
-}
-.sm-blocks .sm-blocks-checkbox > svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-.sm-blocks .sm-blocks-checkbox > svg > .a {
-  fill: transparent;
-}
-.sm-blocks .sm-blocks-checkbox > svg > .b {
-  fill-rule: evenodd;
-  fill: #708090;
-}
-.sm-blocks .sm-blocks-checkbox > svg > .c {
-  fill-rule: evenodd;
-  fill: #dcdcdc;
-}
-.sm-blocks .sm-blocks-checkbox > svg > .d {
-  fill: transparent;
-}
-.sm-blocks .sm-blocks-checkbox > svg > .e {
-  fill: transparent;
-}
-.sm-blocks .sm-blocks-checkbox.x0 > svg > .d {
-  fill: #2f4f4f;
-}
-.sm-blocks .sm-blocks-checkbox.x0.i > svg > .e {
-  fill: #2f4f4f;
-}
-.sm-blocks .sm-blocks-checkbox.x0.i > svg > .d {
-  fill: transparent;
-}
-.sm-blocks .sm-blocks-checkbox.x2 > svg > .c {
-  fill: transparent;
-}
-.sm-blocks .sm-blocks-checkbox.x2 > svg > .d {
-  fill: #2f4f4f;
-}
-.sm-blocks .sm-blocks-checkbox.x2 > svg > .e {
-  fill: #2f4f4f;
-}
-.sm-blocks .sm-blocks-checkbox.v {
-  pointer-events: auto;
-}
-.sm-blocks .sm-blocks-checkbox.v.x0 {
-  pointer-events: none;
-}
-.sm-blocks .sm-blocks-checkbox.v.x0.i {
-  pointer-events: auto;
-}
-.sm-blocks .sm-blocks-checkbox.v.h.x1 > svg > .a {
-  fill: rgba(112,128,144,0.3);
-}
-.sm-blocks .sm-blocks-checkbox.v.h.x2 > svg > .d {
-  fill: #708090;
-}
-.sm-blocks .sm-blocks-checkbox.v.h.x2 > svg > .e {
-  fill: #708090;
-}
-.sm-blocks .sm-blocks-checkbox.v.f.x1 > svg > .a {
-  fill: rgba(106,90,205,0.3);
-}
-.sm-blocks .sm-blocks-checkbox.v.f.x1 > svg > .b {
-  fill: #6a5acd;
-}
-.sm-blocks .sm-blocks-checkbox.v.f.x1 > svg > .c {
-  fill: #c0c0c0;
-}
-.sm-blocks .sm-blocks-checkbox.v.f.x2 > svg > .d {
-  fill: #6a5acd;
-}
-.sm-blocks .sm-blocks-checkbox.v.f.x2 > svg > .e {
-  fill: #6a5acd;
 }
 .sm-blocks.section {
   width: 100%;
@@ -570,7 +672,7 @@
 .sm-blocks.section.category-filter .item.v.o0.e1.hhh > .title > h3.h {
   background-color: rgba(119,136,153,0.04);
 }
-.sm-blocks.section.category-filter .item.v.o0.e1.hhh > .title > button.sm-blocks-checkbox {
+.sm-blocks.section.category-filter .item.v.o0.e1.hhh > .title > button.sm-checkbox {
   background-color: rgba(119,136,153,0.04);
 }
 .sm-blocks.section.category-filter .item.v.o1.e1.hhh > .title > h3.h {
@@ -1062,25 +1164,104 @@
   max-height: calc(1% * var(--c-size));
 }
 .sm-blocks.products > div > .product > div > .section.c > .actions {
-  --height: calc(var(--item-y) * var(--c-size) / 100);
-  font-size: calc(0.4 * var(--height));
-  padding-left: var(--pad);
-  padding-right: var(--pad);
+  font-size: calc(var(--item-y) * var(--c-size) / 100);
   display: flex;
   flex-direction: row;
-  gap: 2px;
+  gap: 4px;
 }
 .sm-blocks.products > div > .product > div > .section.c > .actions > button {
   flex: 1 1 0;
 }
-.sm-blocks.products > div > .product > div > .section.c > .actions > button.add-to-cart {
-  max-width: calc(8px + var(--height));
-  padding-top: 6px;
-  padding-bottom: 6px;
+.sm-blocks.products > div > .product > div > .section.c > .actions > button.add {
+  flex: 0 0 0;
+  min-width: 1.217em;
+  padding: 0.0415em 0.125em 0.0415em 0.125em;
 }
-.sm-blocks.products > div > .product > div > .section.c > .actions > button.add-to-cart > svg {
-  width: auto;
-  height: 100%;
+.sm-blocks.products > div > .product > div > .section.c > .actions > button.add > svg > text {
+  font-size: 0.417em;
+  font-family: 'Arial Black', 'Arial Bold', Gadget, sans-serif;
+  font-weight: bold;
+  fill: transparent;
+}
+.sm-blocks.products > div > .product > div > .section.c > .actions > button.add > svg > .a {
+  fill: rgba(var(--sm-color-4),0.75);
+}
+.sm-blocks.products > div > .product > div > .section.c > .actions > button.add > svg > .b {
+  fill: rgba(var(--sm-color-5),1);
+}
+.sm-blocks.products > div > .product > div > .section.c > .actions > button.add > svg > .c {
+  fill: rgba(var(--sm-color-5),0.5);
+}
+.sm-blocks.products > div > .product > div > .section.c > .actions > button.add > svg > .d {
+  font-size: 0.458em;
+}
+.sm-blocks.products > div > .product > div > .section.c > .actions > button.add > svg > .e {
+  fill: transparent;
+}
+.sm-blocks.products > div > .product > div > .section.c > .actions > button.add.v.h > svg > .b {
+  fill: rgba(var(--sm-color-4),0.75);
+}
+.sm-blocks.products > div > .product > div > .section.c > .actions > button.add.v.h > svg > .c {
+  fill: rgba(var(--sm-color-1),0.25);
+}
+.sm-blocks.products > div > .product > div > .section.c > .actions > button.add.v.h > svg > .d {
+  fill: rgba(var(--sm-color-0),1);
+}
+.sm-blocks.products > div > .product > div > .section.c > .actions > button.add.v.f > svg > .a {
+  fill: rgba(var(--sm-color-6),0.65);
+}
+.sm-blocks.products > div > .product > div > .section.c > .actions > button.add.v.f > svg > .c {
+  fill: rgba(var(--sm-color-7),0.25);
+}
+.sm-blocks.products > div > .product > div > .section.c > .actions > button.add.v.f.h > svg > .c {
+  fill: rgba(var(--sm-color-7),0.125);
+}
+.sm-blocks.products > div > .product > div > .section.c > .actions > button.add.v.f.h > svg > .d {
+  fill: rgba(var(--sm-color-7),1);
+}
+.sm-blocks.products > div > .product > div > .section.c > .actions > button.add.v.w > svg > .a,
+.sm-blocks.products > div > .product > div > .section.c > .actions > button.add.v.w.f > svg > .a {
+  fill: rgba(var(--sm-color-2),1);
+}
+.sm-blocks.products > div > .product > div > .section.c > .actions > button.add.v.w > svg > .b,
+.sm-blocks.products > div > .product > div > .section.c > .actions > button.add.v.w.f > svg > .b {
+  fill: rgba(var(--sm-color-2),1);
+}
+.sm-blocks.products > div > .product > div > .section.c > .actions > button.add.v.w > svg > .c,
+.sm-blocks.products > div > .product > div > .section.c > .actions > button.add.v.w.f > svg > .c {
+  fill: rgba(var(--sm-color-7),0.125);
+}
+.sm-blocks.products > div > .product > div > .section.c > .actions > button.add.v.w > svg > .d,
+.sm-blocks.products > div > .product > div > .section.c > .actions > button.add.v.w.f > svg > .d {
+  fill: transparent;
+}
+.sm-blocks.products > div > .product > div > .section.c > .actions > button.add.v.x > svg > .c {
+  fill: rgba(var(--sm-color-1),0.4);
+}
+.sm-blocks.products > div > .product > div > .section.c > .actions > button.add.v.x > svg > .d {
+  fill: transparent;
+}
+.sm-blocks.products > div > .product > div > .section.c > .actions > button.add.v.x > svg > .e {
+  fill: rgba(var(--sm-color-0),1);
+}
+.sm-blocks.products > div > .product > div > .section.c > .actions > button.add.v.x.h > svg > .c {
+  fill: rgba(var(--sm-color-1),0.25);
+}
+.sm-blocks.products > div > .product > div > .section.c > .actions > button.add.v.x.h > svg > .e {
+  fill: rgba(var(--sm-color-5),1);
+}
+.sm-blocks.products > div > .product > div > .section.c > .actions > button.add.v.x.f > svg > .c {
+  fill: rgba(var(--sm-color-7),0.15);
+}
+.sm-blocks.products > div > .product > div > .section.c > .actions > button.add.v.x.f > svg > .e {
+  fill: rgba(var(--sm-color-6),1);
+}
+.sm-blocks.products > div > .product > div > .section.c > .actions > button.add.v.x.f.h > svg > .d {
+  fill: transparent;
+}
+.sm-blocks.products > div > .product > div > .section.c > .actions > button.add.v.x.w > svg > .e,
+.sm-blocks.products > div > .product > div > .section.c > .actions > button.add.v.x.w.f > svg > .e {
+  fill: rgba(var(--sm-color-7),1);
 }
 .sm-blocks.products > div > .product > div.v > .section {
   border-style: solid;
@@ -1092,13 +1273,11 @@
 }
 .sm-blocks.products > div > .product > svg {
   display: block;
-  width: 100%;
-  height: 100%;
 }
-.sm-blocks.products > div > .product.loaded > div {
+.sm-blocks.products > div > .product.x > div {
   display: flex;
 }
-.sm-blocks.products > div > .product.loaded > svg {
+.sm-blocks.products > div > .product.x > svg {
   display: none;
 }
 .sm-blocks.products > hr {

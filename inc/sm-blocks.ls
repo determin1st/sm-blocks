@@ -1,5 +1,5 @@
 "use strict"
-smBlocks = do ->
+sm = do ->
 	# base
 	# helpers {{{
 	###
@@ -93,76 +93,15 @@ smBlocks = do ->
 		# done
 		return a
 	# }}}
-	parseTemplate = (f) -> # {{{
-		# get function's text and locate the comment
-		f = f.toString!
-		a = (f.indexOf '/*') + 2
-		b = (f.lastIndexOf '*/') - 1
-		# tidy up html content and complete
-		f = (f.substring a, b).trim!replace />\s+</g, '><'
-		return f
-		###
-	# }}}
-	slaveFocusInOut = (block, node) -> # {{{
-		debugger
-		return [
-			(e) !~>
-				# focusin handler
-				# check
-				if block.locked
-					# prevent
-					e.preventDefault!
-					e.stopPropagation!
-				else
-					# operate
-					block.focused = true
-					node.classList.add 'f'
-					# callback
-					if block.onFocus
-						block.onFocus true, block
-				###
-			(e) !~>
-				# focusout handler
-				# operate
-				block.focused = false
-				node.classList.remove 'f'
-				# callback
-				e @, false if e = @onFocus
-				###
-		]
-	# }}}
-	slaveFocusAggregator = (block) -> # {{{
-		bounce = newDelay!
-		return (v, o) ->>
-			# bounce
-			bounce.cancel! if bounce.pending
-			if o and not (await bounce := newDelay 64)
-				return false
-			# check
-			if (w = block.focused) == v
-				return false
-			# callback
-			if o and block.onFocus and not (await block.onFocus v, o)
-				return false
-			# operate
-			if o and block.setFocus
-				block.setFocus v
-			else
-				block.focused = v
-				block.root.classList.remove 'f'+w if w
-				block.root.classList.add 'f'+v
-			# done
-			return true
-	# }}}
 	# }}}
 	# fetchers {{{
-	soFetch = httpFetch.create {
+	goFetch = httpFetch.create {
 		baseUrl: '/?rest_route=/'+BRAND+'/kiss'
 		mounted: true
 		notNull: true
 		method: 'POST'
 	}
-	oFetch = httpFetch.create {
+	soFetch = httpFetch.create {
 		baseUrl: '/?rest_route=/'+BRAND+'/kiss'
 		mounted: true
 		notNull: true
@@ -171,7 +110,482 @@ smBlocks = do ->
 		parseResponse: 'stream'
 	}
 	# }}}
-	S = # slaves
+	w3ui = # {{{
+		template: (f) -> # HTML-in-JS {{{
+			# get function's text and locate the comment
+			f = f.toString!
+			a = (f.indexOf '/*') + 2
+			b = (f.lastIndexOf '*/') - 1
+			# tidy up html content and complete
+			f = (f.substring a, b).trim!replace />\s+</g, '><'
+			return f
+		# }}}
+		event: # {{{
+			# primitive
+			hover: (B) -> (e) !-> # {{{
+				# pprepare
+				e.preventDefault!
+				# check
+				if not B.locked and not B.pending and not B.hovered
+					# operate
+					B.hovered = true
+					B.root.classList.add 'h'
+					# callback
+					B.onHover true, B if B.onHover
+			# }}}
+			unhover: (B) -> (e) !-> # {{{
+				# prepare
+				e.preventDefault!
+				# check
+				if B.hovered
+					# operate
+					B.hovered = false
+					B.root.classList.remove 'h'
+					# callback
+					B.onHover false, B if B.onHover
+			# }}}
+			focus: (B) -> (e) !-> # {{{
+				# check
+				if B.locked
+					# ignore
+					e.preventDefault!
+					#e.stopImmediatePropagation! # focusin bubbles
+				else
+					# operate
+					B.focused = true
+					B.root.classList.add 'f'
+					# callback
+					B.onFocus true, B if B.onFocus
+			# }}}
+			unfocus: (B) -> (e) !-> # blur {{{
+				# prepare
+				e.preventDefault!
+				# check
+				if B.focused
+					# operate
+					B.focused = false
+					B.root.classList.remove 'f'
+					# callback
+					B.onFocus false, B if B.onFocus
+			# }}}
+			# aggregators
+			slaveFocusInOut: (block, node) -> # {{{
+				return [
+					(e) !~>
+						# focusin handler
+						# check
+						if block.locked
+							# prevent
+							e.preventDefault!
+							e.stopPropagation!
+						else
+							# operate
+							block.focused = true
+							node.classList.add 'f'
+							# callback
+							if block.onFocus
+								block.onFocus true, block
+						###
+					(e) !~>
+						# focusout handler
+						# operate
+						block.focused = false
+						node.classList.remove 'f'
+						# callback
+						e @, false if e = @onFocus
+						###
+				]
+			# }}}
+			slaveFocusAggregator: (block) -> # {{{
+				bounce = newDelay!
+				return (v, o) ->>
+					# bounce
+					bounce.cancel! if bounce.pending
+					if o and not (await bounce := newDelay 64)
+						return false
+					# check
+					if (w = block.focused) == v
+						return false
+					# callback
+					if o and block.onFocus and not (await block.onFocus v, o)
+						return false
+					# operate
+					if o and block.setFocus
+						block.setFocus v
+					else
+						block.focused = v
+						block.root.classList.remove 'f'+w if w
+						block.root.classList.add 'f'+v
+					# done
+					return true
+			# }}}
+		# }}}
+		dom: # {{{
+			append: (box, item) -> # {{{
+				if not (box instanceof Element)
+					if not (box = box.root)
+						return null
+				if item instanceof Array
+					for a in item
+						if a instanceof Element
+							box.appendChild a
+						else if a.root
+							box.appendChild a.root
+				else if item instanceof Element
+					box.appendChild item
+				else if item.root
+					box.appendChild item.root
+				###
+				return item
+			# }}}
+		# }}}
+		button: do -> # {{{
+			Block = (root, o) !-> # {{{
+				# base
+				@root    = root
+				# state
+				@hovered = false
+				@focused = false
+				@pending = null
+				@locked  = true
+				# traps
+				@onHover = o.onHover or null
+				@onFocus = o.onFocus or null
+				@onClick = o.onClick or null
+				@onPress = o.onPress or null
+				# handlers (attach)
+				a = 'addEventListener'
+				e = w3ui.event
+				root[a] 'pointerenter', e.hover @
+				root[a] 'pointerleave', e.unhover @
+				root[a] 'focus', e.focus @
+				root[a] 'blur', e.unfocus @
+				root[a] 'click', (e) !~>> # {{{
+					# prepare
+					e.preventDefault!
+					e.stopPropagation!
+					# check
+					if not @locked and not @pending and @onClick
+						# callback
+						if (e = @onClick @) instanceof Promise
+							# lock
+							@pending = e
+							@root.classList.add 'w'
+							# wait complete
+							await e
+							# unlock
+							@pending = null
+							@root.classList.remove 'w'
+				# }}}
+			Block.prototype =
+				lock: (flag = true) !-> # {{{
+					# check
+					if @locked != flag
+						# operate
+						@root.classList.toggle 'v', !(@locked = flag)
+						if flag or ~@current or ~@cfg.intermediate
+							@root.disabled = flag
+				# }}}
+			# }}}
+			return (o = {}) -> # {{{
+				# construct
+				a = document.createElement 'button'
+				a.type      = 'button'
+				a.disabled  = true
+				a.className = 'w3-button'+((o.name and ' '+o.name) or '')
+				if o.hint
+					a.setAttribute 'title', o.hint
+				if o.label
+					b = document.createElement 'label'
+					b.textContent = o.label
+					a.appendChild b
+				else if o.html
+					a.innerHTML = o.html
+				# complete
+				return new Block a, o
+			# }}}
+		# }}}
+	<<<<
+		checkbox: do -> # {{{
+			template = w3ui.template !-> # {{{
+				/*
+				<button type="button" class="sm-checkbox" disabled>
+				<svg preserveAspectRatio="none" viewBox="0 0 48 48">
+					<circle class="a" cx="24" cy="24" r="12"/>
+					<path class="b" d="M24 6a18 18 0 110 36 18 18 0 010-36zm0 6a12 12 0 110 24 12 12 0 010-24z"/>
+					<path class="c" d="M24 4a20 20 0 110 40 20 20 0 010-40zm0 2a18 18 0 110 36 18 18 0 010-36z"/>
+					<path class="d" d="M48 27v-6H0v6z"/>
+					<path class="e" d="M27 48V0h-6v48z"/>
+				</svg>
+				</button>
+				*/
+			# }}}
+			Block = (root, cfg) !-> # {{{
+				# base
+				@root = root
+				@cfg  = cfg
+				# state
+				@current  = -2 # -2=initial -1=intermediate, 0=off, 1=on
+				@hovered  = false
+				@focused  = false
+				@locked   = true
+				# traps
+				@onHover  = null
+				@onFocus  = null
+				@onChange = null
+				# handlers
+				@hover = (e) !~>> # {{{
+					# pprepare
+					e.preventDefault!
+					# check
+					if not @locked
+						# operate
+						if not @onHover or (await @onHover @, true)
+							@setHovered true
+				# }}}
+				@unhover = (e) !~>> # {{{
+					# prepare
+					e.preventDefault!
+					# operate
+					if not @onHover or (await @onHover @, false)
+						@setHovered false
+				# }}}
+				@focus = (e) !~>> # {{{
+					# check
+					if @locked
+						# try to prevent
+						e.preventDefault!
+						e.stopPropagation!
+					else
+						# operate
+						if not @onFocus or (await @onFocus @, true)
+							@setFocused true
+				# }}}
+				@unfocus = (e) !~>> # {{{
+					# prepare
+					e.preventDefault!
+					# operate
+					if not @onFocus or (await @onFocus @, false)
+						@setFocused false
+				# }}}
+				@click = (e) !~> # {{{
+					# prepare
+					e.preventDefault!
+					e.stopPropagation!
+					# check
+					if not @locked and (~@current or ~@cfg.intermediate)
+						# operate
+						@event!
+				# }}}
+				@event = !~>> # {{{
+					# determine new current
+					c = if ~(c = @current)
+						then 1 - c # switch 0<=>1
+						else @cfg.intermediate # escape
+					# should be focused
+					@root.focus! if not @focused
+					# operate
+					if not @onChange or (await @onChange @, c)
+						@set c
+					# done
+				# }}}
+			Block.prototype =
+				init: (v = -1) !-> # {{{
+					# set current state
+					@set v
+					@root.classList.add 'i' if ~@cfg.intermediate
+					# set traps
+					if a = @cfg.master
+						@onHover = a.onHover if not @onHover
+						@onFocus = a.onFocus if not @onFocus
+					# set events
+					a = @root
+					b = 'addEventListener'
+					a[b] 'pointerenter', @hover
+					a[b] 'pointerleave', @unhover
+					a[b] 'focusin', @focus
+					a[b] 'focusout', @unfocus
+					a[b] 'click', @click
+					# done
+				# }}}
+				lock: (flag = true) !-> # {{{
+					if @locked != flag
+						@root.classList.toggle 'v', !(@locked = flag)
+						if flag or ~@current or ~@cfg.intermediate
+							@root.disabled = flag
+				# }}}
+				set: (v) -> # {{{
+					# check
+					if @current == v
+						return v
+					# set style
+					if (i = @current + 1) >= 0
+						@root.classList.remove 'x'+i
+					@root.classList.add 'x'+(v + 1)
+					# complete
+					return @current = v
+				# }}}
+				setHovered: (v) -> # {{{
+					# check
+					if @hovered == v
+						return false
+					# operate
+					@hovered = v
+					@root.classList.toggle 'h'
+					return true
+				# }}}
+				setFocused: (v) -> # {{{
+					# check
+					if @focused == v
+						return false
+					# operate
+					@focused = v
+					@root.classList.toggle 'f'
+					return true
+				# }}}
+			# }}}
+			return (o = {}) ->
+				# prepare
+				o.intermediate = if o.intermediate
+					then o.intermediate
+					else -1 # disabled
+				# construct
+				a = document.createElement 'template'
+				a.innerHTML = template
+				a = a.content.firstChild # button
+				a.innerHTML = o.svg if o.svg
+				# create a block
+				return new Block a, o
+		# }}}
+		select: do -> # {{{
+			template = w3ui.template !-> # {{{
+				/*
+				<svg preserveAspectRatio="none" shape-rendering="geometricPrecision" viewBox="0 0 48 48">
+					<polygon class="b" points="24,32 34,17 36,16 24,34 "/>
+					<polygon class="b" points="24,34 12,16 14,17 24,32 "/>
+					<polygon class="b" points="34,17 14,17 12,16 36,16 "/>
+					<polygon class="a" points="14,17 34,17 24,32 "/>
+				</svg>
+				*/
+			# }}}
+			Block = (root, select) !-> # {{{
+				# base
+				@root     = root
+				@select   = select
+				# state
+				@current  = -1
+				@hovered  = false
+				@focused  = false
+				@locked   = true
+				# traps
+				@onHover  = null
+				@onFocus  = null
+				@onChange = null
+				# handlers
+				@hover = (e) !~> # {{{
+					# fulfil event
+					e.preventDefault!
+					# operate
+					if not @locked and not @hovered
+						@hovered = true
+						@root.classList.add 'h'
+						e @ if e = @onHover
+				# }}}
+				@unhover = (e) !~> # {{{
+					# fulfil event
+					e.preventDefault!
+					# operate
+					if @hovered
+						@hovered = false
+						@root.classList.remove 'h'
+						e @ if e = @onHover
+				# }}}
+				@focus = (e) !~> # {{{
+					if @locked
+						# try to prevent
+						e.preventDefault!
+						e.stopPropagation!
+					else if not @focused
+						# opearate
+						@focused = true
+						@root.classList.add 'f'
+						e @ if e = @onFocus
+				# }}}
+				@unfocus = (e) !~> # {{{
+					# fulfil event
+					e.preventDefault!
+					# operate
+					if @focused
+						@focused = false
+						@root.classList.remove 'f'
+						e @ if e = @onFocus
+				# }}}
+				@input = (e) !~> # {{{
+					# prepare
+					e.preventDefault!
+					# check
+					if @locked or \
+					   ((e = @onChange) and not (e @select.selectedIndex))
+						###
+						# change is not allowed
+						@select.selectedIndex = @current
+					else
+						# update current
+						@current = @select.selectedIndex
+				# }}}
+			Block.prototype =
+				init: (list = null, index = -1) !-> # {{{
+					# set options
+					if list
+						# create options
+						for a in list
+							b = document.createElement 'option'
+							b.textContent = a
+							@select.appendChild b
+						# set current
+						@current = @select.selectedIndex = index
+					else
+						# reset and clear options
+						@current = @select.selectedIndex = -1
+						@select.innerHTML = ''
+					# set events
+					a = @root
+					b = if list
+						then 'addEventListener'
+						else 'removeEventListener'
+					###
+					a[b] 'pointerenter', @hover
+					a[b] 'pointerleave', @unhover
+					a[b] 'focusin', @focus
+					a[b] 'focusout', @unfocus
+					a[b] 'input', @input
+				# }}}
+				lock: (locked) !-> # {{{
+					if @locked != locked
+						@root.classList.toggle 'v', !(@locked = locked)
+						@select.disabled = locked
+				# }}}
+				set: (i) -> # {{{
+					@current = @select.selectedIndex = i if i != @current
+					return i
+				# }}}
+				get: -> # {{{
+					return @current
+				# }}}
+			# }}}
+			return (o = {}) ->
+				# create a container
+				a = document.createElement 'div'
+				a.className = BRAND+'-select'
+				a.innerHTML = if o.hasOwnProperty 'svg'
+					then o.svg
+					else template
+				# create a select
+				b = document.createElement 'select'
+				a.appendChild b
+				# create block
+				return new Block a, b
+		# }}}
 		section: do -> # {{{
 			Title = (node) !-> # {{{
 				@root  = node
@@ -586,290 +1000,12 @@ smBlocks = do ->
 			return (o) ->
 				return new Block o
 		# }}}
-		select: do -> # {{{
-			template = parseTemplate !-> # {{{
-				/*
-				<svg preserveAspectRatio="none" shape-rendering="geometricPrecision" viewBox="0 0 48 48">
-					<polygon class="b" points="24,32 34,17 36,16 24,34 "/>
-					<polygon class="b" points="24,34 12,16 14,17 24,32 "/>
-					<polygon class="b" points="34,17 14,17 12,16 36,16 "/>
-					<polygon class="a" points="14,17 34,17 24,32 "/>
-				</svg>
-				*/
-			# }}}
-			Block = (root, select) !-> # {{{
-				# base
-				@root     = root
-				@select   = select
-				# state
-				@current  = -1
-				@hovered  = false
-				@focused  = false
-				@locked   = true
-				# traps
-				@onHover  = null
-				@onFocus  = null
-				@onChange = null
-				# handlers
-				@hover = (e) !~> # {{{
-					# fulfil event
-					e.preventDefault!
-					# operate
-					if not @locked and not @hovered
-						@hovered = true
-						@root.classList.add 'h'
-						e @ if e = @onHover
-				# }}}
-				@unhover = (e) !~> # {{{
-					# fulfil event
-					e.preventDefault!
-					# operate
-					if @hovered
-						@hovered = false
-						@root.classList.remove 'h'
-						e @ if e = @onHover
-				# }}}
-				@focus = (e) !~> # {{{
-					if @locked
-						# try to prevent
-						e.preventDefault!
-						e.stopPropagation!
-					else if not @focused
-						# opearate
-						@focused = true
-						@root.classList.add 'f'
-						e @ if e = @onFocus
-				# }}}
-				@unfocus = (e) !~> # {{{
-					# fulfil event
-					e.preventDefault!
-					# operate
-					if @focused
-						@focused = false
-						@root.classList.remove 'f'
-						e @ if e = @onFocus
-				# }}}
-				@input = (e) !~> # {{{
-					# prepare
-					e.preventDefault!
-					# check
-					if @locked or \
-					   ((e = @onChange) and not (e @select.selectedIndex))
-						###
-						# change is not allowed
-						@select.selectedIndex = @current
-					else
-						# update current
-						@current = @select.selectedIndex
-				# }}}
-			Block.prototype =
-				init: (list = null, index = -1) !-> # {{{
-					# set options
-					if list
-						# create options
-						for a in list
-							b = document.createElement 'option'
-							b.textContent = a
-							@select.appendChild b
-						# set current
-						@current = @select.selectedIndex = index
-					else
-						# reset and clear options
-						@current = @select.selectedIndex = -1
-						@select.innerHTML = ''
-					# set events
-					a = @root
-					b = if list
-						then 'addEventListener'
-						else 'removeEventListener'
-					###
-					a[b] 'pointerenter', @hover
-					a[b] 'pointerleave', @unhover
-					a[b] 'focusin', @focus
-					a[b] 'focusout', @unfocus
-					a[b] 'input', @input
-				# }}}
-				lock: (locked) !-> # {{{
-					if @locked != locked
-						@root.classList.toggle 'v', !(@locked = locked)
-						@select.disabled = locked
-				# }}}
-				set: (i) -> # {{{
-					@current = @select.selectedIndex = i if i != @current
-					return i
-				# }}}
-				get: -> # {{{
-					return @current
-				# }}}
-			# }}}
-			return (o = {}) ->
-				# create a container
-				a = document.createElement 'div'
-				a.className = BRAND+'-select'
-				a.innerHTML = if o.hasOwnProperty 'svg'
-					then o.svg
-					else template
-				# create a select
-				b = document.createElement 'select'
-				a.appendChild b
-				# create block
-				return new Block a, b
-		# }}}
-		checkbox: do -> # {{{
-			template = parseTemplate !-> # {{{
-				/*
-				<svg preserveAspectRatio="none" shape-rendering="geometricPrecision" viewBox="0 0 48 48">
-					<circle class="a" cx="24" cy="24" r="12"/>
-					<path class="b" d="M24 6a18 18 0 110 36 18 18 0 010-36zm0 6a12 12 0 110 24 12 12 0 010-24z"/>
-					<path class="c" d="M24 4a20 20 0 110 40 20 20 0 010-40zm0 2a18 18 0 110 36 18 18 0 010-36z"/>
-					<path class="d" d="M48 27v-6H0v6z"/>
-					<path class="e" d="M27 48V0h-6v48z"/>
-				</svg>
-				*/
-			# }}}
-			Block = (root, cfg) !-> # {{{
-				# base
-				@root = root
-				@cfg  = cfg
-				# state
-				@current  = -2 # -2=initial -1=intermediate, 0=off, 1=on
-				@hovered  = false
-				@focused  = false
-				@locked   = true
-				# traps
-				@onHover  = null
-				@onFocus  = null
-				@onChange = null
-				# handlers
-				@hover = (e) !~>> # {{{
-					# pprepare
-					e.preventDefault!
-					# check
-					if not @locked
-						# operate
-						if not @onHover or (await @onHover @, true)
-							@setHovered true
-				# }}}
-				@unhover = (e) !~>> # {{{
-					# prepare
-					e.preventDefault!
-					# operate
-					if not @onHover or (await @onHover @, false)
-						@setHovered false
-				# }}}
-				@focus = (e) !~>> # {{{
-					# check
-					if @locked
-						# try to prevent
-						e.preventDefault!
-						e.stopPropagation!
-					else
-						# operate
-						if not @onFocus or (await @onFocus @, true)
-							@setFocused true
-				# }}}
-				@unfocus = (e) !~>> # {{{
-					# prepare
-					e.preventDefault!
-					# operate
-					if not @onFocus or (await @onFocus @, false)
-						@setFocused false
-				# }}}
-				@click = (e) !~> # {{{
-					# prepare
-					e.preventDefault!
-					e.stopPropagation!
-					# check
-					if not @locked and (~@current or ~@cfg.intermediate)
-						# operate
-						@event!
-				# }}}
-				@event = !~>> # {{{
-					# determine new current
-					c = if ~(c = @current)
-						then 1 - c # switch 0<=>1
-						else @cfg.intermediate # escape
-					# should be focused
-					@root.focus! if not @focused
-					# operate
-					if not @onChange or (await @onChange @, c)
-						@set c
-					# done
-				# }}}
-			Block.prototype =
-				init: (v = -1) !-> # {{{
-					# set current state
-					@set v
-					@root.classList.add 'i' if ~@cfg.intermediate
-					# set traps
-					if a = @cfg.master
-						@onHover = a.onHover if not @onHover
-						@onFocus = a.onFocus if not @onFocus
-					# set events
-					a = @root
-					b = 'addEventListener'
-					a[b] 'pointerenter', @hover
-					a[b] 'pointerleave', @unhover
-					a[b] 'focusin', @focus
-					a[b] 'focusout', @unfocus
-					a[b] 'click', @click
-					# done
-				# }}}
-				lock: (flag = true) !-> # {{{
-					if @locked != flag
-						@root.classList.toggle 'v', !(@locked = flag)
-						if flag or ~@current or ~@cfg.intermediate
-							@root.disabled = flag
-				# }}}
-				set: (v) -> # {{{
-					# check
-					if @current == v
-						return v
-					# set style
-					if (i = @current + 1) >= 0
-						@root.classList.remove 'x'+i
-					@root.classList.add 'x'+(v + 1)
-					# complete
-					return @current = v
-				# }}}
-				setHovered: (v) -> # {{{
-					# check
-					if @hovered == v
-						return false
-					# operate
-					@hovered = v
-					@root.classList.toggle 'h'
-					return true
-				# }}}
-				setFocused: (v) -> # {{{
-					# check
-					if @focused == v
-						return false
-					# operate
-					@focused = v
-					@root.classList.toggle 'f'
-					return true
-				# }}}
-			# }}}
-			return (o = {}) ->
-				# prepare
-				o.intermediate = if o.intermediate
-					then o.intermediate
-					else -1 # disabled
-				# create a button
-				a = document.createElement 'button'
-				a.type = 'button'
-				a.className = BRAND+'-checkbox'
-				a.innerHTML = if o.svg
-					then o.svg
-					else template
-				# create a block
-				return new Block a, o
-		# }}}
+	# }}}
+	S = # slaves
 		productCard: do -> # {{{
 			init  = newPromise!
-			sizes = null # dimensions of card elements
-			template = parseTemplate !-> # {{{
+			sizes = null # dimensions of the card elements
+			template = w3ui.template !-> # {{{
 				/*
 				<div>
 					<div class="section a">
@@ -895,25 +1031,12 @@ smBlocks = do ->
 						</div>
 					</div>
 					<div class="section c">
-						<div class="actions sm-buttons">
-							<button type="button" class="open"></button>
-							<button type="button" class="add-to-cart">
-								<svg preserveAspectRatio="none" viewBox="0 0 446.843 446.843">
-									<path d="M444.09 93.103a14.343 14.343 0 00-11.584-5.888H109.92c-.625 0-1.249.038-1.85.119l-13.276-38.27a14.352 14.352 0 00-8.3-8.646L19.586 14.134c-7.374-2.887-15.695.735-18.591 8.1-2.891 7.369.73 15.695 8.1 18.591l60.768 23.872 74.381 214.399c-3.283 1.144-6.065 3.663-7.332 7.187l-21.506 59.739a11.928 11.928 0 001.468 10.916 11.95 11.95 0 009.773 5.078h11.044c-6.844 7.616-11.044 17.646-11.044 28.675 0 23.718 19.298 43.012 43.012 43.012s43.012-19.294 43.012-43.012c0-11.029-4.2-21.059-11.044-28.675h93.776c-6.847 7.616-11.048 17.646-11.048 28.675 0 23.718 19.294 43.012 43.013 43.012 23.718 0 43.012-19.294 43.012-43.012 0-11.029-4.2-21.059-11.043-28.675h13.433c6.599 0 11.947-5.349 11.947-11.948s-5.349-11.947-11.947-11.947H143.647l13.319-36.996c1.72.724 3.578 1.152 5.523 1.152h210.278a14.33 14.33 0 0013.65-9.959l59.739-186.387a14.33 14.33 0 00-2.066-12.828zM169.659 409.807c-10.543 0-19.116-8.573-19.116-19.116s8.573-19.117 19.116-19.117 19.116 8.574 19.116 19.117-8.573 19.116-19.116 19.116zm157.708 0c-10.543 0-19.117-8.573-19.117-19.116s8.574-19.117 19.117-19.117c10.542 0 19.116 8.574 19.116 19.117s-8.574 19.116-19.116 19.116zm75.153-261.658h-73.161V115.89h83.499l-10.338 32.259zm-21.067 65.712h-52.094v-37.038h63.967l-11.873 37.038zm-146.882 0v-37.038h66.113v37.038h-66.113zm66.113 28.677v31.064h-66.113v-31.064h66.113zm-161.569-65.715h66.784v37.038h-53.933l-12.851-37.038zm95.456-28.674V115.89h66.113v32.259h-66.113zm-28.673-32.259v32.259h-76.734l-11.191-32.259h87.925zm-43.982 126.648h43.982v31.064h-33.206l-10.776-31.064zm167.443 31.065v-31.064h42.909l-9.955 31.064h-32.954z"/>
-								</svg>
-							</button>
-						</div>
+						<div class="actions"></div>
 					</div>
 				</div>
 				*/
 			# }}}
-			Items = (block) !-> # {{{
-				@image   = new @image block
-				@title   = new @title block
-				@price   = new @price block
-				@actions = new @actions block
-			###
-			Items.prototype =
+			section = # {{{
 				image: do -> # {{{
 					Item = (block) !->
 						@block  = block
@@ -972,63 +1095,55 @@ smBlocks = do ->
 						# }}}
 					###
 					Item.prototype =
-						set: (data) -> # {{{
-							# check already loaded
+						set: (data) !-> # {{{
+							# clear
 							if @loaded
-								@clear!
-							# check image
-							if data.image
-								# set handler
-								@image.addEventListener 'load', @load
-								# set attributes
-								for a,b of data.image
-									@image[a] = b
-							# done
-							return true
-						# }}}
-						clear: !-> # {{{
-							@image.removeEventListener 'load', @load
-							if @loaded
+								@image.removeEventListener 'load', @load
 								@box.classList.remove 'v'
 								@image.removeAttribute 'style'
 								@image.src = ''
 								@image.srcset = ''
 								@loaded = false
+							# set
+							if data and data.image
+								@image.addEventListener 'load', @load
+								for a,b of data.image
+									@image[a] = b
 						# }}}
 					###
 					return Item
 				# }}}
 				title: do -> # {{{
+					eBreakMarkers = /\s+([\\\|/.]){1}\s+/
 					Item = (block) !->
 						@block = block
 						@box   = box = block.rootBox.querySelector '.title'
-						@title = box.firstChild
+						@title = box = box.firstChild
+						@label = box.firstChild
 					###
-					eBreakMarkers = /\s+([\\\|/.]){1}\s+/
 					Item.prototype =
-						set: (data) -> # {{{
-							# TODO: DELETE
-							@title.firstChild.textContent = data.index
-							return true
-							# check
-							if not (data = data.title)
-								return true
-							# break title into lines
-							data = data.replace eBreakMarkers, "\n"
-							# TODO: check it fits the container height and
-							# TODO: cut string if required
-							# set
-							@title.firstChild.textContent = data
-							# done
-							return true
-						# }}}
-						clear: !-> # {{{
-							@title.firstChild.textContent = ''
+						set: (data) !-> # {{{
+							if data and (a = data.title)
+								# set
+								# TODO: DELETE
+								@label.textContent = data.index
+								return
+								# break title into lines
+								a = a.replace eBreakMarkers, "\n"
+								# TODO: check it fits the container height and
+								# TODO: cut string if required
+								# set
+								@label.textContent = a
+							else
+								# clear
+								@label.textContent = ''
 						# }}}
 					###
 					return Item
 				# }}}
 				price: do -> # {{{
+					eBreakThousands = /\B(?=(\d{3})+(?!\d))/
+					eNotNumber = /[^0-9]/
 					Item = (block) !->
 						@block    = block
 						@box      = box = block.rootBox.querySelector '.price'
@@ -1045,167 +1160,149 @@ smBlocks = do ->
 						]
 						@money    = [0,0] # integers (no fraction)
 					###
-					eBreakThousands = /\B(?=(\d{3})+(?!\d))/
-					eNotNumber = /[^0-9]/
 					Item.prototype =
-						set: (data) -> # {{{
-							# check
-							if not (data = data.price)
-								return true
-							# get global config
-							cfg = @block.master.group.config.currency
-							# split numbers [regular,current] into integer and fraction
-							b = data.0.split eNotNumber, 2
-							a = data.1.split eNotNumber, 2
-							# truncate fraction point
-							a.1 = if a.1
-								then (a.1.substring 0, cfg.3).padEnd cfg.3, '0'
-								else '0'.repeat cfg.3
-							b.1 = if b.1
-								then (b.1.substring 0, cfg.3).padEnd cfg.3, '0'
-								else '0'.repeat cfg.3
-							# determine money values
-							c = @money
-							d = +('1' + ('0'.repeat cfg.3))
-							c.0 = d*(+(a.0)) + (+a.1)
-							c.1 = d*(+(b.0)) + (+b.1)
-							# separate integer thousands
-							if cfg.2
-								a.0 = a.0.replace eBreakThousands, cfg.2
-								b.0 = b.0.replace eBreakThousands, cfg.2
-							# set values
-							@currency.firstChild.textContent = cfg.0
-							c = @values
-							c.0.firstChild.textContent = a.0
-							c.1.firstChild.textContent = cfg.1
-							c.1.lastChild.textContent  = a.1
-							c.2.firstChild.textContent = b.0
-							c.3.firstChild.textContent = cfg.1
-							c.3.lastChild.textContent  = b.1
-							# set styles
-							# price difference
-							c = @money
-							d = if c.0 == c.1
-								then 'equal'
-								else if c.0 > c.1
-									then 'lower'
-									else 'higher'
-							@box.classList.add d
-							# currency sign position
-							d = if cfg.4
-								then 'right'
-								else 'left'
-							@box.classList.add d
-							# done
-							@box.classList.add 'v'
-							return true
-						# }}}
-						clear: !-> # {{{
-							@box.className = 'price'
+						set: (data) !-> # {{{
+							if data and (data = data.price)
+								# set
+								# prepare
+								# get global config
+								C = @block.master.group.config.currency
+								# split numbers [regular,current] into integer and fraction
+								b = data.0.split eNotNumber, 2
+								a = data.1.split eNotNumber, 2
+								# truncate fraction point
+								a.1 = if a.1
+									then (a.1.substring 0, C.3).padEnd C.3, '0'
+									else '0'.repeat C.3
+								b.1 = if b.1
+									then (b.1.substring 0, C.3).padEnd C.3, '0'
+									else '0'.repeat C.3
+								# determine money values
+								c = @money
+								d = +('1' + ('0'.repeat C.3))
+								c.0 = d*(+(a.0)) + (+a.1)
+								c.1 = d*(+(b.0)) + (+b.1)
+								# separate integer thousands
+								if C.2
+									a.0 = a.0.replace eBreakThousands, C.2
+									b.0 = b.0.replace eBreakThousands, C.2
+								# set values
+								@currency.firstChild.textContent = C.0
+								c = @values
+								c.0.firstChild.textContent = a.0
+								c.1.firstChild.textContent = C.1
+								c.1.lastChild.textContent  = a.1
+								c.2.firstChild.textContent = b.0
+								c.3.firstChild.textContent = C.1
+								c.3.lastChild.textContent  = b.1
+								# set styles
+								# price difference
+								c = @money
+								d = if c.0 == c.1
+									then 'equal'
+									else if c.0 > c.1
+										then 'lower'
+										else 'higher'
+								@box.classList.add d
+								# currency sign position
+								d = if C.4
+									then 'right'
+									else 'left'
+								@box.classList.add d, 'v'
+								###
+							else
+								# clear
+								@box.className = 'price'
 						# }}}
 					###
 					return Item
 				# }}}
 				actions: do -> # {{{
-					Item = (block) !->
+					TCartIcon = w3ui.template !-> # {{{
+						/*
+						<svg viewBox="0 0 48 48" preserveAspectRatio="none">
+							<circle class="a" cx="13" cy="40" r="4"/>
+							<circle class="a" cx="38" cy="40" r="4"/>
+							<polygon class="a" points="33,38 18,38 16,36 35,36 "/>
+							<polygon class="b" points="43,34 10,35 4,9 0,9 0,5 7,5 13,31 40,30 43.5,14 47.5,14 "/>
+							<polygon class="c" points="39,29 14,30 10,12 42.5,14 "/>
+							<text class="d" x="26.5" y="29" text-anchor="middle">+</text>
+							<text class="e" x="26" y="28" text-anchor="middle">99</text>
+						</svg>
+						*/
+					# }}}
+					Item = (block, cfg) !->
 						@block   = block
 						@box     = box = block.rootBox.querySelector '.actions'
-						@buttons = b = [
-							box.querySelector '.add-to-cart'
-							box.querySelector '.open'
+						@buttons = btn = w3ui.dom.append box, [
+							w3ui.button {
+								name: 'add'
+								html: TCartIcon
+								hint: cfg.locale.hint.0
+								onClick: @addToCart!
+							}
+							w3ui.button {
+								name: 'open'
+								label: cfg.locale.label.1
+								onClick: @openDetails!
+							}
 						]
-						# initialize
-						a = block.master.group.config.locale.label.1
-						b.1.textContent = a
+						@cartNum = btn.0.root.querySelector 'text.e'
 					###
 					Item.prototype =
-						set: (data) -> # {{{
-							/***
+						set: (data) !-> # {{{
+							###
 							# prepare
-							c = @data.config = []
-							e = @data.value
-							s = data.stock
-							# set links
-							e.0 and e.0.forEach (e) !->
-								e.href = data.link
-							# set add-to-carts
-							e.1 and e.1.forEach (e, i) !->
-								# check if product available
-								if s.status != 'instock'
-									e.classList.add 'none'
-									return
-								# check stock count and
-								# set initial button state
-								x = mCart.get data.id
-								if s.count == 0 or (x and s.count <= x.quantity)
-									e.disabled = true
-								# create event handler and
-								# store it for later removal
-								c[i] = f = (a) !->>
-									# prepare
-									a.preventDefault!
-									e.disabled = true
-									# add simple single product to cart
-									if not (a = await mCart.add data.id)
-										return
-									# reload cart items and
-									# check if more items may be added
-									if not await mCart.load!
-										return
-									x = mCart.get data.id
-									if not x or s.count <= x.quantity
-										return
-									# unlock
-									e.disabled = false
-								# set it
-								e.addEventListener 'click', f
-							/***/
+							a = @block.master.group.config.cart
+							b = @buttons
+							# check
+							if data
+								# enable
+								b.1.lock !data.link
+								b.0.lock (data.stock.status != 'instock' or not data.stock.count)
+								# set number of items in the cart
+								@cartNum.textContent = c = if (c = a[data.id]) and c.count
+									then ''+c.count
+									else ''
+								b.0.root.classList.toggle 'x', !!c
+							else
+								# disable
+								b.1.lock true
+								b.0.lock true
+						# }}}
+						addToCart: -> ~>> # {{{
+							# TODO: miniCart block
+							# update cart data
+							a = @block.master.group.config.cart
+							b = @block.data
+							if c = a[b.id]
+								c.count += 1
+							else
+								a[b.id] = {count: 1}
+							# refresh view
+							@set b
+							# send request
+							c = await goFetch {
+									action: 'a_CartAdd'
+									params: [@block.data.id, 1]
+							}
+							# check
+							if c instanceof Error
+								# restore previous view
+								a[b.id].count -= 1
+								@set b
+								return false
+							# notify woo mini-cart
+							a = jQuery document.body
+							a.trigger 'added_to_cart', c
 							# done
 							return true
 						# }}}
-						clear: !-> # {{{
-							true
-							/***
-							# prepare
-							c = @data.config
-							e = @data.value
-							# clear links
-							e.0 and e.0.forEach (e) !->
-								e.href = ''
-							# clear add-to-carts
-							e.1 and e.1.forEach (e, i) !->
-								e.removeEventListener 'click', c[i]
-								e.disabled = false
-								e.classList.remove 'none'
-							/***/
-						# }}}
-						addToCart: (id) ->> # {{{
-							# fetch
-							a = await soFetch {
-									func: 'cart'
-									op: 'set'
-									id: id
-							}
-							# check
-							if a instanceof Error
-								return false
-							# TODO: optional, back-compat, remove it
-							# send woo-notification
-							# get cart data
-							a = wc_add_to_cart_params.wc_ajax_url.replace '%%endpoint%%', 'get_refreshed_fragments'
-							a = await httpFetch {
-								url: a
-								notNull: true
-							}
-							# check
-							if a instanceof Error
-								return true
-							# notify
-							jQuery document.body .trigger 'added_to_cart', [
-								a.fragments
-								a.cart_hash
-								null
-							]
+						openDetails: -> ~>> # {{{
+							# TODO: productDetails block
+							# naviagate the link
+							window.location.assign @block.data.link
+							await newDelay 20000
 							# done
 							return true
 						# }}}
@@ -1223,6 +1320,11 @@ smBlocks = do ->
 					return Item
 				# }}}
 			# }}}
+			Items = (block) !-> # {{{
+				cfg = block.master.group.config
+				for a of section
+					@[a] = new section[a] block, cfg
+			# }}}
 			Block = (master) !-> # {{{
 				# construct
 				# create root
@@ -1235,43 +1337,48 @@ smBlocks = do ->
 				@master  = master
 				@root    = R
 				@rootBox = R.firstChild
-				@id      = -1
 				@items   = new Items @
-				@loaded  = false
+				@data    = null
 			###
 			Block.prototype =
-				set: (record) -> # {{{
-					# prepare
-					@clear! if @loaded
+				set: (data) -> # {{{
 					# check
-					if record
-						# set id
-						@id = record.id
-						# set items
+					if data
+						if not @data or @data.id != data.id
+							# set stock status
+							a = data.stock.status
+							if @data and (b = @data.stock.status) != a
+								c = (b == 'instock' and 's1') or 's0'
+								@root.classList.remove c
+							if not @data or b != a
+								c = (a == 'instock' and 's1') or 's0'
+								@root.classList.add c
+							# set items
+							for a,a of @items
+								a.set data
+							# set self
+							@root.classList.add 'x' if not @data
+							@data = data
+					else if @data
+						# clear stock status
+						a = @data.stock.status
+						c = (a == 'instock' and 's1') or 's0'
+						@root.classList.remove c
+						# clear items
 						for a,a of @items
-							if not a.set record
-								return false
-						# set class
-						if not @loaded
-							@root.classList.add 'loaded'
-						# set flag
-						@loaded = true
+							a.set!
+						# clear self
+						@root.classList.remove 'x'
+						@data = null
 					# done
 					return true
 				# }}}
-				clear: !-> # {{{
-					# check
-					if @loaded
-						# clear items
-						for a,a of @items
-							a.clear!
-						# clear class
-						@root.classList.remove 'loaded'
-						@loaded = false
-					# done
+				refresh: !-> # {{{
+					# TODO: refactor
+					@items.actions.set @data
 				# }}}
 			# }}}
-			return (m) ->
+			return (m) -> # {{{
 				# consruct
 				m = new Block m
 				# attach to the master
@@ -1302,6 +1409,7 @@ smBlocks = do ->
 					init.resolve!
 				# done
 				return m
+			# }}}
 		# }}}
 	M = # masters
 		'products': do -> # {{{
@@ -1654,6 +1762,26 @@ smBlocks = do ->
 					@ready = newPromise!
 				# }}}
 			# }}}
+			refresher = (block) !-> # {{{
+				e = jQuery document.body
+				e.on 'removed_from_cart', (e, frags) !->
+					# prepare
+					frags = frags['div.widget_shopping_cart_content']
+					cart  = block.group.config.cart
+					items = block.items
+					# iterate
+					for a,b of cart when b.count
+						# search item in the fragments
+						if (frags.indexOf 'data-product_id="'+a+'"') == -1
+							# zap
+							b.count = 0
+							# search product in view
+							e = -1
+							while ++e < block.count
+								if items[e].data.id == a
+									items[e].refresh!
+				###
+			# }}}
 			Block = (root) !-> # {{{
 				# base
 				@group   = 'range'
@@ -1694,6 +1822,8 @@ smBlocks = do ->
 					c.count = o.0 * o.1 # minimal
 					# activate resizer
 					@resizer.attach!
+					# TODO: activate refresher (refactor)
+					refresher @
 					# approximate maximal viewport capacity (page buffer)
 					s = window.screen
 					s = if (a = s.availWidth) > (b = s.availHeight)
@@ -1756,6 +1886,46 @@ smBlocks = do ->
 					# continue
 					return 0
 				# }}}
+				setRange: (o, gaps) !-> # {{{
+					# prepare
+					a = @range
+					c = @page
+					n = @group.config.total
+					# operate
+					if not ~n
+						# the total is not determined,
+						# backend will determine proper range,
+						# set special offset
+						a.0 = o
+						a.1 = a.3 = -1
+						a.2 = a.4 = c
+						###
+					else if gaps
+						# buffer replenishment required,
+						# shift offsets to fill the gaps
+						a.0 = o
+						if (b = @bufA.length) < c
+							if (a.1 = o + b) >= n
+								a.1 = a.1 - n
+							a.2 = c - b
+						else
+							a.1 = a.2 = 0
+						if (b = @bufB.length) < c
+							if (a.3 = o - 1 - b) < 0
+								a.3 = a.3 + n
+							a.4 = c - b
+						else
+							a.3 = a.4 = 0
+						###
+					else
+						# default range (n > c + c)
+						a.0 = a.1 = o
+						a.2 = a.4 = c
+						a.3 = if o
+							then o - 1
+							else n - 1
+						###
+				# }}}
 				setCount: (count) -> # {{{
 					# prepare
 					a = @items
@@ -1767,23 +1937,26 @@ smBlocks = do ->
 						return false
 						###
 					else if c < count
-						# rise, rise display count
-						# prepare
-						c = c - 1
+						# rise, rise
+						# create items first
+						while a.length < count
+							a[*] = @group.f.productCard @
+						# determine initial shift size and direction
 						o = @offset
-						# determine initial shift direction and size
+						c = c - 1
 						if (d = o.0 - o.1) >= 0
 							d = d - n if d > @page
 						else
 							d = d + n if d < -@page
 						# operate
 						while ++c < count
+							# TODO: fix
 							# determine item's location in the buffer
+							i = c + d
 							if d >= 0
 								# forward buffer
-								i = d
 								b = @bufA[i]
-							else if (i = c + d) >= 0
+							else if i >= 0
 								# last page is not aligned with the total and
 								# wrap around option may prescribe to display
 								# records from the first page, blanks otherwise
@@ -1794,14 +1967,8 @@ smBlocks = do ->
 								# backward buffer
 								i = -i - 1
 								b = @bufB[i]
-							# set content
-							if b
-								# only when needed
-								a[c].set b if b.id != a[c].id
-							else
-								# empty
-								a[c].clear!
-							# set visible
+							# set content (may be empty)
+							a[c].set b
 							a[c].root.classList.add 'v'
 						###
 					else
@@ -1848,7 +2015,7 @@ smBlocks = do ->
 							if i < a
 								@items[j].set A[i++]
 							else
-								@items[j].clear!
+								@items[j].set!
 						# }}}
 						return 0
 					if i < 0 and d + i >= 0
@@ -1866,9 +2033,9 @@ smBlocks = do ->
 								if @config.wrapAround
 									@items[j].set A[-k - 1]
 								else
-									@items[j].clear!
+									@items[j].set!
 							else
-								@items[j].clear!
+								@items[j].set!
 							--k
 						# }}}
 						return 0
@@ -1902,7 +2069,7 @@ smBlocks = do ->
 							if --j < k
 								@items[j].set A[j]
 							else
-								@items[j].clear!
+								@items[j].set!
 						# update range
 						@setRange o, true
 						# }}}
@@ -1938,7 +2105,7 @@ smBlocks = do ->
 							if j < k
 								@items[j].set A[j]
 							else
-								@items[j].clear!
+								@items[j].set!
 						# update range
 						@setRange o, true
 						# }}}
@@ -1955,48 +2122,8 @@ smBlocks = do ->
 					# clear items
 					i = @count
 					while i
-						@items[--i].clear!
+						@items[--i].set!
 					# done
-				# }}}
-				setRange: (o, gaps) !-> # {{{
-					# prepare
-					a = @range
-					c = @page
-					n = @group.config.total
-					# operate
-					if not ~n
-						# the total is not determined,
-						# backend will determine proper range,
-						# set special offset
-						a.0 = o
-						a.1 = a.3 = -1
-						a.2 = a.4 = c
-						###
-					else if gaps
-						# buffer replenishment required,
-						# shift offsets to fill the gaps
-						a.0 = o
-						if (b = @bufA.length) < c
-							if (a.1 = o + b) >= n
-								a.1 = a.1 - n
-							a.2 = c - b
-						else
-							a.1 = a.2 = 0
-						if (b = @bufB.length) < c
-							if (a.3 = o - 1 - b) < 0
-								a.3 = a.3 + n
-							a.4 = c - b
-						else
-							a.3 = a.4 = 0
-						###
-					else
-						# default range (n > c + c)
-						a.0 = a.1 = o
-						a.2 = a.4 = c
-						a.3 = if o
-							then o - 1
-							else n - 1
-						###
 				# }}}
 				load: (i, record) -> # {{{
 					# check range and buffer are valid
@@ -2904,7 +3031,7 @@ smBlocks = do ->
 			return Block
 		# }}}
 		'rows-selector': do -> # {{{
-			template = parseTemplate !-> # {{{
+			template = w3ui.template !-> # {{{
 				/*
 				<select></select>
 				<svg preserveAspectRatio="none" shape-rendering="geometricPrecision" viewBox="0 0 48 48">
@@ -3043,7 +3170,7 @@ smBlocks = do ->
 			return Block
 		# }}}
 		'orderer': do -> # {{{
-			template = parseTemplate !-> # {{{
+			template = w3ui.template !-> # {{{
 				/*
 				<svg preserveAspectRatio="none" shape-rendering="geometricPrecision" viewBox="0 0 48 48">
 					<g class="a1">
@@ -3186,8 +3313,8 @@ smBlocks = do ->
 					s.order    = @config.order if @config.order
 					@options   = o = c.locale.order
 					@keys      = k = c.order or (Object.getOwnPropertyNames o)
-					@tag       = a = @group.f.select!
-					@variant   = b = @group.f.checkbox {svg: template}
+					@tag       = a = w3ui.select!
+					@variant   = b = w3ui.checkbox {svg: template}
 					a.onHover  = b.onHover = @hover
 					a.onFocus  = b.onFocus = @focus
 					a.onChange = @tagChange
@@ -3776,7 +3903,7 @@ smBlocks = do ->
 					# group state
 					s.price = @current.slice!
 					# section
-					a = @section = @group.f.section @root
+					a = @section = w3ui.section @root
 					b = c.locale
 					a.onChange = @sectionSwitch if @config.sectionSwitch
 					a.onFocus  = @onFocus
@@ -3979,11 +4106,11 @@ smBlocks = do ->
 					# create group data entry
 					s.category[@index] = []
 					# create a section
-					@section = s = @group.f.section @root
+					@section = s = w3ui.section @root
 					# add extention (exclude root)
 					for a in s.list when a.parent
 						# construct
-						a.extra = b = @group.f.checkbox {
+						a.extra = b = w3ui.checkbox {
 							master: a
 							intermediate: 1 # set (positive escape)
 						}
@@ -4054,7 +4181,7 @@ smBlocks = do ->
 		@locale   = null  # interface labels, titles, etc
 		@order    = null  # order tags to use for ordering
 		@currency = null  # [symbol,decimal_sep,thousand_sep,decimal_cnt]
-		@cart     = null  # shopping cart contents
+		@cart     = null  # shopping cart
 		@price    = null  # price range [min,max]
 		@total    = 0     # ..records in the result
 		@count    = 0     # ..of items displayed
@@ -4083,7 +4210,7 @@ smBlocks = do ->
 			for a in S.blocks when a.configure
 				a.configure S.state
 			# request configuration
-			if (c = await soFetch S.state) instanceof Error
+			if (c = await goFetch S.state) instanceof Error
 				consoleError c.message
 				return false
 			# store
@@ -4182,7 +4309,7 @@ smBlocks = do ->
 			# }}}
 			# startup {{{
 			# send the request
-			f = await (@fetch = oFetch s.state)
+			f = await (@fetch = soFetch s.state)
 			@fetch = null
 			# check the result
 			if f instanceof Error
@@ -4445,8 +4572,3 @@ smBlocks = do ->
 	# factory
 	return (m, s) -> new SUPERVISOR m, s
 ###
-# index/launcher (DELETE) {{{
-#smBlocks = smBlocks [/***/]
-smBlocks = smBlocks!
-smBlocks.attach document
-# }}}

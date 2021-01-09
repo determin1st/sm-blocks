@@ -1,7 +1,7 @@
 <?php
 /***
 * Plugin Name: sm-blocks
-* Description: A fully-asynchronous e-commerce catalogue blocks
+* Description: storefront modern blocks
 * Plugin URI: github.com/determin1st/sm-blocks
 * Author: determin1st
 * Version: 1
@@ -474,30 +474,26 @@ class StorefrontModernBlocks {
   {
     if (!($I = self::$I))
     {
-      # ready
-      #echo '<h1>init 1</h1>';
+      # first call, create instance
       self::$I = new StorefrontModernBlocks();
     }
     else if (!$I->active)
     {
-      # steady
-      #echo '<h1>init 2</h1>';
-      add_action('enqueue_block_assets', function() use ($I) {
+      # second call, activate
+      add_action('enqueue_block_assets', function() use ($I)
+      {
         wp_enqueue_script($I->BRAND);
         wp_enqueue_style($I->BRAND);
       });
       $I->active = true;
     }
   }
-  public static function parse($html)
-  {
-    return (self::$I && self::$I->active)
-      ? apply_filters('the_content', $html)
-      : '';
+  public static function parse($html) {
+    return (self::$I->active) ? apply_filters('the_content', $html) : '';
   }
   # }}}
-  # csr rendering
-  # base {{{
+  # rendering
+  # csr base {{{
   public function renderBase($attr, $content, $block)
   {
     # prepare
@@ -534,7 +530,6 @@ class StorefrontModernBlocks {
     ]);
   }
   # }}}
-  # ssr rendering
   # products {{{
   public function renderProducts($attr, $content)
   {
@@ -724,16 +719,36 @@ class StorefrontModernBlocks {
   }
   # }}}
   # rest api
-  # kiss entry {{{
+  # entry point {{{
   public function apiEntry($p)
   {
-    # prepare
-    # {{{
-    # get parameters
+    # extract parameters
     if (!($p = $p->get_json_params()) || !is_array($p)) {
       $this->apiFail(400, 'incorrect request');
     }
-    # check
+    # ACTION
+    # {{{
+    if (array_key_exists('action', $p))
+    {
+      # check
+      $a = $p['action'];
+      if (!is_string($a) || !method_exists($this, $a)) {
+        $this->apiFail(400, 'incorrect action');
+      }
+      if (!array_key_exists('params', $p) || !is_array($p['params']) || count($p['params']) > 8) {
+        $this->apiFail(400, 'incorrect params');
+      }
+      # execute
+      if (call_user_func_array([$this, $a], $p['params']) === false) {
+        $this->apiFail(500, 'action failed');
+      }
+      # done
+      exit;
+    }
+    # }}}
+    # TRANSFER
+    # refine parameters {{{
+    # check required
     $a = [
       'lang','range','order',
       'category','price',
@@ -743,8 +758,7 @@ class StorefrontModernBlocks {
         $this->apiFail(400, 'missing "'.$b.'" parameter');
       }
     }
-    # refine parameters
-    # language
+    # check language
     $a = $p['lang'];
     if (!is_string($a) || strlen($a) > 2) {
       $this->apiFail(400, 'incorrect language');
@@ -753,7 +767,7 @@ class StorefrontModernBlocks {
       $p['lang'] = $this->lang;
       #$p['lang'] = 'en';
     }
-    # records range
+    # check records range
     if ($R = $p['range'])
     {
       if (!is_array($R) || count($R) !== 5) {
@@ -775,14 +789,14 @@ class StorefrontModernBlocks {
         $this->apiFail(400, 'incorrect range');
       }
     }
-    # order
+    # check order
     $a = $p['order'];
     if (!is_array($a)     || count($a) !== 2 ||
         !is_string($a[0]) || !is_int($a[1]))
     {
       $p['order'] = null;
     }
-    # category filter
+    # check category filter
     # parsing is not simple, so it's wrapped
     $p['category'] = $this->parseCategoryFilter($p['category']);
     # price filter
@@ -805,9 +819,9 @@ class StorefrontModernBlocks {
       $p['price'] = null;
     }
     # }}}
-    # operate
-    if ($R) {
-      # data {{{
+    # stream data {{{
+    if ($R)
+    {
       # close session
       if (session_status() === PHP_SESSION_ACTIVE) {
         session_write_close();
@@ -936,78 +950,46 @@ class StorefrontModernBlocks {
           $this->sendJSON($this->db_Product($q[$a], $a));
         }
       }
-      # }}}
+      # done
+      exit;
     }
-    else {
-      # configuration {{{
-      # get products (thin query)
-      $q = [
-        'category' => $p['category'],
-        'price'    => null,
-        'order'    => null,
-      ];
-      if (($q = $this->db_Products($q)) === null) {
-        $this->apiFail(500, 'failed to get');
-      }
-      # get locale and language
-      $locale = __DIR__.DIRECTORY_SEPARATOR.$this->BRAND.'-locale.php';
-      $locale = (include $locale);
-      $lang   = array_key_exists($p['lang'], $locale)
-        ? $p['lang']
-        : 'en';
-      # encode
-      $q = json_encode([
-        'lang'      => $lang,
-        'locale'    => $locale[$lang],
-        'currency'  => $this->db_Currency(),
-        'cart'      => $this->db_Cart(),
-        'price'     => $this->db_PriceRange($q),
-        'total'     => count($q),
-      ], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
-      if ($q === null) {
-        $this->apiFail(500, json_last_error_msg());
-      }
-      # send
-      header('content-type: application/json');
-      echo $q;
-      # }}}
+    # }}}
+    # send configuration {{{
+    # query products (light)
+    $q = [
+      'category' => $p['category'],
+      'price'    => null,
+      'order'    => null,
+    ];
+    if (($q = $this->db_Products($q)) === null) {
+      $this->apiFail(500, 'failed to get');
     }
-    # done
+    # get locale and language
+    $locale = __DIR__.DIRECTORY_SEPARATOR.$this->BRAND.'-locale.php';
+    $locale = (include $locale);
+    $lang   = array_key_exists($p['lang'], $locale)
+      ? $p['lang']
+      : 'en';
+    # encode
+    $q = json_encode([
+      'lang'      => $lang,
+      'locale'    => $locale[$lang],
+      'currency'  => $this->db_Currency(),
+      'cart'      => $this->db_Cart(),
+      'price'     => $this->db_PriceRange($q),
+      'total'     => count($q),
+    ], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+    if ($q === null) {
+      $this->apiFail(500, json_last_error_msg());
+    }
+    # send
+    header('content-type: application/json');
+    echo $q;
     exit;
+    # }}}
   }
   # }}}
   # helpers {{{
-  private function apiCart($request) # {{{
-  {
-    # check
-    if (!array_key_exists('op', $request)) {
-      $this->apiFail(400, 'missing request operation');
-    }
-    # handle
-    switch ($request['op']) {
-    case 'get':
-      # get cart items
-      echo json_encode($this->getCart());
-      break;
-    case 'set':
-      # extract and validate request parameters
-      if (!array_key_exists('id', $request) ||
-          ($id = intval($request['id'])) < 0)
-      {
-        $this->apiFail(400, 'incorrect identifier');
-      }
-      # set cart item
-      if (!$this->setCart($id)) {
-        $this->apiFail(500, 'failed to set cart');
-      }
-      echo json_encode(true);
-      break;
-    default:
-      $this->apiFail(400, 'unknown request operation');
-      break;
-    }
-  }
-  # }}}
   private function apiFail($code, $msg) # {{{
   {
     http_response_code($code);
@@ -1208,7 +1190,18 @@ EOD;
   private function db_Cart() # {{{
   {
     global $woocommerce;
-    return $woocommerce->cart->get_cart_contents();
+    ###
+    $a = $woocommerce->cart->get_cart_contents();
+    $b = ['count' => 0];
+    $c = ['total' => &$b];
+    foreach ($a as $d)
+    {
+      $b['count'] += 1;
+      $c[$d['product_id']] = [
+        'count' => $d['quantity'],
+      ];
+    }
+    return $c;
   }
   # }}}
   private function db_Product($id, $index) # {{{
@@ -1295,8 +1288,7 @@ EOD;
         'backorder' => $x['_backorders'],
         'count'     => (($x['_stock'] !== null)
           ? intval($x['_stock'])
-          : null
-        ),
+          : -1),
       ],
     ];
     # get image
@@ -1315,6 +1307,7 @@ EOD;
       $a['price'] = [$x['_regular_price'], $x['_price']];
       break;
     }
+    # get stock
     return $a;
   }
   # }}}
@@ -1495,20 +1488,39 @@ EOD;
     return $this->cache['categoryTree'][$k];
   }
   # }}}
-  public function setCart($id) # {{{
+  # }}}
+  # action {{{
+  private function a_CartAdd($id, $count) # {{{
   {
     global $woocommerce;
     ###
-    # invoke woo
-    if (!($cid = $woocommerce->cart->add_to_cart($id))) {
+    # check
+    if (!is_string($id) || strlen($id) > 16 || !ctype_digit($id)) {
       return false;
     }
+    # operate
+    if ($woocommerce->cart->add_to_cart($id, 1) === false) {
+      return false;
+    }
+    # send refreshed mini-cart contents
+    ob_start();
+    woocommerce_mini_cart();
+    $a = ob_get_clean();
+    $a = [
+      apply_filters(
+        'woocommerce_add_to_cart_fragments',
+        ['div.widget_shopping_cart_content' => '<div class="widget_shopping_cart_content">'.$a.'</div>']
+      ),
+      $woocommerce->cart->get_cart_hash(),
+      null
+    ];
     # done
-    return $cid;
+    echo json_encode($a);
+    return true;
   }
   # }}}
   # }}}
-  # parsers {{{
+  # parser {{{
   private function parseTemplate($template, $data, $attr = [])
   {
     $depth = 0;
