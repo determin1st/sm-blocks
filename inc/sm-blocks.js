@@ -1420,7 +1420,7 @@ sm = function(){
             }
           } else if (Math.abs(this$.factor - e) > 0.005) {
             this$.factor = e;
-            b = '--sm-blocks-factor';
+            b = '--sm-size-factor';
             c = this$.block.root.style;
             if (e === 1) {
               c.removeProperty(b);
@@ -2382,7 +2382,7 @@ sm = function(){
             this$.currentSz[2] = e * this$.baseSz[3];
             this$.currentSz[3] = e * this$.baseSz[4];
             if (!this$.onChange) {
-              b = '--sm-blocks-factor';
+              b = '--sm-size-factor';
               if (~a) {
                 B.root.style.setProperty(b, e);
               } else {
@@ -2427,7 +2427,7 @@ sm = function(){
           b = parseFloat(R.cs.getPropertyValue('width'));
           c = parseFloat(R.cs.getPropertyValue('max-width'));
           this.baseSz[0] = a - b + c;
-          this.baseSz[1] = parseFloat(s.getPropertyValue('--sm-blocks-height'));
+          this.baseSz[1] = parseFloat(s.getPropertyValue('--sm-size-height'));
           this.baseSz[2] = c;
           a = ~R.current
             ? R.pages[R.current]
@@ -4068,7 +4068,7 @@ sm = function(){
           var c;
           if (s.factor > e || s.emitter === this.block) {
             s.factor = e;
-            c = '--sm-blocks-factor';
+            c = '--sm-size-factor';
             if (e === 1) {
               s.node.style.removeProperty(c);
               s.emitter = null;

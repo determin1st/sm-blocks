@@ -2,8 +2,8 @@
 * storefront modern blocks
 */
 :root {
-  --sm-blocks-factor: 1;
-  --sm-blocks-height: 48px;
+  --sm-size-factor: 1;
+  --sm-size-height: 48px;
   --sm-color-0: 0,0,0;
   --sm-color-1: 255,255,255;
   --sm-color-2: 192,192,192;
@@ -14,7 +14,7 @@
   --sm-color-7: 106,90,205;
 }
 .sm-blocks {
-  --height: calc(var(--sm-blocks-height) * var(--sm-blocks-factor));
+  --height: calc(var(--sm-size-height) * var(--sm-size-factor));
   --font-size: calc(0.3334 * var(--height));
   position: relative;
   box-sizing: border-box;
@@ -173,7 +173,7 @@
   background-color: rgba(var(--sm-color-2),0.5);
   border-color: rgba(var(--sm-color-6),0.65);
   border-width: 0.05em;
-  box-shadow: inset 0 0 0 0.02em rgba(var(--sm-color-1),1);
+  box-shadow: inset 0 0 0 1px rgba(var(--sm-color-1),1);
 }
 .sm-blocks button.w3-button.v.f > label {
   font-weight: bolder;
@@ -981,10 +981,10 @@
   --foot-size: 25;
   --columns: 1;
   --rows: 1;
-  --item-x: calc(var(--item-width) * var(--sm-blocks-factor));
-  --item-y: calc(var(--item-height) * var(--sm-blocks-factor));
-  --gap-x: calc(var(--column-gap) * var(--sm-blocks-factor));
-  --gap-y: calc(var(--row-gap) * var(--sm-blocks-factor));
+  --item-x: calc(var(--item-width) * var(--sm-size-factor));
+  --item-y: calc(var(--item-height) * var(--sm-size-factor));
+  --gap-x: calc(var(--column-gap) * var(--sm-size-factor));
+  --gap-y: calc(var(--row-gap) * var(--sm-size-factor));
   --grid-width: calc(var(--columns) * var(--item-x) + calc(var(--columns) - 1) * var(--gap-x));
   --grid-height: calc(var(--rows) * var(--item-y) + calc(var(--rows) - 1) * var(--gap-y));
   display: flex;
@@ -1308,7 +1308,7 @@
   justify-content: center;
 }
 .sm-blocks.paginator > div {
-  font-size: var(--sm-blocks-height);
+  font-size: var(--sm-size-height);
   flex: 0 0 auto;
   width: auto;
   height: 100%;

@@ -15,8 +15,8 @@ rgba(cv,alpha=1)
 // }}}
 :root // {{{
 	// SIZE
-	--sm-blocks-factor: 1    // size reduction factor 0-100%
-	--sm-blocks-height: 48px // default vertical base for the frame
+	--sm-size-factor: 1    // size reduction factor 0-100%
+	--sm-size-height: 48px // default vertical base for the frame
 	// COLORS
 	// base
 	--sm-color-0: cv(black)
@@ -34,7 +34,7 @@ rgba(cv,alpha=1)
 .sm-blocks
 	// base {{{
 	// configuration
-	--height: calc(var(--sm-blocks-height) * var(--sm-blocks-factor))
+	--height: calc(var(--sm-size-height) * var(--sm-size-factor))
 	--font-size: calc(0.3334 * var(--height))
 	// root
 	position:   relative
@@ -170,7 +170,7 @@ rgba(cv,alpha=1)
 				background-color: rgba(var(--sm-color-2), 0.5)
 				border-color: rgba(var(--sm-color-6), 0.65)
 				border-width: 0.05em
-				box-shadow: inset 0 0 0 0.02em rgba(var(--sm-color-1))
+				box-shadow: inset 0 0 0 1px rgba(var(--sm-color-1))
 				> label
 					font-weight: bolder
 					color: rgba(var(--sm-color-7))
@@ -958,10 +958,10 @@ rgba(cv,alpha=1)
 		--columns: 1
 		--rows: 1
 		// calculated (relative)
-		--item-x: calc(var(--item-width) * var(--sm-blocks-factor))
-		--item-y: calc(var(--item-height) * var(--sm-blocks-factor))
-		--gap-x: calc(var(--column-gap) * var(--sm-blocks-factor))
-		--gap-y: calc(var(--row-gap) * var(--sm-blocks-factor))
+		--item-x: calc(var(--item-width) * var(--sm-size-factor))
+		--item-y: calc(var(--item-height) * var(--sm-size-factor))
+		--gap-x: calc(var(--column-gap) * var(--sm-size-factor))
+		--gap-y: calc(var(--row-gap) * var(--sm-size-factor))
 		--grid-width: calc(
 			var(--columns) * var(--item-x) + \
 			calc(var(--columns) - 1) * var(--gap-x) \
@@ -1282,7 +1282,7 @@ rgba(cv,alpha=1)
 	align-items: stretch
 	justify-content: center
 	> div
-		font-size: var(--sm-blocks-height) // base sizes
+		font-size: var(--sm-size-height)
 		flex: 0 0 auto
 		width: auto
 		height: 100%

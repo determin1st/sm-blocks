@@ -1475,7 +1475,7 @@ sm = do ->
 						# update
 						@factor = e
 						# set inline style
-						b = '--sm-blocks-factor'
+						b = '--sm-size-factor'
 						c = @block.root.style
 						if e == 1
 							c.removeProperty b
@@ -2651,7 +2651,7 @@ sm = do ->
 						@currentSz.3 = e * @baseSz.4
 						# update styles alone (no master)
 						if not @onChange
-							b = '--sm-blocks-factor'
+							b = '--sm-size-factor'
 							if ~a
 								B.root.style.setProperty b, e
 							else
@@ -2711,7 +2711,7 @@ sm = do ->
 					b = parseFloat (R.cs.getPropertyValue 'width')
 					c = parseFloat (R.cs.getPropertyValue 'max-width')
 					@baseSz.0 = a - b + c
-					@baseSz.1 = parseFloat (s.getPropertyValue '--sm-blocks-height')
+					@baseSz.1 = parseFloat (s.getPropertyValue '--sm-size-height')
 					@baseSz.2 = c
 					# selected page button
 					# get node
@@ -4452,7 +4452,7 @@ sm = do ->
 					# lower factor or higher self,
 					# update state and styles
 					s.factor = e
-					c = '--sm-blocks-factor'
+					c = '--sm-size-factor'
 					if e == 1
 						s.node.style.removeProperty c
 						s.emitter = null
