@@ -1,6 +1,3 @@
-/**
-* storefront modern blocks
-*/
 :root {
   --sm-size-factor: 1;
   --sm-size-height: 48px;
@@ -1297,6 +1294,21 @@
 }
 .sm-blocks.products > hr.v {
   display: block;
+}
+.sm-blocks.menu {
+  width: 100%;
+  height: auto;
+  padding: 4px 0 4px 0;
+}
+.sm-blocks.menu > div {
+  font-size: var(--height);
+  width: 100%;
+  height: 1em;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 2px;
 }
 .sm-blocks.paginator {
   width: 100%;

@@ -1,6 +1,4 @@
-data/*
 inc/httpFetch
-node_modules/
 *.vim
 *.swp
 

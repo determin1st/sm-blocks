@@ -28,7 +28,7 @@ class StorefrontModernBlocks {
       'class',
       'style',
     ],
-    $blocks    = [
+    $blocks = [
       'products' => [ # {{{
         'render_callback' => [null, 'renderProducts'],
         'attributes'      => [
@@ -187,15 +187,15 @@ class StorefrontModernBlocks {
       ],
       # }}}
     ],
+    $template = '<div class="{{cls}}"><div><!--{{cfg}}--></div>{{svg}}</div>',
     $templates = [
-      'base' => [ # {{{
-        'root' => '
+      'base' => # {{{
+        '
         <div class="{{name}}">
-          <div class="{{class}}" style="{{style}}" data-cfg=\'{{cfg}}\'></div>
+          <div class="{{class}}" data-cfg=\'{{cfg}}\'></div>
           {{placeholder}}
         </div>
         ',
-      ],
       # }}}
       'products' => [ # {{{
         'main' => '
@@ -415,7 +415,7 @@ class StorefrontModernBlocks {
       ],
       # }}}
     ],
-    $cache     = [
+    $cache = [
       'categoryTree' => [], # key  => tree
       'categorySlug' => [], # slug => id
     ];
@@ -425,53 +425,45 @@ class StorefrontModernBlocks {
   {
     global $wpdb;
     # prepare
-    $I = $this;
+    $I         = $this;
     $I->db     = $wpdb->dbh;
     $I->prefix = $wpdb->prefix;
     $I->lang   = substr(get_locale(), 0, 2);
-    # initialize renderers
+    # set renderers
     foreach ($I->blocks as &$a) {
       $a['render_callback'][0] = $I;
     }
     unset($a);
-    # register scripts and styles
-    # some scripts are separate projects that may be included
-    # locally (from the same-origin) or remotely (from cdn)
-    $a = plugins_url().'/'.$I->BRAND.'/';
-    wp_register_script(
-      'http-fetch',
-      file_exists($I->dir.'httpFetch')
-        ? $a.'inc/httpFetch/httpFetch.js'
-        : 'https://cdn.jsdelivr.net/npm/http-fetch-json@2/httpFetch.js',
-      [], false, true
-    );
-    wp_register_script(
-      $I->BRAND,
-      $a.'inc/'.$I->BRAND.'.js',
-      ['http-fetch'],
-      false, true
-    );
-    wp_register_style(
-      $I->BRAND,
-      $a.'inc/'.$I->BRAND.'.css'
-    );
     # set hooks
-    add_action('init', function() use ($I) {
+    add_action('init', function() use ($I)
+    {
       foreach ($I->blocks as $a => $b) {
         register_block_type($I->BRAND.'/'.$a, $b);
       }
     });
-    add_action('rest_api_init', function() use ($I) {
+    add_action('rest_api_init', function() use ($I)
+    {
       register_rest_route($I->BRAND, 'kiss', [
         'methods'  => 'POST',
         'callback' => [$I, 'apiEntry'],
       ]);
     });
+    # register scripts and styles
+    $a = plugins_url().'/'.$I->BRAND.'/';
+    $b = file_exists($I->dir.'httpFetch')
+      ? $a.'inc/httpFetch/httpFetch.js'
+      : 'https://cdn.jsdelivr.net/npm/http-fetch-json@2/httpFetch.js',
+    wp_register_script('http-fetch', $b, [], false, false);
+    ###
+    $b = $a.$I->BRAND.'.';
+    wp_register_script($I->BRAND, $b.'js', ['http-fetch'], false, true);
+    wp_register_style($I->BRAND, $b.'css');
   }
   # }}}
   # api {{{
   public static function init()
   {
+    # {{{
     if (!($I = self::$I))
     {
       # first call, create instance
@@ -487,18 +479,33 @@ class StorefrontModernBlocks {
       });
       $I->active = true;
     }
+    # }}}
   }
-  public static function parse($html) {
+  public static function render($name, $cfg)
+  {
+    # CSR {{{
+    $I    = self::$I;
+    $name = $I->BRAND.' '.$name;
+    $cfg  = json_encode($cfg, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+    ###
+    return $I->parseTemplate($I->template, [
+      'cls' => $name,
+      'cfg' => $cfg,
+      'svg' => $I->templates['svg']['placeholder'],
+    ]);
+    # }}}
+  }
+  public static function parse($html)
+  {
+    # TODO: own parser {{{
     return (self::$I->active) ? apply_filters('the_content', $html) : '';
+    # }}}
   }
   # }}}
   # rendering
-  # csr base {{{
+  # CSR base {{{
   public function renderBase($attr, $content, $block)
   {
-    # prepare
-    $T = $this->templates['base'];
-    ###
     $name = str_replace('/', ' ', $block->name);
     if (array_key_exists('customClass', $attr) && ($a = $attr['customClass'])) {
       $name = $name.' '.$a;
@@ -506,7 +513,6 @@ class StorefrontModernBlocks {
     else {
       $name = $name.' custom';
     }
-    ###
     $class = (array_key_exists('class', $attr) && $attr['class'])
       ? $attr['class'] : '';
     $style = (array_key_exists('style', $attr) && $attr['style'])
@@ -520,12 +526,11 @@ class StorefrontModernBlocks {
       }
     }
     $cfg = json_encode($cfg, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
-    # compose
-    return $this->parseTemplate($T['root'], $T, [
-      'name'   => $name,
-      'class'  => $class,
-      'style'  => $style,
-      'cfg'    => $cfg,
+    ###
+    return $this->parseTemplate($this->templates['base'], [
+      'name'  => $name,
+      'class' => $class,
+      'cfg'   => $cfg,
       'placeholder' => $this->templates['svg']['placeholder'],
     ]);
   }
@@ -750,8 +755,7 @@ class StorefrontModernBlocks {
     # refine parameters {{{
     # check required
     $a = [
-      'lang','range','order',
-      'category','price',
+      'lang','route','range','order','category','price',
     ];
     foreach ($a as $b) {
       if (!array_key_exists($b, $p)) {
@@ -766,6 +770,11 @@ class StorefrontModernBlocks {
     else if (!$a) {
       $p['lang'] = $this->lang;
       #$p['lang'] = 'en';
+    }
+    # check route
+    $a = $p['route'];
+    if (!is_int($a) || $a < -1) {
+      $this->apiFail(400, 'incorrect route');
     }
     # check records range
     if ($R = $p['range'])
@@ -962,22 +971,21 @@ class StorefrontModernBlocks {
       'order'    => null,
     ];
     if (($q = $this->db_Products($q)) === null) {
-      $this->apiFail(500, 'failed to get');
+      $this->apiFail(500, 'failed to get products');
     }
     # get locale and language
-    $locale = __DIR__.DIRECTORY_SEPARATOR.$this->BRAND.'-locale.php';
-    $locale = (include $locale);
+    $locale = (include $this->dir.'lang.inc');
     $lang   = array_key_exists($p['lang'], $locale)
       ? $p['lang']
       : 'en';
     # encode
     $q = json_encode([
-      'lang'      => $lang,
-      'locale'    => $locale[$lang],
-      'currency'  => $this->db_Currency(),
-      'cart'      => $this->db_Cart(),
-      'price'     => $this->db_PriceRange($q),
-      'total'     => count($q),
+      'lang'     => $lang,
+      'locale'   => $locale[$lang],
+      'currency' => $this->db_Currency(),
+      'cart'     => $this->db_Cart(),
+      'price'    => $this->db_PriceRange($q),
+      'total'    => count($q),
     ], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
     if ($q === null) {
       $this->apiFail(500, json_last_error_msg());
@@ -1488,6 +1496,51 @@ EOD;
     return $this->cache['categoryTree'][$k];
   }
   # }}}
+  private function db_Menu($id) # {{{
+  {
+    # get menu items
+    $a = ['update_post_term_cache' => false];
+    $m = wp_get_nav_menu_items($id, $a);
+    # assemble navigation tree
+    # create parent => children lists
+    $a = [0 => []];
+    foreach ((array)$m as $b)
+    {
+      $c = $b->menu_item_parent;
+      if (!array_key_exists($c, $a)) {
+        $a[$c] = [];
+      }
+      $a[$c][$b->menu_order] = [
+        'id'       => $b->object_id,
+        'type'     => $b->object,
+        'name'     => $b->title,
+        'url'      => $b->url,
+        'children' => $b->ID,
+      ];
+    }
+    # set children
+    foreach ($a as &$b)
+    {
+      foreach ($b as &$c)
+      {
+        $d = $c['children'];
+        if (array_key_exists($d, $a)) {
+          $c['children'] = &$a[$d];
+        }
+        else {
+          $c['children'] = null;
+        }
+      }
+    }
+    unset($b, $c);
+    # ...
+    # ...
+    # ...
+    # ...
+    # done
+    return $a[0];
+  }
+  # }}}
   # }}}
   # action {{{
   private function a_CartAdd($id, $count) # {{{
@@ -1646,21 +1699,26 @@ EOD;
   }
   # }}}
 }
-# activation hook {{{
-function_exists('register_activation_hook') && register_activation_hook(__FILE__, function() {
-  if (!class_exists('WooCommerce', false))
-  {
-    $a = 'woocommerce';
-    $a = activate_plugin($a.DIRECTORY_SEPARATOR.$a.'.php');
-  }
-});
-# }}}
-# load hook {{{
-function_exists('add_action') && add_action('plugins_loaded', function()
+# hookup {{{
+# check wordpress loaded
+if (defined('ABSPATH') && function_exists('add_action'))
 {
-  if (class_exists('WooCommerce', false)) {
-    StorefrontModernBlocks::init();
-  }
-});
+  register_activation_hook(__FILE__, function()
+  {
+    # try to activate woo plugin
+    if (!class_exists('WooCommerce', false))
+    {
+      $a = 'woocommerce';
+      $a = activate_plugin($a.DIRECTORY_SEPARATOR.$a.'.php');
+    }
+  });
+  add_action('plugins_loaded', function()
+  {
+    # create blocks instance
+    if (class_exists('WooCommerce', false)) {
+      StorefrontModernBlocks::init();
+    }
+  });
+}
 # }}}
 ?>

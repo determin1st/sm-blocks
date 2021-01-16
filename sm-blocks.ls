@@ -1,5 +1,5 @@
 "use strict"
-sm = do ->
+SM = do ->
 	# base
 	# helpers {{{
 	###
@@ -306,6 +306,51 @@ sm = do ->
 			# }}}
 		# }}}
 	<<<<
+		menu: do -> # {{{
+			template = w3ui.template !-> # {{{
+				/*
+				<div class="item">
+					<label></label><hr>
+					<div class="dropdown"></div>
+				</button>
+				*/
+			# }}}
+			Item = (block, node, parent) !-> # {{{
+				# base
+				@block  = block
+				@node   = node
+				@parent = parent
+				# controls
+				# ...
+				# state
+				# ...
+				# handlers
+				# ...
+			Item.prototype =
+				init: !-> # {{{
+				# }}}
+			# }}}
+			Block = (root, o) !-> # {{{
+				# base
+				@root = root
+				@cfg  = o
+				# state
+				# ...
+				# traps
+				# ...
+				# handlers
+				# ...
+			Block.prototype =
+				init: !-> # {{{
+					# ...
+				# }}}
+				lock: (locked) !-> # {{{
+					true
+				# }}}
+			# }}}
+			return (root, o) ->
+				true
+		# }}}
 		checkbox: do -> # {{{
 			template = w3ui.template !-> # {{{
 				/*
@@ -4176,399 +4221,435 @@ sm = do ->
 			# }}}
 			return Block
 		# }}}
-	# controllers
-	Config = !-> # {{{
-		@locale   = null  # interface labels, titles, etc
-		@order    = null  # order tags to use for ordering
-		@currency = null  # [symbol,decimal_sep,thousand_sep,decimal_cnt]
-		@cart     = null  # shopping cart
-		@price    = null  # price range [min,max]
-		@total    = 0     # ..records in the result
-		@count    = 0     # ..of items displayed
-		@rows     = 0     # rows in the grid (0=auto, -1=infinite)
-	# }}}
-	State = !-> # {{{
-		@lang     = ''    # two-byte language code
-		@range    = null  # [offset,limit,o1,o2,o3,o4]
-		@order    = null  # [tag,variant]
-		@category = []    # [id-1..N],[..],..
-		@price    = null  # [min,max]
-	# }}}
-	Loader = (s) !-> # {{{
-		@super  = s     # s-supervisor
-		@lock   = null  # loader promise
-		@dirty  = -1    # resolved-in-process: 0=clean, -1=soft, 1=hard
-		@level  = -1    # update priority
-		@fetch  = null  # fetcher promise
-	###
-	Loader.prototype =
-		init: ->> # {{{
-			# prepare
-			T = window.performance.now!
-			S = @super
-			# configure request (low -> high)
-			for a in S.blocks when a.configure
-				a.configure S.state
-			# request configuration
-			if (c = await goFetch S.state) instanceof Error
-				consoleError c.message
-				return false
-			# store
-			for a of c when S.config.hasOwnProperty a
-				S.config[a] = c[a]
-			# initialize (ordered)
-			a = []
-			for c in (b = Object.getOwnPropertyNames S.groups)
-				a[*] = S.groups[c].init!
-			# wait completed and
-			# check the results
-			for a,c in (await Promise.all a) when not a
-				consoleError 'failed to initialize '+S.groups[c].name
-				return false
-			# refresh (ordered)
-			for a in b
-				await S.groups[a].refresh!
-			# set constructed class
-			for a in S.blocks when a.locked == -1
-				a.root.classList.add 'v'
-				a.locked = 1
-			# done
-			T = (window.performance.now! - T) .|. 0
-			consoleInfo 'initialized in '+T+'ms'
-			return true
-		# }}}
-		finit: !-> # {{{
-			# interrupt
-			@lock.resolve! if @lock
-			@fetch.cancel! if @fetch
-			# reset
-			@dirty = @level = -1
-			@lock  = @fetch = null
-		# }}}
-		charge: (group) !-> # {{{
-			# rise priority
-			@level = group.level if @level < group.level
-			# check
-			if @lock.pending
-				# charge clean,
-				# start or restart routine
-				@lock.resolve (@lock.pending == 1)
-			else
-				# charge dirty,
-				# set flag and terminate fetcher
-				@dirty = 1
-				@fetch.cancel! if @fetch
-			# done
-		# }}}
-		enter: ->>
-			# initiate {{{
-			# create new lock
-			# dirty flag is a guard against excessive queries,
-			# resulted by fast, multiple user actions (charges),
-			# which are throttled by reasonable delay,
-			# except the soft/programmatic restarts made by routine itself,
-			# otherwise a lock is clean - instant charge by the user.
-			@lock = if @dirty
-				then newDelay (~@dirty and 400)
-				else newPromise 1
-			# wait for the charge
-			if not (await @lock)
-				return true
-			# reset dirty
-			@dirty = 0
-			# get superviser and priority
-			s = @super
-			c = @level
-			# }}}
-			# syncronize {{{
-			# this step is skipped first time (after init)
-			if ~c
-				# query may or may not be executed,
-				# but any block should be notified that something is changed
-				# iteration order goes from higher levels to lower and
-				# allows to restart the process by any master through the callback
-				a = s.blocks.length
-				while a
-					# get instance
-					b = s.blocks[--a]
-					# operate
-					if b.notify and (@dirty = b.notify c)
-						return true
-				# restart query-less charge
-				if not c
+		'menu': do -> # {{{
+			Block = (root) !-> # {{{
+				# base
+				@group   = 'route'
+				@root    = root
+				@rootBox = box = root.firstChild
+				@cfg     = null
+				# controls
+				# ...
+				# state
+				@hovered = false
+				@focused = false
+				@locked  = -1
+				# handlers
+				# ...
+			###
+			Block.prototype =
+				level: 3
+				init: (s, c) ->> # {{{
+					# ...
+					debugger
 					return true
-				# lock lower priority blocks (if they are not locked already)
-				for b in s.blocks when b.level < c and not b.locked
-					# set common property here (block doesn't have to)
-					b.locked = 1
-					# execute specialized async callback (if present) and
-					# collect returned promise
-					b.lock c if b.lock
-					# clear availability class from the common content container
-					b.rootBox.classList.remove 'v'
-			# }}}
-			# startup {{{
-			# send the request
-			f = await (@fetch = soFetch s.state)
-			@fetch = null
-			# check the result
-			if f instanceof Error
-				# cancelled
-				if f.id == 4
+				# }}}
+				lock: (level) !-> # {{{
+					true
+				# }}}
+				unlock: (level) !-> # {{{
+					true
+				# }}}
+				refresh: -> # {{{
 					return true
-				# fatal
-				consoleError f.message
-				return false
-			# read total records count
-			if (s.config.total = a = await f.readInt!) == null
-				consoleError 'fetch stream failed'
-				f.cancel!
-				return false
+				# }}}
 			# }}}
-			# desynchronize {{{
-			# refresh worker blocks individually
-			a = []
-			for b in s.blocks when b.level > 0
-				a[*] = b.refresh c
-			# wait complete
-			await Promise.all a
-			# unlock blocks
-			for b in s.blocks when b.locked
-				# update value and callback
-				b.locked = 0
-				b.unlock c if b.unlock
-				# restore availability class
-				b.rootBox.classList.add 'v'
-			# reset priority
-			@level = 0
-			# }}}
-			# load {{{
-			# check (allow uncomplete configurations)
-			if s.receiver
-				a = 0
-				while not @dirty and b = await f.readJSON!
-					# check
-					if b instanceof Error
-						consoleError 'fetch stream failed, '+b.message
-						return false
-					# load
-					if @dirty or not s.receiver.load a++, b
-						break
-			# terminate explicitly if cancelled or didn't started
-			f.cancel! if b
-			# }}}
-			return true
-	# }}}
-	Group = (sup, name, blocks) !-> # {{{
-		# {{{
-		@super   = sup
-		@f       = sup.slaves # factory
-		@name    = name
-		@blocks  = blocks
-		@config  = sup.config
-		@data    = null # state[name]
-		@level   = 0
-		# order blocks by priority level (ascending)
-		blocks.sort (a, b) ->
-			return if a.level < b.level
-				then -1
-				else if a.level == b.level
-					then 0
-					else 1
+			return Block
 		# }}}
-	Group.prototype =
-		init: ->> # {{{
-			# initialize blocks, state and config
-			s = @super
-			a = []
-			for b in @blocks
-				b.group = @
-				a[*] = b.init s.state, s.config
-			# set data shortcut (should setle early)
-			@data = s.state[@name]
-			# wait completed and
-			# check the results
-			for a in (await Promise.all a) when not a
-				return false
-			# done
-			return true
+	# supervisor
+	return do -> # {{{
+		Config = !-> # {{{
+			@locale   = null  # interface labels, titles, etc
+			@routes   = null  # {navigation}
+			@order    = null  # order tags to use for ordering
+			@currency = null  # [symbol,decimal_sep,thousand_sep,decimal_cnt]
+			@cart     = null  # shopping cart
+			@price    = null  # price range [min,max]
+			@total    = 0     # ..records in the result
+			@count    = 0     # ..of items displayed
+			@rows     = 0     # rows in the grid (0=auto, -1=infinite)
 		# }}}
-		refresh: (block) ->> # {{{
-			# refresh group blocks (exclude option)
-			for a in @blocks
-				if a != block and not (await a.refresh!)
+		State = !-> # {{{
+			@lang     = ''    # two-byte language code
+			@route    = 0     # navigation id
+			@range    = null  # [offset,limit,o1,o2,o3,o4]
+			@order    = null  # [tag,variant]
+			@category = []    # [id-1..N],[..],..
+			@price    = null  # [min,max]
+		# }}}
+		Loader = (s) !-> # {{{
+			@super  = s     # s-supervisor
+			@lock   = null  # loader promise
+			@dirty  = -1    # resolved-in-process: 0=clean, -1=soft, 1=hard
+			@level  = -1    # update priority
+			@fetch  = null  # fetcher promise
+		Loader.prototype =
+			init: ->> # {{{
+				# prepare
+				T = window.performance.now!
+				S = @super
+				# configure request (low -> high)
+				for a in S.blocks when a.configure
+					a.configure S.state
+				# request configuration
+				if (c = await goFetch S.state) instanceof Error
+					consoleError c.message
 					return false
-			# done
-			return true
-		# }}}
-		submit: (block) !-> # {{{
-			# set priority
-			@level = if block
-				then block.level     # exact
-				else @blocks.0.level # group minimal
-			# refresh group early
-			@refresh block
-			# unleash the loader
-			@super.loader.charge @
-		# }}}
-	# }}}
-	newResizer = do -> # {{{
-		ResizeSlave = (master, node) !->
-			@parent   = master
-			@node     = node
-			@blocks   = null
-			@factor   = 1
-			@emitter  = null
-			@handler  = null
-		###
-		ResizeMaster = (selector, blocks) !->
-			# {{{
-			@slaves = s = []
-			# initialize
-			# locate slave nodes
-			n = [...(document.querySelectorAll selector)]
-			# iterate
-			for a in n
-				# create a slave
-				s[*] = b = new ResizeSlave @, a
-				# set blocks
-				b.blocks = c = []
-				for d in blocks
-					# lookup block parents
-					e = d.root
-					while e and e != a and (n.indexOf e) == -1
-						e = e.parentNode
-					# add
-					c[*] = d if e == a
-				# set handlers
-				b.handler = e = @handler b
-				for d in c when d.resizer
-					d.resizer.onChange = e
-			# }}}
-		ResizeMaster.prototype =
-			handler: (s) -> (e) -> # {{{
-				# check
-				if s.factor > e or s.emitter == @block
-					# lower factor or higher self,
-					# update state and styles
-					s.factor = e
-					c = '--sm-size-factor'
-					if e == 1
-						s.node.style.removeProperty c
-						s.emitter = null
-					else
-						s.node.style.setProperty c, e
-						s.emitter = @block
-				else
-					# higher another, use minimal
-					e = s.factor
+				# store
+				for a of c when S.config.hasOwnProperty a
+					S.config[a] = c[a]
+				# initialize (ordered)
+				a = []
+				for c in (b = Object.getOwnPropertyNames S.groups)
+					a[*] = S.groups[c].init!
+				# wait completed and
+				# check the results
+				for a,c in (await Promise.all a) when not a
+					consoleError 'failed to initialize '+S.groups[c].name
+					return false
+				# refresh (ordered)
+				for a in b
+					await S.groups[a].refresh!
+				# set constructed class
+				for a in S.blocks when a.locked == -1
+					a.root.classList.add 'v'
+					a.locked = 1
 				# done
-				return e
+				T = (window.performance.now! - T) .|. 0
+				consoleInfo 'initialized in '+T+'ms'
+				return true
 			# }}}
-		###
-		return (selector, blocks) ->
-			return new ResizeMaster selector, blocks
-	# }}}
-	SUPERVISOR = (m, s) !-> # {{{
-		# {{{
-		# prepare masters and slaves
-		m = if m
-			then {} <<< M <<< m
-			else M
-		s = if s
-			then {} <<< S <<< s
-			else S
-		# create object shape
-		# base
-		@masters  = m     # constructors
-		@slaves   = s     # factories
-		@root     = null  # attachment point
-		@blocks   = null  # master blocks
-		@groups   = null  # name:group
-		@receiver = null
-		# data
-		@counter  = 0     # user actions
-		@config   = null
-		@state    = null
-		# controllers
-		@loader   = null
-		@resizer  = null
-		###
-		s = (m != M and 'custom ') or ''
-		consoleInfo 'new '+s+'supervisor'
-		# }}}
-	SUPERVISOR.prototype =
-		attach: (root) ->> # {{{
-			# check
-			if not root
-				return false
-			else if @state
-				# detach first
-				if not (await @detach!)
+			finit: !-> # {{{
+				# interrupt
+				@lock.resolve! if @lock
+				@fetch.cancel! if @fetch
+				# reset
+				@dirty = @level = -1
+				@lock  = @fetch = null
+			# }}}
+			charge: (group) !-> # {{{
+				# rise priority
+				@level = group.level if @level < group.level
+				# check
+				if @lock.pending
+					# charge clean,
+					# start or restart routine
+					@lock.resolve (@lock.pending == 1)
+				else
+					# charge dirty,
+					# set flag and terminate fetcher
+					@dirty = 1
+					@fetch.cancel! if @fetch
+				# done
+			# }}}
+			run: ->>
+				# initiate {{{
+				# create new lock
+				# dirty flag is a guard against excessive queries,
+				# resulted by fast, multiple user actions (charges),
+				# which are throttled by reasonable delay,
+				# except the soft/programmatic restarts made by routine itself,
+				# otherwise a lock is clean - instant charge by the user.
+				@lock = if @dirty
+					then newDelay (~@dirty and 400)
+					else newPromise 1
+				# wait for the charge
+				if not (await @lock)
+					return true
+				# reset dirty
+				@dirty = 0
+				# get superviser and priority
+				s = @super
+				c = @level
+				# }}}
+				# syncronize {{{
+				# this step is skipped first time (after init)
+				if ~c
+					# query may or may not be executed,
+					# but any block should be notified that something is changed
+					# iteration order goes from higher levels to lower and
+					# allows to restart the process by any master through the callback
+					a = s.blocks.length
+					while a
+						# get instance
+						b = s.blocks[--a]
+						# operate
+						if b.notify and (@dirty = b.notify c)
+							return true
+					# restart query-less charge
+					if not c
+						return true
+					# lock lower priority blocks (if they are not locked already)
+					for b in s.blocks when b.level < c and not b.locked
+						# set common property here (block doesn't have to)
+						b.locked = 1
+						# execute specialized async callback (if present) and
+						# collect returned promise
+						b.lock c if b.lock
+						# clear availability class from the common content container
+						b.rootBox.classList.remove 'v'
+				# }}}
+				# startup {{{
+				# send the request
+				f = await (@fetch = soFetch s.state)
+				@fetch = null
+				# check the result
+				if f instanceof Error
+					# cancelled
+					if f.id == 4
+						return true
+					# fatal
+					consoleError f.message
 					return false
-				# continue
-				consoleInfo 're-attaching..'
-			else
-				consoleInfo 'attaching..'
-			# prepare
-			@root     = root
-			@blocks   = B = []
-			@receiver = null
-			@counter  = 0
-			@config   = new Config!
-			@state    = new State!
-			@loader   = new Loader @
-			# create master blocks
-			G = {}
-			for b,a of @masters
-				# get and iterate DOM nodes
-				for b,c in [...(root.querySelectorAll '.'+BRAND+'.'+b)]
-					# construct
-					B[*] = a = new a b,c
-					# set receiver
-					@receiver = a if a.load
-					# set group
-					if b = G[a.group]
-						b[*] = a
-					else
-						G[a.group] = [a]
-			# check
-			if not B.length or not G.range
-				consoleError 'nothing to attach'
-				return false
-			# sort by priority level (ascending)
-			B.sort (a, b) ->
+				# read total records count
+				if (s.config.total = a = await f.readInt!) == null
+					consoleError 'fetch stream failed'
+					f.cancel!
+					return false
+				# }}}
+				# desynchronize {{{
+				# refresh worker blocks individually
+				a = []
+				for b in s.blocks when b.level > 0
+					a[*] = b.refresh c
+				# wait complete
+				await Promise.all a
+				# unlock blocks
+				for b in s.blocks when b.locked
+					# update value and callback
+					b.locked = 0
+					b.unlock c if b.unlock
+					# restore availability class
+					b.rootBox.classList.add 'v'
+				# reset priority
+				@level = 0
+				# }}}
+				# load {{{
+				# check (allow uncomplete configurations)
+				if s.receiver
+					a = 0
+					while not @dirty and b = await f.readJSON!
+						# check
+						if b instanceof Error
+							consoleError 'fetch stream failed, '+b.message
+							return false
+						# load
+						if @dirty or not s.receiver.load a++, b
+							break
+				# terminate explicitly if cancelled or didn't started
+				f.cancel! if b
+				# }}}
+				return true
+		# }}}
+		Group = (sup, name, blocks) !-> # {{{
+			# {{{
+			@super   = sup
+			@f       = sup.slaves # factory
+			@name    = name
+			@blocks  = blocks
+			@config  = sup.config
+			@data    = null # state[name]
+			@level   = 0
+			# order blocks by priority level (ascending)
+			blocks.sort (a, b) ->
 				return if a.level < b.level
 					then -1
 					else if a.level == b.level
 						then 0
 						else 1
-			# create groups (enforce state order)
-			@groups = c = {}
-			for a in (Object.getOwnPropertyNames @state) when G[a]
-				c[a] = new Group @, a, G[a]
-			# create resizer
-			@resizer = newResizer '.'+BRAND+'-resizer', B
-			# initialize
-			if not (await @loader.init!)
-				await @detach!
-				consoleError 'attachment failed'
-				return false
-			# enter the dragon
-			consoleInfo 'supervisor attached'
-			while await @loader.enter!
-				++@counter
-			# complete
-			consoleInfo 'supervisor detached, '+@counter+' actions'
-			return true
+			# }}}
+		Group.prototype =
+			init: ->> # {{{
+				# initialize blocks, state and config
+				s = @super
+				a = []
+				for b in @blocks
+					b.group = @
+					a[*] = b.init s.state, s.config
+				# set data shortcut (should setle early)
+				@data = s.state[@name]
+				# wait completed and
+				# check the results
+				for a in (await Promise.all a) when not a
+					return false
+				# done
+				return true
+			# }}}
+			refresh: (block) ->> # {{{
+				# refresh group blocks (exclude argument)
+				for a in @blocks
+					if a != block and not (await a.refresh!)
+						return false
+				# done
+				return true
+			# }}}
+			submit: (block) !-> # {{{
+				# set priority
+				@level = if block
+					then block.level     # exact
+					else @blocks.0.level # group minimal
+				# refresh group early
+				@refresh block
+				# unleash the loader
+				@super.loader.charge @
+			# }}}
 		# }}}
-		detach: ->> # {{{
-			# cleanup
-			# ...
-			# done
-			return true
+		newResizer = do -> # {{{
+			ResizeSlave = (master, node) !->
+				@parent   = master
+				@node     = node
+				@blocks   = null
+				@factor   = 1
+				@emitter  = null
+				@handler  = null
+			###
+			ResizeMaster = (selector, blocks) !->
+				# {{{
+				@slaves = s = []
+				# initialize
+				# locate slave nodes
+				n = [...(document.querySelectorAll selector)]
+				# iterate
+				for a in n
+					# create a slave
+					s[*] = b = new ResizeSlave @, a
+					# set blocks
+					b.blocks = c = []
+					for d in blocks
+						# lookup block parents
+						e = d.root
+						while e and e != a and (n.indexOf e) == -1
+							e = e.parentNode
+						# add
+						c[*] = d if e == a
+					# set handlers
+					b.handler = e = @handler b
+					for d in c when d.resizer
+						d.resizer.onChange = e
+				# }}}
+			ResizeMaster.prototype =
+				handler: (s) -> (e) -> # {{{
+					# check
+					if s.factor > e or s.emitter == @block
+						# lower factor or higher self,
+						# update state and styles
+						s.factor = e
+						c = '--sm-size-factor'
+						if e == 1
+							s.node.style.removeProperty c
+							s.emitter = null
+						else
+							s.node.style.setProperty c, e
+							s.emitter = @block
+					else
+						# higher another, use minimal
+						e = s.factor
+					# done
+					return e
+				# }}}
+			###
+			return (selector, blocks) ->
+				return new ResizeMaster selector, blocks
 		# }}}
+		SuperVisor = (m, s) !->
+			# {{{
+			# prepare masters and slaves
+			m = if m
+				then {} <<< M <<< m
+				else M
+			s = if s
+				then {} <<< S <<< s
+				else S
+			# create object shape
+			# base
+			@masters  = m     # constructors
+			@slaves   = s     # factories
+			@root     = null  # attachment point
+			@blocks   = null  # master blocks
+			@groups   = null  # name:group
+			@receiver = null
+			# data
+			@counter  = 0     # user actions
+			@config   = null
+			@state    = null
+			# controllers
+			@loader   = null
+			@resizer  = null
+			###
+			s = (m != M and 'custom ') or ''
+			consoleInfo 'new '+s+'supervisor'
+			# }}}
+		SuperVisor.prototype =
+			attach: (root) ->> # {{{
+				# check
+				if not root
+					return false
+				else if @state
+					# detach first
+					if not (await @detach!)
+						return false
+					# continue
+					consoleInfo 're-attaching..'
+				else
+					consoleInfo 'attaching..'
+				# prepare
+				@root     = root
+				@blocks   = B = []
+				@receiver = null
+				@counter  = 0
+				@config   = new Config!
+				@state    = new State!
+				@loader   = new Loader @
+				# create master blocks
+				G = {}
+				for b,a of @masters
+					# get and iterate DOM nodes
+					for b,c in [...(root.querySelectorAll '.'+BRAND+'.'+b)]
+						# construct
+						B[*] = a = new a b,c
+						# set receiver
+						@receiver = a if a.load
+						# set group
+						if b = G[a.group]
+							b[*] = a
+						else
+							G[a.group] = [a]
+				# check
+				if not B.length
+					consoleError 'nothing to attach'
+					return false
+				# sort by priority level (ascending)
+				B.sort (a, b) ->
+					return if a.level < b.level
+						then -1
+						else if a.level == b.level
+							then 0
+							else 1
+				# create groups (use state order)
+				@groups = c = {}
+				for a in (Object.getOwnPropertyNames @state) when G[a]
+					c[a] = new Group @, a, G[a]
+				# create resizer
+				@resizer = newResizer '.'+BRAND+'-resizer', B
+				# initialize
+				if not (await @loader.init!)
+					await @detach!
+					consoleError 'attachment failed'
+					return false
+				# enter the dragon
+				consoleInfo 'supervisor attached'
+				while await @loader.run!
+					++@counter
+				# complete
+				consoleInfo 'supervisor detached, '+@counter+' actions'
+				return true
+			# }}}
+			detach: ->> # {{{
+				# cleanup
+				# ...
+				# done
+				return true
+			# }}}
+		return (m, s) -> new SuperVisor m, s
 	# }}}
-	# factory
-	return (m, s) -> new SUPERVISOR m, s
 ###

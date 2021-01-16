@@ -1,17 +1,14 @@
-/**
-* storefront modern blocks
-*/
-// fonts {{{
-WebSafeFontMono = Consolas, Courier, monospace
-WebSafeFontFat = 'Arial Black', 'Arial Bold', Gadget, sans-serif
-WebSafeFontUI = Verdana, Helvetica, Arial, sans-serif
-WebSafeFontHeadline = Times, 'Times New Roman', serif
-// }}}
 // helpers {{{
 cv(c)
 	s('%s,%s,%s', red(c), green(c), blue(c));
 rgba(cv,alpha=1)
 	s('rgba(%s,%s)', cv, alpha);
+// }}}
+// fonts {{{
+WebSafeFontMono = Consolas, Courier, monospace
+WebSafeFontFat = 'Arial Black', 'Arial Bold', Gadget, sans-serif
+WebSafeFontUI = Verdana, Helvetica, Arial, sans-serif
+WebSafeFontHeadline = Times, 'Times New Roman', serif
 // }}}
 :root // {{{
 	// SIZE
@@ -1271,6 +1268,22 @@ rgba(cv,alpha=1)
 			&.v
 				display: block
 		// }}}
+	// }}}
+	&.menu // {{{
+		width:  100%
+		height: auto
+		padding: 4px 0 4px 0
+		> div
+			font-size: var(--height)
+			width:  100%
+			height: 1em
+			////
+			display: flex
+			flex-direction: row
+			align-items: stretch
+			justify-content: flex-start
+			gap: 2px
+		////
 	// }}}
 // ===
 .sm-blocks.paginator // {{{
