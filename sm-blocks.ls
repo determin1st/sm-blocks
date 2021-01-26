@@ -58,41 +58,6 @@ SM = do ->
 		# done
 		return p
 	# }}}
-	querySelectorChildren = (parentNode, selector) -> # {{{
-		# prepare
-		a = []
-		if not parentNode or not parentNode.children.length
-			return a
-		# select all and
-		# filter into result
-		for b in parentNode.querySelectorAll selector
-			if b.parentNode == parentNode
-				a[*] = b
-		# done
-		return a
-	# }}}
-	querySelectorChild = (parentNode, selector) -> # {{{
-		# check
-		if not parentNode
-			return null
-		# reuse
-		a = querySelectorChildren parentNode, selector
-		# done
-		return if a.length
-			then a.0
-			else null
-	# }}}
-	queryFirstChildren = (list) -> # {{{
-		# check
-		if not list or not list.length
-			return null
-		# collect
-		a = []
-		for b in list
-			a[*] = b.firstChild
-		# done
-		return a
-	# }}}
 	# }}}
 	# fetchers {{{
 	goFetch = httpFetch.create {
@@ -111,6 +76,30 @@ SM = do ->
 	}
 	# }}}
 	w3ui = # {{{
+		# helper functions
+		console: # debug messages {{{
+			log: (msg) !->
+				a = '%cw3ui: %c'+msg
+				console.log a, 'font-weight:bold;color:sandybrown', 'color:aquamarine'
+			error: (msg) !->
+				a = '%cw3ui: %c'+msg
+				console.log a, 'font-weight:bold;color:sandybrown', 'color:crimson'
+		# }}}
+		config: (node) -> # JSON-in-HTML {{{
+			# get contents, should include <!-- and -->
+			if (a = node.innerHTML).length <= 7
+				return null
+			# extract and zap content
+			a = a.slice 4, (a.length - 3)
+			node.innerHTML = ''
+			# parse to JSON
+			try
+				a = JSON.parse a
+			catch
+				a = null
+			# done
+			return a
+		# }}}
 		template: (f) -> # HTML-in-JS {{{
 			# get function's text and locate the comment
 			f = f.toString!
@@ -120,16 +109,102 @@ SM = do ->
 			f = (f.substring a, b).trim!replace />\s+</g, '><'
 			return f
 		# }}}
-		event: # {{{
-			# primitive
+		getArrayObjectProps: (a, prop, compact = false) -> # {{{
+			# check array-like
+			if not a or not (c = a.length)
+				return null
+			# iterate it and collect properties
+			x = []
+			i = -1
+			while ++i < c
+				if (b = a[i]) and b.hasOwnProperty prop
+					x[*] = b[prop]
+				else if not compact
+					x[*] = null
+			# done
+			return x
+		# }}}
+		parse: (template, tags) -> # the dumbest parser {{{
+			# prepare
+			a = ''
+			i = 0
+			# search opening marker
+			while ~(j = template.indexOf '{{', i)
+				# append trailing
+				a += template.substring i, j
+				i  = j
+				j += 2
+				# search closing marker
+				if (k = template.indexOf '}}', j) == -1
+					break
+				# check tag length
+				if k - j > 16
+					a += '{{'
+					i += 2
+					continue
+				# extact tag
+				b = template.substring j, k
+				# check exists
+				if not tags.hasOwnProperty b
+					a += '{{'
+					i += 2
+					continue
+				# substitute
+				a += tags[b]
+				i  = k + 2
+			# append remaining
+			return a + (template.substring i)
+		# }}}
+		append: (box, item) -> # {{{
+			if not (box instanceof Element)
+				if not (box = box.root)
+					return null
+			if item instanceof Array
+				for a in item
+					if a instanceof Element
+						box.appendChild a
+					else if a.root
+						box.appendChild a.root
+			else if item instanceof Element
+				box.appendChild item
+			else if item.root
+				box.appendChild item.root
+			###
+			return item
+		# }}}
+		queryChildren: (parentNode, selector) -> # {{{
+			# prepare
+			a = []
+			if not parentNode or not parentNode.children.length
+				return a
+			# select all and filter result
+			for b in parentNode.querySelectorAll selector
+				if b.parentNode == parentNode
+					a[*] = b
+			# done
+			return a
+		# }}}
+		queryChild: (parentNode, selector) -> # {{{
+			# check
+			if not parentNode
+				return null
+			# reuse
+			a = w3ui.queryChildren parentNode, selector
+			# done
+			return if a.length
+				then a.0
+				else null
+		# }}}
+		event: # handlers {{{
+			# basic
 			hover: (B) -> (e) !-> # {{{
 				# pprepare
 				e.preventDefault!
 				# check
-				if not B.locked and not B.pending and not B.hovered
+				if not B.locked and not B.hovered
 					# operate
 					B.hovered = true
-					B.root.classList.add 'h'
+					B.root.classList.add 'h' if B.root
 					# callback
 					B.onHover true, B if B.onHover
 			# }}}
@@ -140,7 +215,7 @@ SM = do ->
 				if B.hovered
 					# operate
 					B.hovered = false
-					B.root.classList.remove 'h'
+					B.root.classList.remove 'h' if B.root
 					# callback
 					B.onHover false, B if B.onHover
 			# }}}
@@ -169,6 +244,29 @@ SM = do ->
 					B.onFocus false, B if B.onFocus
 			# }}}
 			# aggregators
+			hoverAccum: (block) -> # {{{
+				bounce = newDelay!
+				return (v, o) ->>
+					# bounce
+					bounce.cancel! if bounce.pending
+					if o and not (await bounce := newDelay 64)
+						return false
+					# check
+					if (w = block.focused) == v
+						return false
+					# callback
+					if o and block.onFocus and not (await block.onFocus v, o)
+						return false
+					# operate
+					if o and block.setFocus
+						block.setFocus v
+					else
+						block.focused = v
+						block.root.classList.remove 'f'+w if w
+						block.root.classList.add 'f'+v
+					# done
+					return true
+			# }}}
 			slaveFocusInOut: (block, node) -> # {{{
 				return [
 					(e) !~>
@@ -219,30 +317,32 @@ SM = do ->
 					# done
 					return true
 			# }}}
-		# }}}
-		dom: # {{{
-			append: (box, item) -> # {{{
-				if not (box instanceof Element)
-					if not (box = box.root)
-						return null
-				if item instanceof Array
-					for a in item
-						if a instanceof Element
-							box.appendChild a
-						else if a.root
-							box.appendChild a.root
-				else if item instanceof Element
-					box.appendChild item
-				else if item.root
-					box.appendChild item.root
-				###
-				return item
+			resizeAccum: (f, ms = 100, max = 3) -> # {{{
+				bounce = newDelay!
+				count  = 0
+				return (e) ->>
+					# check observed
+					if e
+						# apply debounce algorithm
+						if bounce.pending
+							count := count + 1
+							bounce.cancel (count == max)
+						if not await (bounce := newDelay ms)
+							return false
+						count := 0
+					# callback
+					f e
+					# done
+					return true
 			# }}}
 		# }}}
+		# basic
 		button: do -> # {{{
 			Block = (root, o) !-> # {{{
 				# base
 				@root    = root
+				@label   = w3ui.queryChild root, '.label'
+				@cfg     = o.cfg
 				# state
 				@hovered = false
 				@focused = false
@@ -296,7 +396,8 @@ SM = do ->
 				if o.hint
 					a.setAttribute 'title', o.hint
 				if o.label
-					b = document.createElement 'label'
+					b = document.createElement 'div'
+					b.className   = 'label'
 					b.textContent = o.label
 					a.appendChild b
 				else if o.html
@@ -306,51 +407,7 @@ SM = do ->
 			# }}}
 		# }}}
 	<<<<
-		menu: do -> # {{{
-			template = w3ui.template !-> # {{{
-				/*
-				<div class="item">
-					<label></label><hr>
-					<div class="dropdown"></div>
-				</button>
-				*/
-			# }}}
-			Item = (block, node, parent) !-> # {{{
-				# base
-				@block  = block
-				@node   = node
-				@parent = parent
-				# controls
-				# ...
-				# state
-				# ...
-				# handlers
-				# ...
-			Item.prototype =
-				init: !-> # {{{
-				# }}}
-			# }}}
-			Block = (root, o) !-> # {{{
-				# base
-				@root = root
-				@cfg  = o
-				# state
-				# ...
-				# traps
-				# ...
-				# handlers
-				# ...
-			Block.prototype =
-				init: !-> # {{{
-					# ...
-				# }}}
-				lock: (locked) !-> # {{{
-					true
-				# }}}
-			# }}}
-			return (root, o) ->
-				true
-		# }}}
+		# compound
 		checkbox: do -> # {{{
 			template = w3ui.template !-> # {{{
 				/*
@@ -505,7 +562,7 @@ SM = do ->
 		select: do -> # {{{
 			template = w3ui.template !-> # {{{
 				/*
-				<svg preserveAspectRatio="none" shape-rendering="geometricPrecision" viewBox="0 0 48 48">
+				<svg preserveAspectRatio="none" viewBox="0 0 48 48">
 					<polygon class="b" points="24,32 34,17 36,16 24,34 "/>
 					<polygon class="b" points="24,34 12,16 14,17 24,32 "/>
 					<polygon class="b" points="34,17 14,17 12,16 36,16 "/>
@@ -646,10 +703,10 @@ SM = do ->
 				@parent = parent
 				@config = cfg = JSON.parse node.dataset.cfg
 				# controls
-				@title    = new Title (querySelectorChild node, '.title')
+				@title    = new Title (w3ui.queryChild node, '.title')
 				@extra    = null # title extension
-				@section  = sect = querySelectorChild node, '.section'
-				@children = c = querySelectorChildren sect, '.item'
+				@section  = sect = w3ui.queryChild node, '.section'
+				@children = c = w3ui.queryChildren sect, '.item'
 				# construct recursively
 				if c
 					for a,b in c
@@ -769,7 +826,7 @@ SM = do ->
 				# }}}
 			Item.prototype =
 				init: !-> # {{{
-					# configure
+					# set initial state
 					@opened = @config.opened
 					@title.label.textContent = a if a = @config.name
 					# attach title
@@ -955,7 +1012,7 @@ SM = do ->
 				@root    = root
 				@rootBox = box = root.firstChild
 				# controls
-				@lines   = querySelectorChildren box, 'svg'
+				@lines   = w3ui.queryChildren box, 'svg'
 				@item    = root  = new Item @, box, null
 				@sect    = sect  = {}     # with section (parents)
 				@items   = items = {}     # all
@@ -1056,7 +1113,7 @@ SM = do ->
 					<div class="section a">
 						<div class="image">
 							<img alt="product">
-							<svg preserveAspectRatio="none" fill-rule="evenodd" clip-rule="evenodd" shape-rendering="geometricPrecision" viewBox="0 0 270.92 270.92">
+							<svg preserveAspectRatio="none" fill-rule="evenodd" clip-rule="evenodd" viewBox="0 0 270.92 270.92">
 								<path fill-rule="nonzero" d="M135.46 245.27c-28.39 0-54.21-10.93-73.72-28.67L216.6 61.74c17.74 19.51 28.67 45.33 28.67 73.72 0 60.55-49.26 109.81-109.81 109.81zm0-219.62c29.24 0 55.78 11.56 75.47 30.25L55.91 210.93c-18.7-19.7-30.25-46.23-30.25-75.47 0-60.55 49.26-109.81 109.8-109.81zm84.55 27.76c-.12-.16-.18-.35-.33-.5-.1-.09-.22-.12-.32-.2-21.4-21.7-51.09-35.19-83.9-35.19-65.03 0-117.94 52.91-117.94 117.94 0 32.81 13.5 62.52 35.2 83.91.08.09.11.22.2.31.14.14.33.2.49.32 21.24 20.63 50.17 33.4 82.05 33.4 65.03 0 117.94-52.91 117.94-117.94 0-31.88-12.77-60.8-33.39-82.05z"/>
 							</svg>
 						</div>
@@ -1192,10 +1249,10 @@ SM = do ->
 					Item = (block) !->
 						@block    = block
 						@box      = box = block.rootBox.querySelector '.price'
-						@currency = querySelectorChild box, '.currency'
+						@currency = w3ui.queryChild box, '.currency'
 						@boxes    = box = [
-							querySelectorChild box, '.value.a' # current
-							querySelectorChild box, '.value.b' # regular
+							w3ui.queryChild box, '.value.a' # current
+							w3ui.queryChild box, '.value.b' # regular
 						]
 						@values   = [
 							box.0.children.0 # integer
@@ -1263,7 +1320,7 @@ SM = do ->
 					return Item
 				# }}}
 				actions: do -> # {{{
-					TCartIcon = w3ui.template !-> # {{{
+					tCartIcon = w3ui.template !-> # {{{
 						/*
 						<svg viewBox="0 0 48 48" preserveAspectRatio="none">
 							<circle class="a" cx="13" cy="40" r="4"/>
@@ -1279,10 +1336,10 @@ SM = do ->
 					Item = (block, cfg) !->
 						@block   = block
 						@box     = box = block.rootBox.querySelector '.actions'
-						@buttons = btn = w3ui.dom.append box, [
+						@buttons = btn = w3ui.append box, [
 							w3ui.button {
 								name: 'add'
-								html: TCartIcon
+								html: tCartIcon
 								hint: cfg.locale.hint.0
 								onClick: @addToCart!
 							}
@@ -1457,6 +1514,145 @@ SM = do ->
 			# }}}
 		# }}}
 	M = # masters
+		'rows-selector': do -> # {{{
+			template = w3ui.template !-> # {{{
+				/*
+				<select></select>
+				<svg preserveAspectRatio="none" viewBox="0 0 48 48">
+					<polygon class="b" points="24,32 34,17 36,16 24,34 "/>
+					<polygon class="b" points="24,34 12,16 14,17 24,32 "/>
+					<polygon class="b" points="34,17 14,17 12,16 36,16 "/>
+					<polygon class="a" points="14,17 34,17 24,32 "/>
+				</svg>
+				*/
+			# }}}
+			Block = (root) !-> # {{{
+				# base
+				@group   = 'range'
+				@root    = root
+				@rootBox = box = root.firstChild
+				@config  = JSON.parse box.dataset.cfg
+				box.innerHTML = template
+				# controls
+				@select  = box.querySelector 'select' # holds current value
+				@icon    = box.querySelector 'svg'
+				# state
+				@hovered = false
+				@focused = false
+				@active  = false
+				@locked  = -1
+				# handlers
+				@hover = (e) !~> # {{{
+					# fulfil event
+					e.preventDefault!
+					e.stopPropagation!
+					# operate
+					if not @hovered and not @locked
+						@hovered = true
+						@rootBox.classList.add 'hovered'
+				# }}}
+				@unhover = (e) !~> # {{{
+					# fulfil event
+					if e
+						e.preventDefault!
+						e.stopPropagation!
+					# operate
+					if @hovered
+						@hovered = false
+						@rootBox.classList.remove 'hovered'
+				# }}}
+				@focus = (e) !~> # {{{
+					# fulfil event
+					e.preventDefault!
+					e.stopPropagation!
+					# set focused
+					if not @focused and not @locked
+						@focused = true
+						@rootBox.classList.add 'focused'
+				# }}}
+				@unfocus = (e) !~> # {{{
+					# fulfil event
+					if e
+						e.preventDefault!
+						e.stopPropagation!
+					# set focused
+					if @focused
+						@focused = false
+						@rootBox.classList.remove 'focused'
+				# }}}
+				@input = (e) !~> # {{{
+					# fulfil event
+					e.preventDefault!
+					e.stopPropagation!
+					# operate
+					@submit!
+				# }}}
+			Block.prototype =
+				init: (s, c) -> # {{{
+					# set config
+					c.rows = @config.list[@config.index]
+					# create options
+					c = @group.config.locale
+					for s in @config.list
+						a = document.createElement 'option'
+						a.text = if s == -1
+							then c.label.2
+							else if s
+								then 'x'+s
+								else c.label.0
+						@select.add a
+					# set current
+					@select.selectedIndex = @config.index
+					# set event handlers
+					@attach!
+					# done
+					return true
+				# }}}
+				refresh: -> # {{{
+					# get current value
+					a = @config.list[@select.selectedIndex]
+					# check changed
+					if a != (b = @group.config.rows)
+						# update
+						a = @config.list.indexOf b
+						@select.selectedIndex = a
+						# set style
+						a = !!b and not @locked
+						@rootBox.classList.toggle 'active', a
+					# done
+					return true
+				# }}}
+				lock: !-> # {{{
+					@select.disabled = true
+				# }}}
+				unlock: !-> # {{{
+					@select.disabled = false
+				# }}}
+				submit: !-> # {{{
+					# get current value
+					a = @config.list[@select.selectedIndex]
+					# refresh group
+					@group.config.rows = a
+					@group.refresh @
+				# }}}
+				attach: !-> # {{{
+					@rootBox.addEventListener 'pointerenter', @hover
+					@rootBox.addEventListener 'pointerleave', @unhover
+					@select.addEventListener 'focusin', @focus
+					@select.addEventListener 'focusout', @unfocus
+					@select.addEventListener 'input', @input
+				# }}}
+				detach: !-> # {{{
+					@rootBox.removeEventListener 'pointerenter', @hover
+					@rootBox.removeEventListener 'pointerleave', @unhover
+					@select.removeEventListener 'focusin', @focus
+					@select.removeEventListener 'focusout', @unfocus
+					@select.removeEventListener 'input', @input
+				# }}}
+				level: 0
+			# }}}
+			return Block
+		# }}}
 		'products': do -> # {{{
 			Resizer = (block) !-> # {{{
 				# create object shape
@@ -1834,7 +2030,7 @@ SM = do ->
 				@rootBox = box = root.firstChild
 				@config  = cfg = JSON.parse box.dataset.cfg
 				# controls
-				@dot     = querySelectorChild root, 'hr'
+				@dot     = w3ui.queryChild root, 'hr'
 				@items   = [] # product cards
 				@resizer = new Resizer @
 				# state
@@ -1857,7 +2053,6 @@ SM = do ->
 				@locked  = -1
 			###
 			Block.prototype =
-				level: 1
 				init: (s, c) -> # {{{
 					# set state and config
 					c.order = a if a = @config.options
@@ -2200,6 +2395,7 @@ SM = do ->
 					# done
 					return true
 				# }}}
+				level: 1
 			# }}}
 			return Block
 		# }}}
@@ -2801,11 +2997,11 @@ SM = do ->
 				# }}}
 			# }}}
 			PageGoto = (block) !-> # {{{
-				@boxFL = a = querySelectorChildren block.rootBox, '.goto.FL'
-				@boxPN = b = querySelectorChildren block.rootBox, '.goto.PN'
-				@btnFL = queryFirstChildren a
-				@btnPN = queryFirstChildren b
-				@sepFL = querySelectorChildren block.rootBox, '.sep'
+				@boxFL = a = w3ui.queryChildren block.rootBox, '.goto.FL'
+				@boxPN = b = w3ui.queryChildren block.rootBox, '.goto.PN'
+				@btnFL = w3ui.getArrayObjectProps a, 'firstChild'
+				@btnPN = w3ui.getArrayObjectProps b, 'firstChild'
+				@sepFL = w3ui.queryChildren block.rootBox, '.sep'
 				# initialize
 				# both first-previous/next-last present
 				if a.length and b.length
@@ -2817,10 +3013,10 @@ SM = do ->
 			PageRange = (block) !-> # {{{
 				# controls
 				@block = block
-				@box   = box = querySelectorChild block.rootBox, '.range'
+				@box   = box = w3ui.queryChild block.rootBox, '.range'
 				@cs    = getComputedStyle box
-				@pages = pages = querySelectorChildren box, '.page'
-				@gaps  = gaps = querySelectorChildren box, '.gap'
+				@pages = pages = w3ui.queryChildren box, '.page'
+				@gaps  = gaps = w3ui.queryChildren box, '.gap'
 				# constants
 				@index = i = 1 + block.config.index # range "center"
 				@size  = pages.length - 2 # rendered range size
@@ -3007,7 +3203,6 @@ SM = do ->
 				@locked  = -1
 			###
 			Block.prototype =
-				level: 1
 				init: -> # {{{
 					# set control classes
 					a = @rootBox.classList
@@ -3072,152 +3267,14 @@ SM = do ->
 						###
 						a.focus!
 				# }}}
-			# }}}
-			return Block
-		# }}}
-		'rows-selector': do -> # {{{
-			template = w3ui.template !-> # {{{
-				/*
-				<select></select>
-				<svg preserveAspectRatio="none" shape-rendering="geometricPrecision" viewBox="0 0 48 48">
-					<polygon class="b" points="24,32 34,17 36,16 24,34 "/>
-					<polygon class="b" points="24,34 12,16 14,17 24,32 "/>
-					<polygon class="b" points="34,17 14,17 12,16 36,16 "/>
-					<polygon class="a" points="14,17 34,17 24,32 "/>
-				</svg>
-				*/
-			# }}}
-			Block = (root) !-> # {{{
-				# base
-				@group   = 'range'
-				@root    = root
-				@rootBox = box = root.firstChild
-				@config  = JSON.parse box.dataset.cfg
-				box.innerHTML = template
-				# controls
-				@select  = box.querySelector 'select' # holds current value
-				@icon    = box.querySelector 'svg'
-				# state
-				@hovered = false
-				@focused = false
-				@active  = false
-				@locked  = -1
-				# handlers
-				@hover = (e) !~> # {{{
-					# fulfil event
-					e.preventDefault!
-					e.stopPropagation!
-					# operate
-					if not @hovered and not @locked
-						@hovered = true
-						@rootBox.classList.add 'hovered'
-				# }}}
-				@unhover = (e) !~> # {{{
-					# fulfil event
-					if e
-						e.preventDefault!
-						e.stopPropagation!
-					# operate
-					if @hovered
-						@hovered = false
-						@rootBox.classList.remove 'hovered'
-				# }}}
-				@focus = (e) !~> # {{{
-					# fulfil event
-					e.preventDefault!
-					e.stopPropagation!
-					# set focused
-					if not @focused and not @locked
-						@focused = true
-						@rootBox.classList.add 'focused'
-				# }}}
-				@unfocus = (e) !~> # {{{
-					# fulfil event
-					if e
-						e.preventDefault!
-						e.stopPropagation!
-					# set focused
-					if @focused
-						@focused = false
-						@rootBox.classList.remove 'focused'
-				# }}}
-				@input = (e) !~> # {{{
-					# fulfil event
-					e.preventDefault!
-					e.stopPropagation!
-					# operate
-					@submit!
-				# }}}
-			Block.prototype =
-				level: 0
-				init: (s, c) -> # {{{
-					# set config
-					c.rows = @config.list[@config.index]
-					# create options
-					c = @group.config.locale
-					for s in @config.list
-						a = document.createElement 'option'
-						a.text = if s == -1
-							then c.label.2
-							else if s
-								then 'x'+s
-								else c.label.0
-						@select.add a
-					# set current
-					@select.selectedIndex = @config.index
-					# set event handlers
-					@attach!
-					# done
-					return true
-				# }}}
-				refresh: -> # {{{
-					# get current value
-					a = @config.list[@select.selectedIndex]
-					# check changed
-					if a != (b = @group.config.rows)
-						# update
-						a = @config.list.indexOf b
-						@select.selectedIndex = a
-						# set style
-						a = !!b and not @locked
-						@rootBox.classList.toggle 'active', a
-					# done
-					return true
-				# }}}
-				lock: !-> # {{{
-					@select.disabled = true
-				# }}}
-				unlock: !-> # {{{
-					@select.disabled = false
-				# }}}
-				submit: !-> # {{{
-					# get current value
-					a = @config.list[@select.selectedIndex]
-					# refresh group
-					@group.config.rows = a
-					@group.refresh @
-				# }}}
-				attach: !-> # {{{
-					@rootBox.addEventListener 'pointerenter', @hover
-					@rootBox.addEventListener 'pointerleave', @unhover
-					@select.addEventListener 'focusin', @focus
-					@select.addEventListener 'focusout', @unfocus
-					@select.addEventListener 'input', @input
-				# }}}
-				detach: !-> # {{{
-					@rootBox.removeEventListener 'pointerenter', @hover
-					@rootBox.removeEventListener 'pointerleave', @unhover
-					@select.removeEventListener 'focusin', @focus
-					@select.removeEventListener 'focusout', @unfocus
-					@select.removeEventListener 'input', @input
-				# }}}
+				level: 1
 			# }}}
 			return Block
 		# }}}
 		'orderer': do -> # {{{
 			template = w3ui.template !-> # {{{
 				/*
-				<svg preserveAspectRatio="none" shape-rendering="geometricPrecision" viewBox="0 0 48 48">
+				<svg preserveAspectRatio="none" viewBox="0 0 48 48">
 					<g class="a1">
 						<polygon class="a" points="12,12 24,0 36,12 33,15 27,9 27,45 21,45 21,9 15,15 "/>
 						<polygon class="b" points="13,12 24,1 35,12 33,14 26,7 26,44 22,44 22,7 15,14 "/>
@@ -3352,7 +3409,6 @@ SM = do ->
 				# }}}
 			###
 			Block.prototype =
-				level: 1
 				init: (s, c) ->> # {{{
 					# initialize
 					s.order    = @config.order if @config.order
@@ -3413,6 +3469,7 @@ SM = do ->
 					# done
 					return true
 				# }}}
+				level: 1
 			# }}}
 			return Block
 		# }}}
@@ -3626,7 +3683,7 @@ SM = do ->
 					new NumInput box.children.2
 				]
 				@svg = box.children.1
-				@rst = querySelectorChild @svg, '.X'
+				@rst = w3ui.queryChild @svg, '.X'
 				# state
 				@current = null # [fromMin,toMax]
 				@range   = null # [min,max]
@@ -3942,7 +3999,6 @@ SM = do ->
 				# }}}
 			###
 			Block.prototype =
-				level: 2
 				init: (s, c) ->> # {{{
 					# initialize
 					# group state
@@ -3999,6 +4055,7 @@ SM = do ->
 					@section.lock false
 					@range.lock false
 				# }}}
+				level: 2
 			# }}}
 			return Block
 		# }}}
@@ -4146,7 +4203,6 @@ SM = do ->
 				# }}}
 			###
 			Block.prototype =
-				level: 2
 				init: (s, c) ->> # {{{
 					# create group data entry
 					s.category[@index] = []
@@ -4218,41 +4274,326 @@ SM = do ->
 					# done
 					return true
 				# }}}
+				level: 2
 			# }}}
 			return Block
 		# }}}
 		'menu': do -> # {{{
+			# {{{
+			tItem = w3ui.template !-> # {{{
+				/*
+				{{lineA}}
+				<div class="label">{{name}}</div>{{arrow}}
+				{{lineB}}
+				*/
+			# }}}
+			tArrow = w3ui.template !-> # {{{
+				/*
+				<svg class="arrow" preserveAspectRatio="none" viewBox="0 0 48 48">
+					<polygon class="b" points="24,32 34,17 36,16 24,34 "/>
+					<polygon class="b" points="24,34 12,16 14,17 24,32 "/>
+					<polygon class="b" points="34,17 14,17 12,16 36,16 "/>
+					<polygon class="a" points="14,17 34,17 24,32 "/>
+				</svg>
+				*/
+			# }}}
+			tLineA = w3ui.template !-> # {{{
+				/*
+				<div class="line a">
+					<svg class="a" preserveAspectRatio="none" viewBox="0 0 48 48">
+						<polygon class="a" points="0,40 48,28 48,36 0,48 "/>
+						<polygon class="b" points="0,0 48,0 48,28 0,40 "/>
+					</svg>
+					<svg class="b" preserveAspectRatio="none" viewBox="0 0 48 48">
+						<polygon class="a" points="0,28 48,28 48,36 0,36 "/>
+						<polygon class="b" points="0,0 48,0 48,28 0,28 "/>
+					</svg>
+					<svg class="a" preserveAspectRatio="none" viewBox="0 0 48 48">
+						<polygon class="a" points="0,28 48,40 48,48 0,36 "/>
+						<polygon class="b" points="0,0 48,0 48,40 0,28 "/>
+					</svg>
+				</div>
+				*/
+			# }}}
+			tLineB = w3ui.template !-> # {{{
+				/*
+				<div class="line b">
+					<svg class="a" preserveAspectRatio="none" viewBox="0 0 48 48">
+						<polygon class="a" points="0,0 48,12 48,20 0,8 "/>
+						<polygon class="b" points="0,8 48,20 48,48 0,48 "/>
+					</svg>
+					<svg class="b" preserveAspectRatio="none" viewBox="0 0 48 48">
+						<polygon class="a" points="0,12 48,12 48,20 0,20 "/>
+						<polygon class="b" points="0,20 48,20 48,48 0,48 "/>
+					</svg>
+					<svg class="a" preserveAspectRatio="none" viewBox="0 0 48 48">
+						<polygon class="a" points="0,12 48,0 48,8 0,20 "/>
+						<polygon class="b" points="0,20 48,8 48,48 0,48 "/>
+					</svg>
+				</div>
+				*/
+			# }}}
+			fOrder = (a, b) -> # {{{
+				return if a.data.order < b.data.order
+					then -1
+					else if a.data.order == b.data.order
+						then 0
+						else 1
+			# }}}
+			fAssembly = (block, heap, parent) -> # {{{
+				# prepare
+				a = []
+				b = (parent and parent.data.id) or '0'
+				# collect
+				for c,d of heap when c and d.parent == b
+					# create item
+					a[*] = c = new Item block, d, parent
+					# set children (recurse)
+					c.children = fAssembly block, heap, c
+				# check
+				if not a.length
+					return null
+				# set order
+				a.sort fOrder
+				# done
+				return a
+			# }}}
+			# }}}
+			Resizer = (block) !-> # {{{
+				@block = block
+				@obs   = null
+			Resizer.prototype =
+				init: !->
+					# create observer
+					@obs = new ResizeObserver @update
+					@obs.observer @block.root
+			# }}}
+			Item = (block, data, parent) !-> # {{{
+				# base
+				@block    = block
+				@data     = data
+				@parent   = parent
+				@children = null
+				@level    = 0
+				# controls
+				@button   = null
+				@dropdown = null
+				# state
+				@hovered  = false
+				@locked   = false # never
+				# handlers
+				@onHover  = (flag, drop) !~>
+					@block.onHover flag, @button
+			###
+			Item.prototype =
+				init: (level = 0) !-> # {{{
+					# set item's level in the tree
+					@level = level
+					# create base control
+					a = w3ui.parse tItem, {
+						lineA: (not @parent and tLineA) or ''
+						name: @data.name
+						arrow: (@children and tArrow) or ''
+						lineB: (not @parent and tLineB) or ''
+					}
+					@button = b = w3ui.button {
+						html: a
+						name: (@children and 'drop') or ''
+						cfg: @
+						onHover: @block.onHover
+						onClick: @block.onClick
+					}
+					# initialize children
+					if @children
+						# create dropdown
+						@dropdown = a = document.createElement 'div'
+						a.className = 'dropdown l'+level
+						a.addEventListener 'pointerenter', w3ui.event.hover @
+						a.addEventListener 'pointerleave', w3ui.event.unhover @
+						# recurse
+						for a in @children
+							a.init (level + 1)
+					# preserve natural focus order
+					# attach button
+					a = if @parent
+						then @parent.dropdown
+						else @block.rootBox
+					a.appendChild b.root
+					# attach dropdown
+					if b = @dropdown
+						a.appendChild b
+					# done
+				# }}}
+				lock: (v) !-> # {{{
+					# operate
+					@button.lock v
+					# recurse
+					if a = @children
+						for b in a
+							b.lock v
+				# }}}
+			# }}}
 			Block = (root) !-> # {{{
 				# base
-				@group   = 'route'
-				@root    = root
-				@rootBox = box = root.firstChild
-				@cfg     = null
+				@group    = 'route'
+				@root     = root
+				@rootBox  = root.firstChild
+				@cfg      = w3ui.config root.firstChild
 				# controls
-				# ...
+				@items    = null
+				@levels   = null
+				@resizer  = null
 				# state
-				@hovered = false
-				@focused = false
-				@locked  = -1
+				@pads     = null
+				@opened   = [] # items with opened dropdowns
+				@shutdown = newDelay!
+				@hovered  = false
+				@focused  = false
+				@locked   = -1
 				# handlers
-				# ...
-			###
-			Block.prototype =
-				level: 3
-				init: (s, c) ->> # {{{
-					# ...
-					debugger
+				@onHover = (flag, btn) ~>> # {{{
+					# abort dropdowns closing
+					if @shutdown.pending
+						@shutdown.cancel!
+					# prepare
+					o = @opened
+					item = btn.cfg
+					drop = item.dropdown
+					# check element heirarchy
+					if item.parent
+						if flag
+							# ENTRANCE
+							# check level already opened
+							if item.level < o.length
+								# CLOSE
+								# skip if item is already opened
+								if drop == o[item.level].dropdown
+									return true
+								# close all higher levels (including current)
+								a = o.length
+								while --a >= item.level
+									o[a].dropdown.classList.remove 'o'
+									o[a].button.root.classList.remove 'o'
+								# scrap
+								o.length = a + 1
+							# check item has dropdown
+							if drop
+								# OPEN
+								# determine dimensions
+								a = item.parent.dropdown.getBoundingClientRect!
+								b = btn.root.getBoundingClientRect!
+								#c = @rootBox.getBoundingClientRect!
+								# calculate
+								x = a.width + 1
+								y = b.y - a.y - @pads[item.level]
+								console.log item.level
+								w = a.width
+								# set
+								drop.style.left = x + 'px'
+								drop.style.top  = y + 'px'
+								drop.style.minWidth = w + 'px'
+								drop.classList.add 'o'
+								btn.root.classList.add 'o'
+								# store
+								o[*] = item
+						else
+							# EXIT
+							true
+					else if flag
+						# OPEN ROOT
+						# check opened
+						if o.length
+							# skip if already opened
+							if drop == o.0.dropdown
+								return true
+							# close all
+							a = o.length
+							while ~--a
+								o[a].dropdown.classList.remove 'o'
+								o[a].button.root.classList.remove 'o'
+							# clear
+							o.length = 0
+						# check has dropdown
+						if drop
+							# get position and size
+							a = btn.root.getBoundingClientRect!
+							b = @rootBox.getBoundingClientRect!
+							# set styles
+							drop.style.minWidth = a.width+'px'
+							drop.style.left = (a.x - b.x)+'px'
+							drop.style.top  = (a.y - b.y + a.height + 1)+'px'
+							drop.classList.add 'o'
+							btn.root.classList.add 'o'
+							# store
+							o[*] = item
+					else if drop and o.length == 1 and o.0 == item
+						# CLOSE ROOT
+						# delay
+						if await (@shutdown = newDelay @cfg.delay.0)
+							# close
+							drop.classList.remove 'o'
+							btn.root.classList.remove 'o'
+							o.length = 0
+					# done
 					return true
 				# }}}
-				lock: (level) !-> # {{{
-					true
+				@onClick = (btn) !~> # {{{
+					console.log 'click'
 				# }}}
-				unlock: (level) !-> # {{{
-					true
+				@resize = w3ui.event.resizeAccum (e) !~> # {{{
+					# assuming that dropdowns of the same level have same style
+					# prepare
+					@pads = []
+					# iterate levels with dropdowns
+					a = -1
+					b = @levels.length - 1
+					while ++a < b
+						# search first dropdown
+						for c in @levels[a] when c.dropdown
+							# get dropdown pads,
+							d = getComputedStyle c.dropdown
+							@pads[a] = parseFloat (d.getPropertyValue 'padding-top')
+							break
+					# done
+					return true
+				# }}}
+			Block.prototype =
+				init: (s, c) ->> # {{{
+					# configure state
+					s.route = [c.routes[''], -1]
+					# create and attach items
+					if @items = fAssembly @, c.routes, null
+						for a in @items
+							a.init!
+					# create tree levels
+					@levels = []
+					a = @items
+					b = -1
+					while a.length
+						@levels[++b] = a
+						c = []
+						for d in a when d.children
+							c.push ...d.children
+						a = c
+					# create resizer
+					@resizer = new ResizeObserver @resize
+					@resizer.observe @root
+					# done
+					return true
 				# }}}
 				refresh: -> # {{{
 					return true
 				# }}}
+				lock: !-> # {{{
+					@rootBox.classList.remove 'v'
+				# }}}
+				unlock: !-> # {{{
+					if a = @items
+						for b in a
+							b.lock false
+					@rootBox.classList.add 'v'
+				# }}}
+				level: 3
 			# }}}
 			return Block
 		# }}}
@@ -4260,7 +4601,7 @@ SM = do ->
 	return do -> # {{{
 		Config = !-> # {{{
 			@locale   = null  # interface labels, titles, etc
-			@routes   = null  # {navigation}
+			@routes   = null  # {id:route} navigation
 			@order    = null  # order tags to use for ordering
 			@currency = null  # [symbol,decimal_sep,thousand_sep,decimal_cnt]
 			@cart     = null  # shopping cart
@@ -4271,7 +4612,7 @@ SM = do ->
 		# }}}
 		State = !-> # {{{
 			@lang     = ''    # two-byte language code
-			@route    = 0     # navigation id
+			@route    = null  # [menu-id,navigation-id]
 			@range    = null  # [offset,limit,o1,o2,o3,o4]
 			@order    = null  # [tag,variant]
 			@category = []    # [id-1..N],[..],..
@@ -4284,39 +4625,44 @@ SM = do ->
 			@level  = -1    # update priority
 			@fetch  = null  # fetcher promise
 		Loader.prototype =
-			init: ->> # {{{
+			init: (c) ->> # {{{
 				# prepare
-				T = window.performance.now!
-				S = @super
-				# configure request (low -> high)
-				for a in S.blocks when a.configure
-					a.configure S.state
-				# request configuration
-				if (c = await goFetch S.state) instanceof Error
-					consoleError c.message
-					return false
-				# store
-				for a of c when S.config.hasOwnProperty a
-					S.config[a] = c[a]
-				# initialize (ordered)
+				t = window.performance.now!
+				s = @super
+				# get configuration
+				if not c
+					if (c = await goFetch s.state) instanceof Error
+						consoleError c.message
+						return false
+				# set configuration
+				for a of c when s.config.hasOwnProperty a
+					s.config[a] = c[a]
+				# initialize and configure (ordered)
 				a = []
-				for c in (b = Object.getOwnPropertyNames S.groups)
-					a[*] = S.groups[c].init!
-				# wait completed and
-				# check the results
+				for c in (b = Object.getOwnPropertyNames s.groups)
+					a[*] = s.groups[c].init!
+				# wait completed and check the results
 				for a,c in (await Promise.all a) when not a
-					consoleError 'failed to initialize '+S.groups[c].name
+					consoleError 'failed to initialize '+s.groups[c].name
 					return false
 				# refresh (ordered)
 				for a in b
-					await S.groups[a].refresh!
-				# set constructed class
-				for a in S.blocks when a.locked == -1
+					await s.groups[a].refresh!
+				# set priority
+				@level = c = if s.groups.range
+					then -1 # skip sync, fetch fast
+					else  0 # sync only, dont fetch
+				# set blocks ready state
+				for a in s.blocks when a.locked == -1
 					a.root.classList.add 'v'
-					a.locked = 1
+					if c
+						a.locked = 1
+					else
+						a.locked = 0
+						a.unlock 0
 				# done
-				T = (window.performance.now! - T) .|. 0
-				consoleInfo 'initialized in '+T+'ms'
+				t = (window.performance.now! - t) .|. 0
+				consoleInfo 'initialized in '+t+'ms'
 				return true
 			# }}}
 			finit: !-> # {{{
@@ -4379,7 +4725,7 @@ SM = do ->
 					# restart query-less charge
 					if not c
 						return true
-					# lock lower priority blocks (if they are not locked already)
+					# lock lower priority blocks
 					for b in s.blocks when b.level < c and not b.locked
 						# set common property here (block doesn't have to)
 						b.locked = 1
@@ -4580,7 +4926,7 @@ SM = do ->
 			consoleInfo 'new '+s+'supervisor'
 			# }}}
 		SuperVisor.prototype =
-			attach: (root) ->> # {{{
+			attach: (root, cfg = null) ->> # {{{
 				# check
 				if not root
 					return false
@@ -4632,7 +4978,7 @@ SM = do ->
 				# create resizer
 				@resizer = newResizer '.'+BRAND+'-resizer', B
 				# initialize
-				if not (await @loader.init!)
+				if not (await @loader.init cfg)
 					await @detach!
 					consoleError 'attachment failed'
 					return false

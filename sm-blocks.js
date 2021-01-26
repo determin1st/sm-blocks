@@ -2,7 +2,7 @@
 "use strict";
 var SM, slice$ = [].slice, arrayFrom$ = Array.from || function(x){return slice$.call(x);};
 SM = function(){
-  var BRAND, consoleError, consoleInfo, newPromise, newDelay, querySelectorChildren, querySelectorChild, queryFirstChildren, goFetch, soFetch, w3ui, S, M;
+  var BRAND, consoleError, consoleInfo, newPromise, newDelay, goFetch, soFetch, w3ui, S, M;
   BRAND = 'sm-blocks';
   consoleError = function(msg){
     var a;
@@ -52,40 +52,6 @@ SM = function(){
     };
     return p;
   };
-  querySelectorChildren = function(parentNode, selector){
-    var a, i$, ref$, len$, b;
-    a = [];
-    if (!parentNode || !parentNode.children.length) {
-      return a;
-    }
-    for (i$ = 0, len$ = (ref$ = parentNode.querySelectorAll(selector)).length; i$ < len$; ++i$) {
-      b = ref$[i$];
-      if (b.parentNode === parentNode) {
-        a[a.length] = b;
-      }
-    }
-    return a;
-  };
-  querySelectorChild = function(parentNode, selector){
-    var a;
-    if (!parentNode) {
-      return null;
-    }
-    a = querySelectorChildren(parentNode, selector);
-    return a.length ? a[0] : null;
-  };
-  queryFirstChildren = function(list){
-    var a, i$, len$, b;
-    if (!list || !list.length) {
-      return null;
-    }
-    a = [];
-    for (i$ = 0, len$ = list.length; i$ < len$; ++i$) {
-      b = list[i$];
-      a[a.length] = b.firstChild;
-    }
-    return a;
-  };
   goFetch = httpFetch.create({
     baseUrl: '/?rest_route=/' + BRAND + '/kiss',
     mounted: true,
@@ -101,6 +67,33 @@ SM = function(){
     parseResponse: 'stream'
   });
   importAll$(w3ui = {
+    console: {
+      log: function(msg){
+        var a;
+        a = '%cw3ui: %c' + msg;
+        console.log(a, 'font-weight:bold;color:sandybrown', 'color:aquamarine');
+      },
+      error: function(msg){
+        var a;
+        a = '%cw3ui: %c' + msg;
+        console.log(a, 'font-weight:bold;color:sandybrown', 'color:crimson');
+      }
+    },
+    config: function(node){
+      var a, e;
+      if ((a = node.innerHTML).length <= 7) {
+        return null;
+      }
+      a = a.slice(4, a.length - 3);
+      node.innerHTML = '';
+      try {
+        a = JSON.parse(a);
+      } catch (e$) {
+        e = e$;
+        a = null;
+      }
+      return a;
+    },
     template: function(f){
       var a, b;
       f = f.toString();
@@ -109,13 +102,104 @@ SM = function(){
       f = f.substring(a, b).trim().replace(/>\s+</g, '><');
       return f;
     },
+    getArrayObjectProps: function(a, prop, compact){
+      var c, x, i, b;
+      compact == null && (compact = false);
+      if (!a || !(c = a.length)) {
+        return null;
+      }
+      x = [];
+      i = -1;
+      while (++i < c) {
+        if ((b = a[i]) && b.hasOwnProperty(prop)) {
+          x[x.length] = b[prop];
+        } else if (!compact) {
+          x[x.length] = null;
+        }
+      }
+      return x;
+    },
+    parse: function(template, tags){
+      var a, i, j, k, b;
+      a = '';
+      i = 0;
+      while (~(j = template.indexOf('{{', i))) {
+        a += template.substring(i, j);
+        i = j;
+        j += 2;
+        if ((k = template.indexOf('}}', j)) === -1) {
+          break;
+        }
+        if (k - j > 16) {
+          a += '{{';
+          i += 2;
+          continue;
+        }
+        b = template.substring(j, k);
+        if (!tags.hasOwnProperty(b)) {
+          a += '{{';
+          i += 2;
+          continue;
+        }
+        a += tags[b];
+        i = k + 2;
+      }
+      return a + template.substring(i);
+    },
+    append: function(box, item){
+      var i$, len$, a;
+      if (!(box instanceof Element)) {
+        if (!(box = box.root)) {
+          return null;
+        }
+      }
+      if (item instanceof Array) {
+        for (i$ = 0, len$ = item.length; i$ < len$; ++i$) {
+          a = item[i$];
+          if (a instanceof Element) {
+            box.appendChild(a);
+          } else if (a.root) {
+            box.appendChild(a.root);
+          }
+        }
+      } else if (item instanceof Element) {
+        box.appendChild(item);
+      } else if (item.root) {
+        box.appendChild(item.root);
+      }
+      return item;
+    },
+    queryChildren: function(parentNode, selector){
+      var a, i$, ref$, len$, b;
+      a = [];
+      if (!parentNode || !parentNode.children.length) {
+        return a;
+      }
+      for (i$ = 0, len$ = (ref$ = parentNode.querySelectorAll(selector)).length; i$ < len$; ++i$) {
+        b = ref$[i$];
+        if (b.parentNode === parentNode) {
+          a[a.length] = b;
+        }
+      }
+      return a;
+    },
+    queryChild: function(parentNode, selector){
+      var a;
+      if (!parentNode) {
+        return null;
+      }
+      a = w3ui.queryChildren(parentNode, selector);
+      return a.length ? a[0] : null;
+    },
     event: {
       hover: function(B){
         return function(e){
           e.preventDefault();
-          if (!B.locked && !B.pending && !B.hovered) {
+          if (!B.locked && !B.hovered) {
             B.hovered = true;
-            B.root.classList.add('h');
+            if (B.root) {
+              B.root.classList.add('h');
+            }
             if (B.onHover) {
               B.onHover(true, B);
             }
@@ -127,7 +211,9 @@ SM = function(){
           e.preventDefault();
           if (B.hovered) {
             B.hovered = false;
-            B.root.classList.remove('h');
+            if (B.root) {
+              B.root.classList.remove('h');
+            }
             if (B.onHover) {
               B.onHover(false, B);
             }
@@ -157,6 +243,35 @@ SM = function(){
               B.onFocus(false, B);
             }
           }
+        };
+      },
+      hoverAccum: function(block){
+        var bounce;
+        bounce = newDelay();
+        return async function(v, o){
+          var w;
+          if (bounce.pending) {
+            bounce.cancel();
+          }
+          if (o && !(await (bounce = newDelay(64)))) {
+            return false;
+          }
+          if ((w = block.focused) === v) {
+            return false;
+          }
+          if (o && block.onFocus && !(await block.onFocus(v, o))) {
+            return false;
+          }
+          if (o && block.setFocus) {
+            block.setFocus(v);
+          } else {
+            block.focused = v;
+            if (w) {
+              block.root.classList.remove('f' + w);
+            }
+            block.root.classList.add('f' + v);
+          }
+          return true;
         };
       },
       slaveFocusInOut: function(block, node){
@@ -210,31 +325,27 @@ SM = function(){
           }
           return true;
         };
-      }
-    },
-    dom: {
-      append: function(box, item){
-        var i$, len$, a;
-        if (!(box instanceof Element)) {
-          if (!(box = box.root)) {
-            return null;
-          }
-        }
-        if (item instanceof Array) {
-          for (i$ = 0, len$ = item.length; i$ < len$; ++i$) {
-            a = item[i$];
-            if (a instanceof Element) {
-              box.appendChild(a);
-            } else if (a.root) {
-              box.appendChild(a.root);
+      },
+      resizeAccum: function(f, ms, max){
+        var bounce, count;
+        ms == null && (ms = 100);
+        max == null && (max = 3);
+        bounce = newDelay();
+        count = 0;
+        return async function(e){
+          if (e) {
+            if (bounce.pending) {
+              count = count + 1;
+              bounce.cancel(count === max);
             }
+            if (!(await (bounce = newDelay(ms)))) {
+              return false;
+            }
+            count = 0;
           }
-        } else if (item instanceof Element) {
-          box.appendChild(item);
-        } else if (item.root) {
-          box.appendChild(item.root);
-        }
-        return item;
+          f(e);
+          return true;
+        };
       }
     },
     button: function(){
@@ -242,6 +353,8 @@ SM = function(){
       Block = function(root, o){
         var a, e, this$ = this;
         this.root = root;
+        this.label = w3ui.queryChild(root, '.label');
+        this.cfg = o.cfg;
         this.hovered = false;
         this.focused = false;
         this.pending = null;
@@ -292,7 +405,8 @@ SM = function(){
           a.setAttribute('title', o.hint);
         }
         if (o.label) {
-          b = document.createElement('label');
+          b = document.createElement('div');
+          b.className = 'label';
           b.textContent = o.label;
           a.appendChild(b);
         } else if (o.html) {
@@ -302,38 +416,6 @@ SM = function(){
       };
     }()
   }, {
-    menu: function(){
-      var template, Item, Block;
-      template = w3ui.template(function(){
-        /*
-        <div class="item">
-        	<label></label><hr>
-        	<div class="dropdown"></div>
-        </button>
-        */
-      });
-      Item = function(block, node, parent){
-        this.block = block;
-        this.node = node;
-        this.parent = parent;
-      };
-      Item.prototype = {
-        init: function(){}
-      };
-      Block = function(root, o){
-        this.root = root;
-        this.cfg = o;
-      };
-      Block.prototype = {
-        init: function(){},
-        lock: function(locked){
-          true;
-        }
-      };
-      return function(root, o){
-        return true;
-      };
-    }(),
     checkbox: function(){
       var template, Block;
       template = w3ui.template(function(){
@@ -490,7 +572,7 @@ SM = function(){
       var template, Block;
       template = w3ui.template(function(){
         /*
-        <svg preserveAspectRatio="none" shape-rendering="geometricPrecision" viewBox="0 0 48 48">
+        <svg preserveAspectRatio="none" viewBox="0 0 48 48">
         	<polygon class="b" points="24,32 34,17 36,16 24,34 "/>
         	<polygon class="b" points="24,34 12,16 14,17 24,32 "/>
         	<polygon class="b" points="34,17 14,17 12,16 36,16 "/>
@@ -627,10 +709,10 @@ SM = function(){
         this.node = node;
         this.parent = parent;
         this.config = cfg = JSON.parse(node.dataset.cfg);
-        this.title = new Title(querySelectorChild(node, '.title'));
+        this.title = new Title(w3ui.queryChild(node, '.title'));
         this.extra = null;
-        this.section = sect = querySelectorChild(node, '.section');
-        this.children = c = querySelectorChildren(sect, '.item');
+        this.section = sect = w3ui.queryChild(node, '.section');
+        this.children = c = w3ui.queryChildren(sect, '.item');
         if (c) {
           for (i$ = 0, len$ = c.length; i$ < len$; ++i$) {
             b = i$;
@@ -937,7 +1019,7 @@ SM = function(){
         var box, sect, items, list, a, b;
         this.root = root;
         this.rootBox = box = root.firstChild;
-        this.lines = querySelectorChildren(box, 'svg');
+        this.lines = w3ui.queryChildren(box, 'svg');
         this.item = root = new Item(this, box, null);
         this.sect = sect = {};
         this.items = items = {};
@@ -1040,7 +1122,7 @@ SM = function(){
         	<div class="section a">
         		<div class="image">
         			<img alt="product">
-        			<svg preserveAspectRatio="none" fill-rule="evenodd" clip-rule="evenodd" shape-rendering="geometricPrecision" viewBox="0 0 270.92 270.92">
+        			<svg preserveAspectRatio="none" fill-rule="evenodd" clip-rule="evenodd" viewBox="0 0 270.92 270.92">
         				<path fill-rule="nonzero" d="M135.46 245.27c-28.39 0-54.21-10.93-73.72-28.67L216.6 61.74c17.74 19.51 28.67 45.33 28.67 73.72 0 60.55-49.26 109.81-109.81 109.81zm0-219.62c29.24 0 55.78 11.56 75.47 30.25L55.91 210.93c-18.7-19.7-30.25-46.23-30.25-75.47 0-60.55 49.26-109.81 109.8-109.81zm84.55 27.76c-.12-.16-.18-.35-.33-.5-.1-.09-.22-.12-.32-.2-21.4-21.7-51.09-35.19-83.9-35.19-65.03 0-117.94 52.91-117.94 117.94 0 32.81 13.5 62.52 35.2 83.91.08.09.11.22.2.31.14.14.33.2.49.32 21.24 20.63 50.17 33.4 82.05 33.4 65.03 0 117.94-52.91 117.94-117.94 0-31.88-12.77-60.8-33.39-82.05z"/>
         			</svg>
         		</div>
@@ -1169,8 +1251,8 @@ SM = function(){
             var box;
             this.block = block;
             this.box = box = block.rootBox.querySelector('.price');
-            this.currency = querySelectorChild(box, '.currency');
-            this.boxes = box = [querySelectorChild(box, '.value.a'), querySelectorChild(box, '.value.b')];
+            this.currency = w3ui.queryChild(box, '.currency');
+            this.boxes = box = [w3ui.queryChild(box, '.value.a'), w3ui.queryChild(box, '.value.b')];
             this.values = [box[0].children[0], box[0].children[1], box[1].children[0], box[1].children[1]];
             this.money = [0, 0];
           };
@@ -1218,8 +1300,8 @@ SM = function(){
           return Item;
         }(),
         actions: function(){
-          var TCartIcon, Item;
-          TCartIcon = w3ui.template(function(){
+          var tCartIcon, Item;
+          tCartIcon = w3ui.template(function(){
             /*
             <svg viewBox="0 0 48 48" preserveAspectRatio="none">
             	<circle class="a" cx="13" cy="40" r="4"/>
@@ -1236,10 +1318,10 @@ SM = function(){
             var box, btn;
             this.block = block;
             this.box = box = block.rootBox.querySelector('.actions');
-            this.buttons = btn = w3ui.dom.append(box, [
+            this.buttons = btn = w3ui.append(box, [
               w3ui.button({
                 name: 'add',
-                html: TCartIcon,
+                html: tCartIcon,
                 hint: cfg.locale.hint[0],
                 onClick: this.addToCart()
               }), w3ui.button({
@@ -1398,6 +1480,134 @@ SM = function(){
     }()
   };
   M = {
+    'rows-selector': function(){
+      var template, Block;
+      template = w3ui.template(function(){
+        /*
+        <select></select>
+        <svg preserveAspectRatio="none" viewBox="0 0 48 48">
+        	<polygon class="b" points="24,32 34,17 36,16 24,34 "/>
+        	<polygon class="b" points="24,34 12,16 14,17 24,32 "/>
+        	<polygon class="b" points="34,17 14,17 12,16 36,16 "/>
+        	<polygon class="a" points="14,17 34,17 24,32 "/>
+        </svg>
+        */
+      });
+      Block = function(root){
+        var box, this$ = this;
+        this.group = 'range';
+        this.root = root;
+        this.rootBox = box = root.firstChild;
+        this.config = JSON.parse(box.dataset.cfg);
+        box.innerHTML = template;
+        this.select = box.querySelector('select');
+        this.icon = box.querySelector('svg');
+        this.hovered = false;
+        this.focused = false;
+        this.active = false;
+        this.locked = -1;
+        this.hover = function(e){
+          e.preventDefault();
+          e.stopPropagation();
+          if (!this$.hovered && !this$.locked) {
+            this$.hovered = true;
+            this$.rootBox.classList.add('hovered');
+          }
+        };
+        this.unhover = function(e){
+          if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+          if (this$.hovered) {
+            this$.hovered = false;
+            this$.rootBox.classList.remove('hovered');
+          }
+        };
+        this.focus = function(e){
+          e.preventDefault();
+          e.stopPropagation();
+          if (!this$.focused && !this$.locked) {
+            this$.focused = true;
+            this$.rootBox.classList.add('focused');
+          }
+        };
+        this.unfocus = function(e){
+          if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+          if (this$.focused) {
+            this$.focused = false;
+            this$.rootBox.classList.remove('focused');
+          }
+        };
+        this.input = function(e){
+          e.preventDefault();
+          e.stopPropagation();
+          this$.submit();
+        };
+      };
+      Block.prototype = {
+        init: function(s, c){
+          var i$, ref$, len$, a;
+          c.rows = this.config.list[this.config.index];
+          c = this.group.config.locale;
+          for (i$ = 0, len$ = (ref$ = this.config.list).length; i$ < len$; ++i$) {
+            s = ref$[i$];
+            a = document.createElement('option');
+            a.text = s === -1
+              ? c.label[2]
+              : s
+                ? 'x' + s
+                : c.label[0];
+            this.select.add(a);
+          }
+          this.select.selectedIndex = this.config.index;
+          this.attach();
+          return true;
+        },
+        refresh: function(){
+          var a, b;
+          a = this.config.list[this.select.selectedIndex];
+          if (a !== (b = this.group.config.rows)) {
+            a = this.config.list.indexOf(b);
+            this.select.selectedIndex = a;
+            a = !!b && !this.locked;
+            this.rootBox.classList.toggle('active', a);
+          }
+          return true;
+        },
+        lock: function(){
+          this.select.disabled = true;
+        },
+        unlock: function(){
+          this.select.disabled = false;
+        },
+        submit: function(){
+          var a;
+          a = this.config.list[this.select.selectedIndex];
+          this.group.config.rows = a;
+          this.group.refresh(this);
+        },
+        attach: function(){
+          this.rootBox.addEventListener('pointerenter', this.hover);
+          this.rootBox.addEventListener('pointerleave', this.unhover);
+          this.select.addEventListener('focusin', this.focus);
+          this.select.addEventListener('focusout', this.unfocus);
+          this.select.addEventListener('input', this.input);
+        },
+        detach: function(){
+          this.rootBox.removeEventListener('pointerenter', this.hover);
+          this.rootBox.removeEventListener('pointerleave', this.unhover);
+          this.select.removeEventListener('focusin', this.focus);
+          this.select.removeEventListener('focusout', this.unfocus);
+          this.select.removeEventListener('input', this.input);
+        },
+        level: 0
+      };
+      return Block;
+    }(),
     'products': function(){
       var Resizer, refresher, Block;
       Resizer = function(block){
@@ -1718,7 +1928,7 @@ SM = function(){
         this.root = root;
         this.rootBox = box = root.firstChild;
         this.config = cfg = JSON.parse(box.dataset.cfg);
-        this.dot = querySelectorChild(root, 'hr');
+        this.dot = w3ui.queryChild(root, 'hr');
         this.items = [];
         this.resizer = new Resizer(this);
         this.range = [0, 0, 0, 0, 0];
@@ -1732,7 +1942,6 @@ SM = function(){
         this.locked = -1;
       };
       Block.prototype = {
-        level: 1,
         init: function(s, c){
           var a, o, b;
           if (a = this.config.options) {
@@ -2030,7 +2239,8 @@ SM = function(){
             }
           }
           return true;
-        }
+        },
+        level: 1
       };
       return Block;
     }(),
@@ -2499,11 +2709,11 @@ SM = function(){
       };
       PageGoto = function(block){
         var a, b, c;
-        this.boxFL = a = querySelectorChildren(block.rootBox, '.goto.FL');
-        this.boxPN = b = querySelectorChildren(block.rootBox, '.goto.PN');
-        this.btnFL = queryFirstChildren(a);
-        this.btnPN = queryFirstChildren(b);
-        this.sepFL = querySelectorChildren(block.rootBox, '.sep');
+        this.boxFL = a = w3ui.queryChildren(block.rootBox, '.goto.FL');
+        this.boxPN = b = w3ui.queryChildren(block.rootBox, '.goto.PN');
+        this.btnFL = w3ui.getArrayObjectProps(a, 'firstChild');
+        this.btnPN = w3ui.getArrayObjectProps(b, 'firstChild');
+        this.sepFL = w3ui.queryChildren(block.rootBox, '.sep');
         if (a.length && b.length) {
           c = -1;
           while (++c < a.length) {
@@ -2515,10 +2725,10 @@ SM = function(){
       PageRange = function(block){
         var box, pages, gaps, i;
         this.block = block;
-        this.box = box = querySelectorChild(block.rootBox, '.range');
+        this.box = box = w3ui.queryChild(block.rootBox, '.range');
         this.cs = getComputedStyle(box);
-        this.pages = pages = querySelectorChildren(box, '.page');
-        this.gaps = gaps = querySelectorChildren(box, '.gap');
+        this.pages = pages = w3ui.queryChildren(box, '.page');
+        this.gaps = gaps = w3ui.queryChildren(box, '.gap');
         this.index = i = 1 + block.config.index;
         this.size = pages.length - 2;
         this.mode = 0;
@@ -2700,7 +2910,6 @@ SM = function(){
         this.locked = -1;
       };
       Block.prototype = {
-        level: 1,
         init: function(){
           var a;
           a = this.rootBox.classList;
@@ -2760,135 +2969,8 @@ SM = function(){
           if (!this.locked && (a = this.range) && ~a.current && (a = a.pages[a.current].firstChild) !== document.activeElement) {
             a.focus();
           }
-        }
-      };
-      return Block;
-    }(),
-    'rows-selector': function(){
-      var template, Block;
-      template = w3ui.template(function(){
-        /*
-        <select></select>
-        <svg preserveAspectRatio="none" shape-rendering="geometricPrecision" viewBox="0 0 48 48">
-        	<polygon class="b" points="24,32 34,17 36,16 24,34 "/>
-        	<polygon class="b" points="24,34 12,16 14,17 24,32 "/>
-        	<polygon class="b" points="34,17 14,17 12,16 36,16 "/>
-        	<polygon class="a" points="14,17 34,17 24,32 "/>
-        </svg>
-        */
-      });
-      Block = function(root){
-        var box, this$ = this;
-        this.group = 'range';
-        this.root = root;
-        this.rootBox = box = root.firstChild;
-        this.config = JSON.parse(box.dataset.cfg);
-        box.innerHTML = template;
-        this.select = box.querySelector('select');
-        this.icon = box.querySelector('svg');
-        this.hovered = false;
-        this.focused = false;
-        this.active = false;
-        this.locked = -1;
-        this.hover = function(e){
-          e.preventDefault();
-          e.stopPropagation();
-          if (!this$.hovered && !this$.locked) {
-            this$.hovered = true;
-            this$.rootBox.classList.add('hovered');
-          }
-        };
-        this.unhover = function(e){
-          if (e) {
-            e.preventDefault();
-            e.stopPropagation();
-          }
-          if (this$.hovered) {
-            this$.hovered = false;
-            this$.rootBox.classList.remove('hovered');
-          }
-        };
-        this.focus = function(e){
-          e.preventDefault();
-          e.stopPropagation();
-          if (!this$.focused && !this$.locked) {
-            this$.focused = true;
-            this$.rootBox.classList.add('focused');
-          }
-        };
-        this.unfocus = function(e){
-          if (e) {
-            e.preventDefault();
-            e.stopPropagation();
-          }
-          if (this$.focused) {
-            this$.focused = false;
-            this$.rootBox.classList.remove('focused');
-          }
-        };
-        this.input = function(e){
-          e.preventDefault();
-          e.stopPropagation();
-          this$.submit();
-        };
-      };
-      Block.prototype = {
-        level: 0,
-        init: function(s, c){
-          var i$, ref$, len$, a;
-          c.rows = this.config.list[this.config.index];
-          c = this.group.config.locale;
-          for (i$ = 0, len$ = (ref$ = this.config.list).length; i$ < len$; ++i$) {
-            s = ref$[i$];
-            a = document.createElement('option');
-            a.text = s === -1
-              ? c.label[2]
-              : s
-                ? 'x' + s
-                : c.label[0];
-            this.select.add(a);
-          }
-          this.select.selectedIndex = this.config.index;
-          this.attach();
-          return true;
         },
-        refresh: function(){
-          var a, b;
-          a = this.config.list[this.select.selectedIndex];
-          if (a !== (b = this.group.config.rows)) {
-            a = this.config.list.indexOf(b);
-            this.select.selectedIndex = a;
-            a = !!b && !this.locked;
-            this.rootBox.classList.toggle('active', a);
-          }
-          return true;
-        },
-        lock: function(){
-          this.select.disabled = true;
-        },
-        unlock: function(){
-          this.select.disabled = false;
-        },
-        submit: function(){
-          var a;
-          a = this.config.list[this.select.selectedIndex];
-          this.group.config.rows = a;
-          this.group.refresh(this);
-        },
-        attach: function(){
-          this.rootBox.addEventListener('pointerenter', this.hover);
-          this.rootBox.addEventListener('pointerleave', this.unhover);
-          this.select.addEventListener('focusin', this.focus);
-          this.select.addEventListener('focusout', this.unfocus);
-          this.select.addEventListener('input', this.input);
-        },
-        detach: function(){
-          this.rootBox.removeEventListener('pointerenter', this.hover);
-          this.rootBox.removeEventListener('pointerleave', this.unhover);
-          this.select.removeEventListener('focusin', this.focus);
-          this.select.removeEventListener('focusout', this.unfocus);
-          this.select.removeEventListener('input', this.input);
-        }
+        level: 1
       };
       return Block;
     }(),
@@ -2896,7 +2978,7 @@ SM = function(){
       var template, Control, Block;
       template = w3ui.template(function(){
         /*
-        <svg preserveAspectRatio="none" shape-rendering="geometricPrecision" viewBox="0 0 48 48">
+        <svg preserveAspectRatio="none" viewBox="0 0 48 48">
         	<g class="a1">
         		<polygon class="a" points="12,12 24,0 36,12 33,15 27,9 27,45 21,45 21,9 15,15 "/>
         		<polygon class="b" points="13,12 24,1 35,12 33,14 26,7 26,44 22,44 22,7 15,14 "/>
@@ -3014,7 +3096,6 @@ SM = function(){
         };
       };
       Block.prototype = {
-        level: 1,
         init: async function(s, c){
           var o, k, a, b, i;
           if (this.config.order) {
@@ -3073,7 +3154,8 @@ SM = function(){
             b[1] = this.variant.set(a[1]);
           }
           return true;
-        }
+        },
+        level: 1
       };
       return Block;
     }(),
@@ -3263,7 +3345,7 @@ SM = function(){
         this.box = box;
         this.num = [new NumInput(box.children[0]), new NumInput(box.children[2])];
         this.svg = box.children[1];
-        this.rst = querySelectorChild(this.svg, '.X');
+        this.rst = w3ui.queryChild(this.svg, '.X');
         this.current = null;
         this.range = null;
         this.hovered = false;
@@ -3562,7 +3644,6 @@ SM = function(){
         };
       };
       Block.prototype = {
-        level: 2,
         init: async function(s, c){
           var a, b;
           s.price = this.current.slice();
@@ -3607,7 +3688,8 @@ SM = function(){
         unlock: function(level){
           this.section.lock(false);
           this.range.lock(false);
-        }
+        },
+        level: 2
       };
       return Block;
     }(),
@@ -3753,7 +3835,6 @@ SM = function(){
         };
       };
       Block.prototype = {
-        level: 2,
         init: async function(s, c){
           var i$, ref$, len$, a, b;
           s.category[this.index] = [];
@@ -3822,37 +3903,310 @@ SM = function(){
             this.group.update();
           }
           return true;
-        }
+        },
+        level: 2
       };
       return Block;
     }(),
     'menu': function(){
-      var Block;
+      var tItem, tArrow, tLineA, tLineB, fOrder, fAssembly, Resizer, Item, Block;
+      tItem = w3ui.template(function(){
+        /*
+        {{lineA}}
+        <div class="label">{{name}}</div>{{arrow}}
+        {{lineB}}
+        */
+      });
+      tArrow = w3ui.template(function(){
+        /*
+        <svg class="arrow" preserveAspectRatio="none" viewBox="0 0 48 48">
+        	<polygon class="b" points="24,32 34,17 36,16 24,34 "/>
+        	<polygon class="b" points="24,34 12,16 14,17 24,32 "/>
+        	<polygon class="b" points="34,17 14,17 12,16 36,16 "/>
+        	<polygon class="a" points="14,17 34,17 24,32 "/>
+        </svg>
+        */
+      });
+      tLineA = w3ui.template(function(){
+        /*
+        <div class="line a">
+        	<svg class="a" preserveAspectRatio="none" viewBox="0 0 48 48">
+        		<polygon class="a" points="0,40 48,28 48,36 0,48 "/>
+        		<polygon class="b" points="0,0 48,0 48,28 0,40 "/>
+        	</svg>
+        	<svg class="b" preserveAspectRatio="none" viewBox="0 0 48 48">
+        		<polygon class="a" points="0,28 48,28 48,36 0,36 "/>
+        		<polygon class="b" points="0,0 48,0 48,28 0,28 "/>
+        	</svg>
+        	<svg class="a" preserveAspectRatio="none" viewBox="0 0 48 48">
+        		<polygon class="a" points="0,28 48,40 48,48 0,36 "/>
+        		<polygon class="b" points="0,0 48,0 48,40 0,28 "/>
+        	</svg>
+        </div>
+        */
+      });
+      tLineB = w3ui.template(function(){
+        /*
+        <div class="line b">
+        	<svg class="a" preserveAspectRatio="none" viewBox="0 0 48 48">
+        		<polygon class="a" points="0,0 48,12 48,20 0,8 "/>
+        		<polygon class="b" points="0,8 48,20 48,48 0,48 "/>
+        	</svg>
+        	<svg class="b" preserveAspectRatio="none" viewBox="0 0 48 48">
+        		<polygon class="a" points="0,12 48,12 48,20 0,20 "/>
+        		<polygon class="b" points="0,20 48,20 48,48 0,48 "/>
+        	</svg>
+        	<svg class="a" preserveAspectRatio="none" viewBox="0 0 48 48">
+        		<polygon class="a" points="0,12 48,0 48,8 0,20 "/>
+        		<polygon class="b" points="0,20 48,8 48,48 0,48 "/>
+        	</svg>
+        </div>
+        */
+      });
+      fOrder = function(a, b){
+        return a.data.order < b.data.order
+          ? -1
+          : a.data.order === b.data.order ? 0 : 1;
+      };
+      fAssembly = function(block, heap, parent){
+        var a, b, c, d;
+        a = [];
+        b = (parent && parent.data.id) || '0';
+        for (c in heap) {
+          d = heap[c];
+          if (c && d.parent === b) {
+            a[a.length] = c = new Item(block, d, parent);
+            c.children = fAssembly(block, heap, c);
+          }
+        }
+        if (!a.length) {
+          return null;
+        }
+        a.sort(fOrder);
+        return a;
+      };
+      Resizer = function(block){
+        this.block = block;
+        this.obs = null;
+      };
+      Resizer.prototype = {
+        init: function(){
+          this.obs = new ResizeObserver(this.update);
+          this.obs.observer(this.block.root);
+        }
+      };
+      Item = function(block, data, parent){
+        var this$ = this;
+        this.block = block;
+        this.data = data;
+        this.parent = parent;
+        this.children = null;
+        this.level = 0;
+        this.button = null;
+        this.dropdown = null;
+        this.hovered = false;
+        this.locked = false;
+        this.onHover = function(flag, drop){
+          this$.block.onHover(flag, this$.button);
+        };
+      };
+      Item.prototype = {
+        init: function(level){
+          var a, b, i$, ref$, len$;
+          level == null && (level = 0);
+          this.level = level;
+          a = w3ui.parse(tItem, {
+            lineA: (!this.parent && tLineA) || '',
+            name: this.data.name,
+            arrow: (this.children && tArrow) || '',
+            lineB: (!this.parent && tLineB) || ''
+          });
+          this.button = b = w3ui.button({
+            html: a,
+            name: (this.children && 'drop') || '',
+            cfg: this,
+            onHover: this.block.onHover,
+            onClick: this.block.onClick
+          });
+          if (this.children) {
+            this.dropdown = a = document.createElement('div');
+            a.className = 'dropdown l' + level;
+            a.addEventListener('pointerenter', w3ui.event.hover(this));
+            a.addEventListener('pointerleave', w3ui.event.unhover(this));
+            for (i$ = 0, len$ = (ref$ = this.children).length; i$ < len$; ++i$) {
+              a = ref$[i$];
+              a.init(level + 1);
+            }
+          }
+          a = this.parent
+            ? this.parent.dropdown
+            : this.block.rootBox;
+          a.appendChild(b.root);
+          if (b = this.dropdown) {
+            a.appendChild(b);
+          }
+        },
+        lock: function(v){
+          var a, i$, len$, b;
+          this.button.lock(v);
+          if (a = this.children) {
+            for (i$ = 0, len$ = a.length; i$ < len$; ++i$) {
+              b = a[i$];
+              b.lock(v);
+            }
+          }
+        }
+      };
       Block = function(root){
-        var box;
+        var this$ = this;
         this.group = 'route';
         this.root = root;
-        this.rootBox = box = root.firstChild;
-        this.cfg = null;
+        this.rootBox = root.firstChild;
+        this.cfg = w3ui.config(root.firstChild);
+        this.items = null;
+        this.levels = null;
+        this.resizer = null;
+        this.pads = null;
+        this.opened = [];
+        this.shutdown = newDelay();
         this.hovered = false;
         this.focused = false;
         this.locked = -1;
+        this.onHover = async function(flag, btn){
+          var o, item, drop, a, b, x, y, w;
+          if (this$.shutdown.pending) {
+            this$.shutdown.cancel();
+          }
+          o = this$.opened;
+          item = btn.cfg;
+          drop = item.dropdown;
+          if (item.parent) {
+            if (flag) {
+              if (item.level < o.length) {
+                if (drop === o[item.level].dropdown) {
+                  return true;
+                }
+                a = o.length;
+                while (--a >= item.level) {
+                  o[a].dropdown.classList.remove('o');
+                  o[a].button.root.classList.remove('o');
+                }
+                o.length = a + 1;
+              }
+              if (drop) {
+                a = item.parent.dropdown.getBoundingClientRect();
+                b = btn.root.getBoundingClientRect();
+                x = a.width + 1;
+                y = b.y - a.y - this$.pads[item.level];
+                console.log(item.level);
+                w = a.width;
+                drop.style.left = x + 'px';
+                drop.style.top = y + 'px';
+                drop.style.minWidth = w + 'px';
+                drop.classList.add('o');
+                btn.root.classList.add('o');
+                o[o.length] = item;
+              }
+            } else {
+              true;
+            }
+          } else if (flag) {
+            if (o.length) {
+              if (drop === o[0].dropdown) {
+                return true;
+              }
+              a = o.length;
+              while (~--a) {
+                o[a].dropdown.classList.remove('o');
+                o[a].button.root.classList.remove('o');
+              }
+              o.length = 0;
+            }
+            if (drop) {
+              a = btn.root.getBoundingClientRect();
+              b = this$.rootBox.getBoundingClientRect();
+              drop.style.minWidth = a.width + 'px';
+              drop.style.left = (a.x - b.x) + 'px';
+              drop.style.top = (a.y - b.y + a.height + 1) + 'px';
+              drop.classList.add('o');
+              btn.root.classList.add('o');
+              o[o.length] = item;
+            }
+          } else if (drop && o.length === 1 && o[0] === item) {
+            if ((await (this$.shutdown = newDelay(this$.cfg.delay[0])))) {
+              drop.classList.remove('o');
+              btn.root.classList.remove('o');
+              o.length = 0;
+            }
+          }
+          return true;
+        };
+        this.onClick = function(btn){
+          console.log('click');
+        };
+        this.resize = w3ui.event.resizeAccum(function(e){
+          var a, b, i$, ref$, len$, c, d;
+          this$.pads = [];
+          a = -1;
+          b = this$.levels.length - 1;
+          while (++a < b) {
+            for (i$ = 0, len$ = (ref$ = this$.levels[a]).length; i$ < len$; ++i$) {
+              c = ref$[i$];
+              if (c.dropdown) {
+                d = getComputedStyle(c.dropdown);
+                this$.pads[a] = parseFloat(d.getPropertyValue('padding-top'));
+                break;
+              }
+            }
+          }
+          return true;
+        });
       };
       Block.prototype = {
-        level: 3,
         init: async function(s, c){
-          debugger;
+          var i$, ref$, len$, a, b, d;
+          s.route = [c.routes[''], -1];
+          if (this.items = fAssembly(this, c.routes, null)) {
+            for (i$ = 0, len$ = (ref$ = this.items).length; i$ < len$; ++i$) {
+              a = ref$[i$];
+              a.init();
+            }
+          }
+          this.levels = [];
+          a = this.items;
+          b = -1;
+          while (a.length) {
+            this.levels[++b] = a;
+            c = [];
+            for (i$ = 0, len$ = a.length; i$ < len$; ++i$) {
+              d = a[i$];
+              if (d.children) {
+                c.push.apply(c, d.children);
+              }
+            }
+            a = c;
+          }
+          this.resizer = new ResizeObserver(this.resize);
+          this.resizer.observe(this.root);
           return true;
-        },
-        lock: function(level){
-          true;
-        },
-        unlock: function(level){
-          true;
         },
         refresh: function(){
           return true;
-        }
+        },
+        lock: function(){
+          this.rootBox.classList.remove('v');
+        },
+        unlock: function(){
+          var a, i$, len$, b;
+          if (a = this.items) {
+            for (i$ = 0, len$ = a.length; i$ < len$; ++i$) {
+              b = a[i$];
+              b.lock(false);
+            }
+          }
+          this.rootBox.classList.add('v');
+        },
+        level: 3
       };
       return Block;
     }()
@@ -3872,7 +4226,7 @@ SM = function(){
     };
     State = function(){
       this.lang = '';
-      this.route = 0;
+      this.route = null;
       this.range = null;
       this.order = null;
       this.category = [];
@@ -3886,51 +4240,53 @@ SM = function(){
       this.fetch = null;
     };
     Loader.prototype = {
-      init: async function(){
-        var T, S, i$, ref$, len$, a, c, b;
-        T = window.performance.now();
-        S = this['super'];
-        for (i$ = 0, len$ = (ref$ = S.blocks).length; i$ < len$; ++i$) {
-          a = ref$[i$];
-          if (a.configure) {
-            a.configure(S.state);
+      init: async function(c){
+        var t, s, a, i$, ref$, b, len$;
+        t = window.performance.now();
+        s = this['super'];
+        if (!c) {
+          if ((c = (await goFetch(s.state))) instanceof Error) {
+            consoleError(c.message);
+            return false;
           }
         }
-        if ((c = (await goFetch(S.state))) instanceof Error) {
-          consoleError(c.message);
-          return false;
-        }
         for (a in c) {
-          if (S.config.hasOwnProperty(a)) {
-            S.config[a] = c[a];
+          if (s.config.hasOwnProperty(a)) {
+            s.config[a] = c[a];
           }
         }
         a = [];
-        for (i$ = 0, len$ = (ref$ = b = Object.getOwnPropertyNames(S.groups)).length; i$ < len$; ++i$) {
+        for (i$ = 0, len$ = (ref$ = b = Object.getOwnPropertyNames(s.groups)).length; i$ < len$; ++i$) {
           c = ref$[i$];
-          a[a.length] = S.groups[c].init();
+          a[a.length] = s.groups[c].init();
         }
         for (i$ = 0, len$ = (ref$ = (await Promise.all(a))).length; i$ < len$; ++i$) {
           c = i$;
           a = ref$[i$];
           if (!a) {
-            consoleError('failed to initialize ' + S.groups[c].name);
+            consoleError('failed to initialize ' + s.groups[c].name);
             return false;
           }
         }
         for (i$ = 0, len$ = b.length; i$ < len$; ++i$) {
           a = b[i$];
-          (await S.groups[a].refresh());
+          (await s.groups[a].refresh());
         }
-        for (i$ = 0, len$ = (ref$ = S.blocks).length; i$ < len$; ++i$) {
+        this.level = c = s.groups.range ? -1 : 0;
+        for (i$ = 0, len$ = (ref$ = s.blocks).length; i$ < len$; ++i$) {
           a = ref$[i$];
           if (a.locked === -1) {
             a.root.classList.add('v');
-            a.locked = 1;
+            if (c) {
+              a.locked = 1;
+            } else {
+              a.locked = 0;
+              a.unlock(0);
+            }
           }
         }
-        T = window.performance.now() - T | 0;
-        consoleInfo('initialized in ' + T + 'ms');
+        t = window.performance.now() - t | 0;
+        consoleInfo('initialized in ' + t + 'ms');
         return true;
       },
       finit: function(){
@@ -4171,8 +4527,9 @@ SM = function(){
       consoleInfo('new ' + s + 'supervisor');
     };
     SuperVisor.prototype = {
-      attach: async function(root){
+      attach: async function(root, cfg){
         var B, G, b, ref$, a, i$, ref1$, len$, c;
+        cfg == null && (cfg = null);
         if (!root) {
           return false;
         } else if (this.state) {
@@ -4224,7 +4581,7 @@ SM = function(){
           }
         }
         this.resizer = newResizer('.' + BRAND + '-resizer', B);
-        if (!(await this.loader.init())) {
+        if (!(await this.loader.init(cfg))) {
           (await this.detach());
           consoleError('attachment failed');
           return false;

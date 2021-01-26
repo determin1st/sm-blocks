@@ -17,7 +17,7 @@ class StorefrontModernBlocks {
     $I = null;
   private
     $BRAND     = 'sm-blocks',
-    $active    = false,
+    $ERROR     = '',
     $dir       = __DIR__.DIRECTORY_SEPARATOR.'inc'.DIRECTORY_SEPARATOR,
     $db        = null,
     $prefix    = null,
@@ -217,12 +217,12 @@ class StorefrontModernBlocks {
         </svg>
         ',
         'noImage' => '
-        <svg preserveAspectRatio="none" fill-rule="evenodd" clip-rule="evenodd" shape-rendering="geometricPrecision" viewBox="0 0 270.92 270.92">
+        <svg preserveAspectRatio="none" fill-rule="evenodd" clip-rule="evenodd" viewBox="0 0 270.92 270.92">
           <path fill-rule="nonzero" d="M135.46 245.27c-28.39 0-54.21-10.93-73.72-28.67L216.6 61.74c17.74 19.51 28.67 45.33 28.67 73.72 0 60.55-49.26 109.81-109.81 109.81zm0-219.62c29.24 0 55.78 11.56 75.47 30.25L55.91 210.93c-18.7-19.7-30.25-46.23-30.25-75.47 0-60.55 49.26-109.81 109.8-109.81zm84.55 27.76c-.12-.16-.18-.35-.33-.5-.1-.09-.22-.12-.32-.2-21.4-21.7-51.09-35.19-83.9-35.19-65.03 0-117.94 52.91-117.94 117.94 0 32.81 13.5 62.52 35.2 83.91.08.09.11.22.2.31.14.14.33.2.49.32 21.24 20.63 50.17 33.4 82.05 33.4 65.03 0 117.94-52.91 117.94-117.94 0-31.88-12.77-60.8-33.39-82.05z"/>
         </svg>
         ',
         'noControls' => '
-        <svg preserveAspectRatio="none" fill-rule="evenodd" clip-rule="evenodd" shape-rendering="geometricPrecision" viewBox="0 0 13547 13547">
+        <svg preserveAspectRatio="none" fill-rule="evenodd" clip-rule="evenodd" viewBox="0 0 13547 13547">
           <path fill="none" d="M0 0h13547v13547H0z"/>
           <path d="M714 12832h12118V715H714v12117zm2566-5212h6985V5927H3280v1693z"/>
         </svg>
@@ -359,7 +359,7 @@ class StorefrontModernBlocks {
         </div>
         ',
         'delimiter' => '
-        <svg preserveAspectRatio="none" shape-rendering="geometricPrecision" viewBox="0 0 48 48">
+        <svg preserveAspectRatio="none" viewBox="0 0 48 48">
           <polygon points="0,48 4,48 12,43 18,41 22,40 26,40 30,41 36,43 44,48 48,48 48,0 44,0 36,5 30,7 26,8 22,8 18,7 12,5 4,0 0,0 "/>
           <polygon class="L" points="13,28 16,31 19,32 23,32 23,31 19,30 17,28 16,24 17,20 19,18 23,17 23,16 19,16 16,17 13,20 12,22 12,26 "/>
           <polygon class="X" points="18,28 20,30 24,31 28,30 30,28 31,24 30,20 28,18 24,17 20,18 18,20 17,24 "/>
@@ -394,7 +394,7 @@ class StorefrontModernBlocks {
         <div class="section">{{items}}</div>
         ',
         'arrowIcon' => '
-        <svg preserveAspectRatio="none" shape-rendering="geometricPrecision" viewBox="0 0 48 48">
+        <svg preserveAspectRatio="none" viewBox="0 0 48 48">
           <polygon class="a" points="24,44 1,4 47,4 "/>
           <polygon class="b" points="24,40 5,6 43,6 "/>
         </svg>
@@ -452,41 +452,42 @@ class StorefrontModernBlocks {
     $a = plugins_url().'/'.$I->BRAND.'/';
     $b = file_exists($I->dir.'httpFetch')
       ? $a.'inc/httpFetch/httpFetch.js'
-      : 'https://cdn.jsdelivr.net/npm/http-fetch-json@2/httpFetch.js',
+      : 'https://cdn.jsdelivr.net/npm/http-fetch-json@2/httpFetch.js';
     wp_register_script('http-fetch', $b, [], false, false);
     ###
     $b = $a.$I->BRAND.'.';
-    wp_register_script($I->BRAND, $b.'js', ['http-fetch'], false, true);
+    wp_register_script($I->BRAND, $b.'js', ['http-fetch'], false, false);
     wp_register_style($I->BRAND, $b.'css');
   }
   # }}}
   # api {{{
   public static function init()
   {
-    # {{{
-    if (!($I = self::$I))
-    {
-      # first call, create instance
+    # create instance {{{
+    if (!self::$I) {
       self::$I = new StorefrontModernBlocks();
-    }
-    else if (!$I->active)
-    {
-      # second call, activate
-      add_action('enqueue_block_assets', function() use ($I)
-      {
-        wp_enqueue_script($I->BRAND);
-        wp_enqueue_style($I->BRAND);
-      });
-      $I->active = true;
     }
     # }}}
   }
-  public static function render($name, $cfg)
+  public static function config($menu)
   {
-    # CSR {{{
+    # get initial configuration {{{
+    $I = self::$I;
+    return $I->apiConfig([
+      'lang'     => $I->lang,
+      'route'    => [$I->db_Menu($menu), -1],
+      'category' => null,
+    ]);
+    # }}}
+  }
+  public static function render($name, $cfg = null)
+  {
+    # create CSR block {{{
     $I    = self::$I;
     $name = $I->BRAND.' '.$name;
-    $cfg  = json_encode($cfg, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+    $cfg  = is_array($cfg)
+      ? json_encode($cfg, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)
+      : '';
     ###
     return $I->parseTemplate($I->template, [
       'cls' => $name,
@@ -497,12 +498,13 @@ class StorefrontModernBlocks {
   }
   public static function parse($html)
   {
-    # TODO: own parser {{{
-    return (self::$I->active) ? apply_filters('the_content', $html) : '';
+    # create SSR block  {{{
+    # TODO: drop gutenberg parser
+    return apply_filters('the_content', $html);
     # }}}
   }
   # }}}
-  # rendering
+  # renderers
   # CSR base {{{
   public function renderBase($attr, $content, $block)
   {
@@ -757,23 +759,23 @@ class StorefrontModernBlocks {
     $a = [
       'lang','route','range','order','category','price',
     ];
-    foreach ($a as $b) {
+    foreach ($a as $b)
+    {
       if (!array_key_exists($b, $p)) {
         $this->apiFail(400, 'missing "'.$b.'" parameter');
       }
     }
     # check language
-    $a = $p['lang'];
-    if (!is_string($a) || strlen($a) > 2) {
+    if (!($a = $p['lang'])) {
+      $p['lang'] = $this->lang;
+    }
+    else if (!is_string($a) || strlen($a) > 2) {
       $this->apiFail(400, 'incorrect language');
     }
-    else if (!$a) {
-      $p['lang'] = $this->lang;
-      #$p['lang'] = 'en';
-    }
     # check route
-    $a = $p['route'];
-    if (!is_int($a) || $a < -1) {
+    if (!($a = $p['route']) || !is_array($a) || count($a) != 2 ||
+        !is_int($a[0]) || !is_int($a[1]))
+    {
       $this->apiFail(400, 'incorrect route');
     }
     # check records range
@@ -828,7 +830,7 @@ class StorefrontModernBlocks {
       $p['price'] = null;
     }
     # }}}
-    # stream data {{{
+    # data {{{
     if ($R)
     {
       # close session
@@ -963,34 +965,10 @@ class StorefrontModernBlocks {
       exit;
     }
     # }}}
-    # send configuration {{{
-    # query products (light)
-    $q = [
-      'category' => $p['category'],
-      'price'    => null,
-      'order'    => null,
-    ];
-    if (($q = $this->db_Products($q)) === null) {
-      $this->apiFail(500, 'failed to get products');
+    # configuration {{{
+    if (($q = $this->apiConfig($p)) === null) {
+      $this->apiFail(500, $this->ERROR);
     }
-    # get locale and language
-    $locale = (include $this->dir.'lang.inc');
-    $lang   = array_key_exists($p['lang'], $locale)
-      ? $p['lang']
-      : 'en';
-    # encode
-    $q = json_encode([
-      'lang'     => $lang,
-      'locale'   => $locale[$lang],
-      'currency' => $this->db_Currency(),
-      'cart'     => $this->db_Cart(),
-      'price'    => $this->db_PriceRange($q),
-      'total'    => count($q),
-    ], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
-    if ($q === null) {
-      $this->apiFail(500, json_last_error_msg());
-    }
-    # send
     header('content-type: application/json');
     echo $q;
     exit;
@@ -998,6 +976,42 @@ class StorefrontModernBlocks {
   }
   # }}}
   # helpers {{{
+  private function apiConfig($p) # {{{
+  {
+    # get products metadata
+    $q = [
+      'category' => $p['category'],
+      'price'    => null,
+      'order'    => null,
+    ];
+    if (($q = $this->db_Products($q)) === null)
+    {
+      $this->ERROR = 'failed to get products';
+      return null;
+    }
+    # get locale and language
+    $locale = (include $this->dir.'lang.inc');
+    $lang = array_key_exists($p['lang'], $locale)
+      ? $p['lang']
+      : 'en';
+    # encode
+    $q = json_encode([
+      'lang'     => $lang,
+      'locale'   => $locale[$lang],
+      'routes'   => $this->db_Routes($p['route'][0]),
+      'currency' => $this->db_Currency(),
+      'cart'     => $this->db_Cart(),
+      'price'    => $this->db_PriceRange($q),
+      'total'    => count($q),
+    ], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+    # check
+    if ($q === null) {
+      $this->ERROR = json_last_error_msg();
+    }
+    # done
+    return $q;
+  }
+  # }}}
   private function apiFail($code, $msg) # {{{
   {
     http_response_code($code);
@@ -1034,6 +1048,54 @@ class StorefrontModernBlocks {
   # }}}
   # model
   # database {{{
+  private function db_Menu($name) # {{{
+  {
+    # get menu identifier by name or by location name
+    if ((($m = wp_get_nav_menu_object($name)) &&
+         !is_wp_error($m)) ||
+        (($a = get_nav_menu_locations()) &&
+         is_array($a) && array_key_exists($name, $a) &&
+         ($m = wp_get_nav_menu_object($a[$name])) &&
+         !is_wp_error($m)))
+    {
+      $id = $m->term_id;
+    }
+    else
+    {
+      $id = -1;
+    }
+    return $id;
+  }
+  # }}}
+  private function db_Routes($id) # {{{
+  {
+    # prepare
+    $x = ['' => $id];# root item (menu identifier)
+    # check
+    if ($id < 0) {
+      return $x;
+    }
+    # get menu items
+    $a = ['update_post_term_cache' => false];
+    if (!($b = wp_get_nav_menu_items($id, $a))) {
+      return $x;
+    }
+    # refine data
+    foreach ($b as $a)
+    {
+      $x[$a->ID] = [
+        'id'       => $a->object_id,
+        'type'     => $a->object,
+        'parent'   => $a->menu_item_parent,
+        'order'    => $a->menu_order,
+        'name'     => $a->title,
+        'url'      => $a->url,
+      ];
+    }
+    # done
+    return $x;
+  }
+  # }}}
   private function db_Products($o) # {{{
   {
     # prepare
@@ -1494,51 +1556,6 @@ EOD;
     }
     # done
     return $this->cache['categoryTree'][$k];
-  }
-  # }}}
-  private function db_Menu($id) # {{{
-  {
-    # get menu items
-    $a = ['update_post_term_cache' => false];
-    $m = wp_get_nav_menu_items($id, $a);
-    # assemble navigation tree
-    # create parent => children lists
-    $a = [0 => []];
-    foreach ((array)$m as $b)
-    {
-      $c = $b->menu_item_parent;
-      if (!array_key_exists($c, $a)) {
-        $a[$c] = [];
-      }
-      $a[$c][$b->menu_order] = [
-        'id'       => $b->object_id,
-        'type'     => $b->object,
-        'name'     => $b->title,
-        'url'      => $b->url,
-        'children' => $b->ID,
-      ];
-    }
-    # set children
-    foreach ($a as &$b)
-    {
-      foreach ($b as &$c)
-      {
-        $d = $c['children'];
-        if (array_key_exists($d, $a)) {
-          $c['children'] = &$a[$d];
-        }
-        else {
-          $c['children'] = null;
-        }
-      }
-    }
-    unset($b, $c);
-    # ...
-    # ...
-    # ...
-    # ...
-    # done
-    return $a[0];
   }
   # }}}
   # }}}

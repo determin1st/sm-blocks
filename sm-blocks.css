@@ -74,6 +74,7 @@
   display: block;
   width: 100%;
   height: 100%;
+  shape-rendering: geometricPrecision;
 }
 .sm-blocks button {
   cursor: pointer;
@@ -129,7 +130,7 @@
   touch-action: none;
   cursor: default;
 }
-.sm-blocks button.w3-button > label {
+.sm-blocks button.w3-button > .label {
   width: 100%;
   height: 100%;
   display: flex;
@@ -147,24 +148,15 @@
   background-color: transparent;
   color: rgba(var(--sm-color-5),1);
 }
-.sm-blocks button.w3-button > svg {
-  width: 100%;
-  height: 100%;
-  display: block;
-  fill: rgba(var(--sm-color-5),1);
-}
 .sm-blocks button.w3-button.v {
   cursor: pointer;
 }
 .sm-blocks button.w3-button.v.h {
   border-color: rgba(var(--sm-color-0),0.65);
 }
-.sm-blocks button.w3-button.v.h > label {
+.sm-blocks button.w3-button.v.h > .label {
   font-weight: bolder;
   color: rgba(var(--sm-color-4),1);
-}
-.sm-blocks button.w3-button.v.h > svg {
-  fill: rgba(var(--sm-color-4),1);
 }
 .sm-blocks button.w3-button.v.f {
   background-color: rgba(var(--sm-color-2),0.5);
@@ -172,21 +164,15 @@
   border-width: 0.05em;
   box-shadow: inset 0 0 0 1px rgba(var(--sm-color-1),1);
 }
-.sm-blocks button.w3-button.v.f > label {
+.sm-blocks button.w3-button.v.f > .label {
   font-weight: bolder;
   color: rgba(var(--sm-color-7),1);
-}
-.sm-blocks button.w3-button.v.f > svg {
-  fill: rgba(var(--sm-color-7),1);
 }
 .sm-blocks button.w3-button.v.f.h {
   background-color: rgba(var(--sm-color-6),0.125);
 }
-.sm-blocks button.w3-button.v.f.h > label {
+.sm-blocks button.w3-button.v.f.h > .label {
   color: rgba(var(--sm-color-6),1);
-}
-.sm-blocks button.w3-button.v.f.h > svg {
-  fill: rgba(var(--sm-color-6),1);
 }
 .sm-blocks button.w3-button.v.w,
 .sm-blocks button.w3-button.v.w.h,
@@ -196,16 +182,11 @@
   box-shadow: inset 0 0 0 0.02em rgba(var(--sm-color-1),1);
   border-color: rgba(var(--sm-color-0),1);
 }
-.sm-blocks button.w3-button.v.w > label,
-.sm-blocks button.w3-button.v.w.h > label,
-.sm-blocks button.w3-button.v.w.f > label {
+.sm-blocks button.w3-button.v.w > .label,
+.sm-blocks button.w3-button.v.w.h > .label,
+.sm-blocks button.w3-button.v.w.f > .label {
   font-size: 0.313em;
   color: rgba(var(--sm-color-2),1);
-}
-.sm-blocks button.w3-button.v.w > svg,
-.sm-blocks button.w3-button.v.w.h > svg,
-.sm-blocks button.w3-button.v.w.f > svg {
-  filter: none;
 }
 .sm-blocks button.w3-button.v.w.f {
   background-color: rgba(var(--sm-color-6),0.125);
@@ -1174,6 +1155,11 @@
   min-width: 1.217em;
   padding: 0.0415em 0.125em 0.0415em 0.125em;
 }
+.sm-blocks.products > div > .product > div > .section.c > .actions > button.add > svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
 .sm-blocks.products > div > .product > div > .section.c > .actions > button.add > svg > text {
   font-size: 0.417em;
   font-family: 'Arial Black', 'Arial Bold', Gadget, sans-serif;
@@ -1298,17 +1284,173 @@
 .sm-blocks.menu {
   width: 100%;
   height: auto;
-  padding: 4px 0 4px 0;
+  padding: 4px 2px 4px 2px;
+  overflow: visible;
 }
 .sm-blocks.menu > div {
   font-size: var(--height);
   width: 100%;
   height: 1em;
+  position: relative;
+  overflow: visible;
   display: flex;
   flex-direction: row;
   align-items: stretch;
   justify-content: flex-start;
+  flex-wrap: wrap;
   gap: 2px;
+}
+.sm-blocks.menu > div button {
+  width: auto;
+  height: 100%;
+  padding: 0.125em 0.25em 0.125em 0.25em;
+  position: relative;
+  border: 0;
+  background-color: transparent;
+  box-shadow: none;
+}
+.sm-blocks.menu > div button > .label {
+  width: auto;
+  height: 100%;
+  align-items: center;
+  font-family: Verdana, Helvetica, Arial, sans-serif;
+}
+.sm-blocks.menu > div button > .arrow {
+  position: absolute;
+  display: none;
+}
+.sm-blocks.menu > div button > .arrow > .a {
+  fill: rgba(var(--sm-color-5),1);
+}
+.sm-blocks.menu > div button > .arrow > .b {
+  fill: rgba(var(--sm-color-2),1);
+}
+.sm-blocks.menu > div button.drop > .arrow {
+  display: block;
+}
+.sm-blocks.menu > div > button {
+  flex: 0 0 auto;
+}
+.sm-blocks.menu > div > button > .label {
+  width: auto;
+  height: 100%;
+  justify-content: center;
+  font-size: 0.5em;
+}
+.sm-blocks.menu > div > button > .arrow {
+  width: 0.75em;
+  height: 0.75em;
+  top: 0.125em;
+  right: 0;
+  transform: rotate(90deg);
+}
+.sm-blocks.menu > div > button > .arrow > .a {
+  fill: rgba(var(--sm-color-5),1);
+}
+.sm-blocks.menu > div > button > .arrow > .b {
+  fill: rgba(var(--sm-color-2),1);
+}
+.sm-blocks.menu > div > button > .line {
+  width: 100%;
+  height: 0.084em;
+  position: absolute;
+  left: 0;
+  display: flex;
+  flex-direction: row;
+  opacity: 0;
+}
+.sm-blocks.menu > div > button > .line > svg {
+  height: 100%;
+}
+.sm-blocks.menu > div > button > .line > svg.a {
+  flex: 0 0 0;
+  min-width: 0.125em;
+}
+.sm-blocks.menu > div > button > .line > svg.b {
+  flex: 1 1 0;
+}
+.sm-blocks.menu > div > button > .line > svg > .a {
+  fill: rgba(var(--sm-color-4),1);
+}
+.sm-blocks.menu > div > button > .line > svg > .b {
+  fill: rgba(var(--sm-color-2),1);
+}
+.sm-blocks.menu > div > button > .line.a {
+  top: 0;
+}
+.sm-blocks.menu > div > button > .line.b {
+  bottom: 0;
+}
+.sm-blocks.menu > div > button.drop {
+  padding-right: 0.75em;
+}
+.sm-blocks.menu > div > button.v.h {
+  box-shadow: inset 0 0 6px -2px rgba(var(--sm-color-3),1);
+}
+.sm-blocks.menu > div > button.v.h > .line {
+  opacity: 1;
+}
+.sm-blocks.menu > div > button.v.o {
+  box-shadow: inset 0 0 6px -2px rgba(var(--sm-color-3),1);
+}
+.sm-blocks.menu > div > button.v.o > .arrow {
+  transform: rotate(0deg);
+}
+.sm-blocks.menu > div > button.v.o > .arrow > .a {
+  fill: rgba(var(--sm-color-4),1);
+}
+.sm-blocks.menu > div > button.v.o > .arrow > .b {
+  fill: rgba(var(--sm-color-3),1);
+}
+.sm-blocks.menu > div > button.v.o > .line {
+  opacity: 1;
+}
+.sm-blocks.menu > div .dropdown {
+  position: absolute;
+  z-index: 999;
+  padding: 0.167em;
+  background-color: rgba(var(--sm-color-3),1);
+  border: 1px solid rgba(var(--sm-color-4),1);
+  border-radius: 2px;
+  display: none;
+}
+.sm-blocks.menu > div .dropdown.o {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+.sm-blocks.menu > div .dropdown > button {
+  height: 0.75em;
+  padding-right: 0.542em;
+}
+.sm-blocks.menu > div .dropdown > button > .label {
+  font-size: 0.375em;
+  justify-content: flex-start;
+  color: rgba(var(--sm-color-4),1);
+}
+.sm-blocks.menu > div .dropdown > button > .arrow {
+  width: 0.75em;
+  height: 0.75em;
+  top: 0;
+  right: 0;
+  transform: rotate(90deg);
+}
+.sm-blocks.menu > div .dropdown > button > .arrow > .a {
+  fill: rgba(var(--sm-color-5),1);
+}
+.sm-blocks.menu > div .dropdown > button > .arrow > .b {
+  fill: rgba(var(--sm-color-4),1);
+}
+.sm-blocks.menu > div .dropdown > button.v.h {
+  background-color: rgba(var(--sm-color-1),0.75);
+  box-shadow: inset 0 0 1px 0 rgba(var(--sm-color-0),1);
+}
+.sm-blocks.menu > div .dropdown > button.v.h > .label {
+  color: rgba(var(--sm-color-0),1);
+}
+.sm-blocks.menu > div .dropdown > button.v.h > .arrow {
+  transform: rotate(-90deg);
 }
 .sm-blocks.paginator {
   width: 100%;

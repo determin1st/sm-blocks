@@ -8,7 +8,7 @@ rgba(cv,alpha=1)
 WebSafeFontMono = Consolas, Courier, monospace
 WebSafeFontFat = 'Arial Black', 'Arial Bold', Gadget, sans-serif
 WebSafeFontUI = Verdana, Helvetica, Arial, sans-serif
-WebSafeFontHeadline = Times, 'Times New Roman', serif
+WebSafeFontTitle = Times, 'Times New Roman', serif
 // }}}
 :root // {{{
 	// SIZE
@@ -72,6 +72,7 @@ WebSafeFontHeadline = Times, 'Times New Roman', serif
 		display: block
 		width:  100%
 		height: 100%
+		shape-rendering: geometricPrecision
 	button
 		cursor: pointer
 		color:  transparent
@@ -127,7 +128,7 @@ WebSafeFontHeadline = Times, 'Times New Roman', serif
 		////
 		touch-action: none // pointer events only
 		cursor: default
-		> label
+		> .label
 			width:  100%
 			height: 100%
 			display: flex
@@ -145,40 +146,28 @@ WebSafeFontHeadline = Times, 'Times New Roman', serif
 			letter-spacing: 0
 			background-color: transparent
 			color: rgba(var(--sm-color-5))
-		> svg
-			width:  100%
-			height: 100%
-			display: block
-			fill: rgba(var(--sm-color-5))
 		////
 		&.v
 			cursor: pointer
 			// hovered
 			&.h
 				border-color: rgba(var(--sm-color-0), 0.65)
-				> label
+				> .label
 					font-weight: bolder
 					color: rgba(var(--sm-color-4))
-				> svg
-					//filter: brightness(50%)
-					fill: rgba(var(--sm-color-4))
 			// focused
 			&.f
 				background-color: rgba(var(--sm-color-2), 0.5)
 				border-color: rgba(var(--sm-color-6), 0.65)
 				border-width: 0.05em
 				box-shadow: inset 0 0 0 1px rgba(var(--sm-color-1))
-				> label
+				> .label
 					font-weight: bolder
 					color: rgba(var(--sm-color-7))
-				> svg
-					fill: rgba(var(--sm-color-7))
 				&.h
 					background-color: rgba(var(--sm-color-6), 0.125)
-					> label
+					> .label
 						color: rgba(var(--sm-color-6))
-					> svg
-						fill: rgba(var(--sm-color-6))
 			// pending (not locked, awaiting, may recieve focus)
 			&.w,
 			&.w.h,
@@ -187,11 +176,9 @@ WebSafeFontHeadline = Times, 'Times New Roman', serif
 				background-color: rgba(var(--sm-color-3), 0.5)
 				box-shadow: inset 0 0 0 0.02em rgba(var(--sm-color-1))
 				border-color: rgba(var(--sm-color-0))
-				> label
+				> .label
 					font-size: 0.313em
 					color: rgba(var(--sm-color-2))
-				> svg
-					filter: none
 			&.w.f
 				background-color: rgba(var(--sm-color-6), 0.125)
 		// }}}
@@ -1150,6 +1137,9 @@ WebSafeFontHeadline = Times, 'Times New Roman', serif
 									//padding: 0.0415em 0.083em 0.0415em 0.083em
 									padding: padY padX padY padX
 									> svg
+										width:  100%
+										height: 100%
+										display: block
 										> text
 											//font-size: 0.375em
 											font-size: 0.417em
@@ -1247,7 +1237,7 @@ WebSafeFontHeadline = Times, 'Times New Roman', serif
 						display: none
 			// }}}
 			////
-		// DELETE: intersection sentinel (required for infinite scroll) {{{
+		// DELETE: intersection sentinel (for infinite scroll algo) {{{
 		> hr
 			--size: calc(var(--gap-y) + var(--item-y))
 			position: absolute
@@ -1272,17 +1262,151 @@ WebSafeFontHeadline = Times, 'Times New Roman', serif
 	&.menu // {{{
 		width:  100%
 		height: auto
-		padding: 4px 0 4px 0
+		padding: 4px 2px 4px 2px
+		overflow: visible
 		> div
 			font-size: var(--height)
 			width:  100%
 			height: 1em
+			position: relative
+			overflow: visible
 			////
 			display: flex
 			flex-direction: row
 			align-items: stretch
 			justify-content: flex-start
+			flex-wrap: wrap
 			gap: 2px
+			button // {{{
+				width:  auto
+				height: 100%
+				padding: 0.125em 0.25em 0.125em 0.25em
+				position: relative
+				////
+				border: 0
+				background-color: transparent
+				box-shadow: none
+				> .label // {{{
+					width:  auto
+					height: 100%
+					align-items: center
+					font-family: WebSafeFontUI
+				// }}}
+				> .arrow // {{{
+					position: absolute
+					display:  none
+					> .a
+						fill: rgba(var(--sm-color-5))
+					> .b
+						fill: rgba(var(--sm-color-2))
+				// }}}
+				&.drop > .arrow
+					display: block
+			// }}}
+			> button // {{{
+				flex: 0 0 auto
+				> .label // {{{
+					width:  auto
+					height: 100%
+					justify-content: center
+					font-size: 0.5em // 24px
+				// }}}
+				> .arrow // {{{
+					width:  0.75em
+					height: 0.75em
+					top:    0.125em
+					right:  0
+					transform: rotate(90deg)
+					> .a
+						fill: rgba(var(--sm-color-5))
+					> .b
+						fill: rgba(var(--sm-color-2))
+				// }}}
+				> .line // {{{
+					width:  100%
+					//height: 0.125em
+					height: 0.084em
+					position: absolute
+					left: 0
+					display: flex
+					flex-direction: row
+					opacity: 0
+					> svg
+						height: 100%
+						//fill: transparent
+						&.a
+							flex: 0 0 0
+							min-width: 0.125em
+							//width: 0.167em
+						&.b
+							flex: 1 1 0
+						> .a
+							fill: rgba(var(--sm-color-4))
+						> .b
+							fill: rgba(var(--sm-color-2))
+					// variants
+					&.a
+						top: 0
+					&.b
+						bottom: 0
+				// }}}
+				&.drop
+					padding-right: 0.75em
+				&.v.h
+					box-shadow: inset 0 0 6px -2px rgba(var(--sm-color-3))
+					> .line
+						opacity: 1
+				&.v.o
+					box-shadow: inset 0 0 6px -2px rgba(var(--sm-color-3))
+					> .arrow
+						transform: rotate(0deg)
+						> .a
+							fill: rgba(var(--sm-color-4))
+						> .b
+							fill: rgba(var(--sm-color-3))
+					> .line
+						opacity: 1
+			// }}}
+			.dropdown // {{{
+				position: absolute
+				z-index:  999
+				////
+				padding: 0.167em
+				background-color: rgba(var(--sm-color-3))
+				border: 1px solid rgba(var(--sm-color-4))
+				border-radius: 2px
+				display: none
+				&.o
+					display: flex
+					flex-direction: column
+					align-items: stretch
+					justify-content: flex-start
+				> button
+					height: 0.75em
+					padding-right: 0.542em // 24+2px
+					> .label
+						font-size: 0.375em // 18px
+						justify-content: flex-start
+						color: rgba(var(--sm-color-4))
+					> .arrow
+						width:  0.75em
+						height: 0.75em
+						top:    0
+						right:  0
+						transform: rotate(90deg)
+						> .a
+							fill: rgba(var(--sm-color-5))
+						> .b
+							fill: rgba(var(--sm-color-4))
+					////
+					&.v.h
+						background-color: rgba(var(--sm-color-1), 0.75)
+						box-shadow: inset 0 0 1px 0 rgba(var(--sm-color-0))
+						> .label
+							color: rgba(var(--sm-color-0))
+						> .arrow
+							transform: rotate(-90deg)
+			// }}}
 		////
 	// }}}
 // ===
