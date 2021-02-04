@@ -34,6 +34,7 @@ WebSafeFontTitle = Times, 'Times New Roman', serif
 	--height: calc(var(--sm-size-height) * var(--sm-size-factor))
 	--font-size: calc(0.3334 * var(--height))
 	// root
+	font-size:  var(--font-size)
 	position:   relative
 	box-sizing: border-box
 	min-width:  0
@@ -41,7 +42,6 @@ WebSafeFontTitle = Times, 'Times New Roman', serif
 	padding:    0
 	margin:     0
 	//overflow:   hidden
-	font-size:  var(--font-size)
 	// common {{{
 	div,button,select,input,label,svg,img,hr,h1,h2,h3
 		box-sizing: border-box
@@ -168,7 +168,7 @@ WebSafeFontTitle = Times, 'Times New Roman', serif
 					background-color: rgba(var(--sm-color-6), 0.125)
 					> .label
 						color: rgba(var(--sm-color-6))
-			// pending (not locked, awaiting, may recieve focus)
+			// busy-wait locked, waiting for release
 			&.w,
 			&.w.h,
 			&.w.f
@@ -177,7 +177,7 @@ WebSafeFontTitle = Times, 'Times New Roman', serif
 				box-shadow: inset 0 0 0 0.02em rgba(var(--sm-color-1))
 				border-color: rgba(var(--sm-color-0))
 				> .label
-					font-size: 0.313em
+					//font-size: 0.313em
 					color: rgba(var(--sm-color-2))
 			&.w.f
 				background-color: rgba(var(--sm-color-6), 0.125)
@@ -388,7 +388,6 @@ WebSafeFontTitle = Times, 'Times New Roman', serif
 					> .b
 						fill: gainsboro
 	// }}}
-	// ===
 	&.section // {{{
 		// root
 		width:  100%
@@ -1267,9 +1266,10 @@ WebSafeFontTitle = Times, 'Times New Roman', serif
 		> div
 			font-size: var(--height)
 			width:  100%
-			height: 1em
+			height: auto
 			position: relative
 			overflow: visible
+			opacity: 1
 			////
 			display: flex
 			flex-direction: row
@@ -1279,7 +1279,7 @@ WebSafeFontTitle = Times, 'Times New Roman', serif
 			gap: 2px
 			button // {{{
 				width:  auto
-				height: 100%
+				height: 1em
 				padding: 0.125em 0.25em 0.125em 0.25em
 				position: relative
 				////
@@ -1304,6 +1304,7 @@ WebSafeFontTitle = Times, 'Times New Roman', serif
 					display: block
 			// }}}
 			> button // {{{
+				opacity: 0.6
 				flex: 0 0 auto
 				> .label // {{{
 					width:  auto
@@ -1325,7 +1326,7 @@ WebSafeFontTitle = Times, 'Times New Roman', serif
 				> .line // {{{
 					width:  100%
 					//height: 0.125em
-					height: 0.084em
+					height: 0.084em // 4px
 					position: absolute
 					left: 0
 					display: flex
@@ -1350,12 +1351,16 @@ WebSafeFontTitle = Times, 'Times New Roman', serif
 					&.b
 						bottom: 0
 				// }}}
+				// has dropdown
 				&.drop
 					padding-right: 0.75em
-				&.v.h
-					box-shadow: inset 0 0 6px -2px rgba(var(--sm-color-3))
+				&.v.h,
+				&.v.f
 					> .line
 						opacity: 1
+				&.v.f
+					box-shadow: inset 0 0 6px -2px rgba(var(--sm-color-7))
+				// dropdown opened
 				&.v.o
 					box-shadow: inset 0 0 6px -2px rgba(var(--sm-color-3))
 					> .arrow
@@ -1366,8 +1371,43 @@ WebSafeFontTitle = Times, 'Times New Roman', serif
 							fill: rgba(var(--sm-color-3))
 					> .line
 						opacity: 1
+					&.f
+						background-color: rgba(var(--sm-color-7), 0.025)
+						> .arrow > .a
+							fill: rgba(var(--sm-color-6))
+				// clicked, waiting
+				&.v.w,
+				&.v.w.h,
+				&.v.w.f
+					opacity: 1
+					background-color: rgba(var(--sm-color-0))
+					> .label
+						color: rgba(var(--sm-color-1))
+					> .line
+						//height: 0.125em // 6px
+						height: 0.167em // 8px
+						opacity: 1
+						> .a > .a,
+						> .b > .a
+							fill: rgba(var(--sm-color-1))
+				// current
+				&.x
+					opacity: 1
+					background-color: rgba(var(--sm-color-0))
+					> .label
+						color: rgba(var(--sm-color-1))
+					> .line
+						height: 0.167em // 8px
+						opacity: 1
+						> .a > .a,
+						> .b > .a
+							fill: rgba(var(--sm-color-1))
+						> .a > .b,
+						> .b > .b
+							fill: rgba(var(--sm-color-0))
 			// }}}
 			.dropdown // {{{
+				box-sizing: content-box
 				position: absolute
 				z-index:  999
 				////
@@ -1389,9 +1429,9 @@ WebSafeFontTitle = Times, 'Times New Roman', serif
 						justify-content: flex-start
 						color: rgba(var(--sm-color-4))
 					> .arrow
-						width:  0.75em
-						height: 0.75em
-						top:    0
+						width:  0.667em
+						height: 0.667em
+						top:    0.0415em
 						right:  0
 						transform: rotate(90deg)
 						> .a
@@ -1399,14 +1439,70 @@ WebSafeFontTitle = Times, 'Times New Roman', serif
 						> .b
 							fill: rgba(var(--sm-color-4))
 					////
-					&.v.h
+					&.v.o
 						background-color: rgba(var(--sm-color-1), 0.75)
 						box-shadow: inset 0 0 1px 0 rgba(var(--sm-color-0))
-						> .label
-							color: rgba(var(--sm-color-0))
 						> .arrow
 							transform: rotate(-90deg)
+							> .a
+								fill: rgba(var(--sm-color-4))
+							> .b
+								fill: rgba(var(--sm-color-5))
+					&.v.h
+						background-color: rgba(var(--sm-color-1), 0.75)
+						box-shadow: inset 0 0 2px 0 rgba(var(--sm-color-0))
+						> .label
+							color: rgba(var(--sm-color-0))
 			// }}}
+			&.v
+				> button
+					opacity: 1
+		////
+	// }}}
+	&.minicart // {{{
+		width:  auto
+		height: auto
+		padding: 4px 2px 4px 2px
+		overflow: visible
+		> div
+			font-size: var(--height)
+			width:  auto
+			height: auto
+			position: relative
+			overflow: visible
+			padding-right: 0.125em
+			////
+			> a
+				width:  1em
+				height: 1em
+				padding: 0.125em
+				box-sizing: border-box
+				display: block
+				> svg
+					fill: rgba(var(--sm-color-5))
+				> .count // {{{
+					position: absolute
+					top:    0
+					right:  0
+					width:  0.4em
+					height: 0.4em
+					display: none
+					background-color: darkslateblue
+					border-radius: 100%
+					> div
+						width:  100%
+						height: 100%
+						font-size: 0.25em
+						font-weight: bold
+						font-family: var(--sm-font-input)
+						line-height: 0
+						color: white
+						display: flex
+						align-items: center
+						justify-content: center
+					&.v
+						display: block
+				// }}}
 		////
 	// }}}
 // ===

@@ -16,14 +16,14 @@ class StorefrontModernBlocks {
   private static
     $I = null;
   private
-    $BRAND     = 'sm-blocks',
-    $ERROR     = '',
-    $dir       = __DIR__.DIRECTORY_SEPARATOR.'inc'.DIRECTORY_SEPARATOR,
-    $db        = null,
-    $prefix    = null,
-    $lang      = 'en',
+    $BRAND  = 'sm-blocks',
+    $ERROR  = '',
+    $dir    = __DIR__.DIRECTORY_SEPARATOR.'inc'.DIRECTORY_SEPARATOR,
+    $db     = null,
+    $prefix = null,
+    $lang   = 'en',
     $unique_id = 0,
-    $base_attr = [
+    $base_attr = [ # TODO: DELETE
       'customClass',
       'class',
       'style',
@@ -505,7 +505,7 @@ class StorefrontModernBlocks {
   }
   # }}}
   # renderers
-  # CSR base {{{
+  # CSR base, TODO: DELETE {{{
   public function renderBase($attr, $content, $block)
   {
     $name = str_replace('/', ' ', $block->name);
@@ -1080,13 +1080,46 @@ class StorefrontModernBlocks {
     if (!($b = wp_get_nav_menu_items($id, $a))) {
       return $x;
     }
-    # refine data
+    # prepare
+    $id   = intval(get_queried_object_id());
+    $home = home_url();
+    # assemble items list
     foreach ($b as $a)
     {
+      # prepare
+      $oid  = intval($a->object_id);
+      $type = $a->object;
+      $flag = false;
+      # check type and determine current flag
+      if ($type === 'custom')
+      {
+        $c = strlen($home);
+        if (substr($a->url, 0, $c) === $home)
+        {
+          # valid internal link
+          if (!$id && substr($a->url, $c) === '/') {
+            $flag = true;# frontpage
+          }
+        }
+        else if (!wp_http_validate_url($a->url)) {
+          $type = '';# invalid
+        }
+      }
+      else if ($type === 'page')
+      {
+        if ($id && $id === $oid) {
+          $flag = true;
+        }
+      }
+      else {
+        $type = '';# not supported
+      }
+      # create item
       $x[$a->ID] = [
-        'id'       => $a->object_id,
-        'type'     => $a->object,
-        'parent'   => $a->menu_item_parent,
+        'id'       => $oid,
+        'type'     => $type,
+        'current'  => $flag,
+        'parent'   => intval($a->menu_item_parent),
         'order'    => $a->menu_order,
         'name'     => $a->title,
         'url'      => $a->url,

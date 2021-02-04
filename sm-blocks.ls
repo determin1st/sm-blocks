@@ -85,20 +85,22 @@ SM = do ->
 				a = '%cw3ui: %c'+msg
 				console.log a, 'font-weight:bold;color:sandybrown', 'color:crimson'
 		# }}}
-		config: (node) -> # JSON-in-HTML {{{
-			# get contents, should include <!-- and -->
-			if (a = node.innerHTML).length <= 7
-				return null
-			# extract and zap content
-			a = a.slice 4, (a.length - 3)
+		config: (node, defs = {}) -> # JSON-in-HTML {{{
+			# extract and zap contents
+			a = node.innerHTML
 			node.innerHTML = ''
-			# parse to JSON
+			# check size, should include <!--{ and }-->
+			if a.length <= 9
+				return defs
+			# strip comment
+			a = a.slice 4, (a.length - 3)
+			# parse to JSON and combine with defaults
 			try
-				a = JSON.parse a
+				Object.assign defs, (JSON.parse a)
 			catch
-				a = null
+				w3ui.console.error 'incorrect config'
 			# done
-			return a
+			return defs
 		# }}}
 		template: (f) -> # HTML-in-JS {{{
 			# get function's text and locate the comment
@@ -117,7 +119,7 @@ SM = do ->
 			x = []
 			i = -1
 			while ++i < c
-				if (b = a[i]) and b.hasOwnProperty prop
+				if (b = a[i]) and prop of b
 					x[*] = b[prop]
 				else if not compact
 					x[*] = null
@@ -244,29 +246,6 @@ SM = do ->
 					B.onFocus false, B if B.onFocus
 			# }}}
 			# aggregators
-			hoverAccum: (block) -> # {{{
-				bounce = newDelay!
-				return (v, o) ->>
-					# bounce
-					bounce.cancel! if bounce.pending
-					if o and not (await bounce := newDelay 64)
-						return false
-					# check
-					if (w = block.focused) == v
-						return false
-					# callback
-					if o and block.onFocus and not (await block.onFocus v, o)
-						return false
-					# operate
-					if o and block.setFocus
-						block.setFocus v
-					else
-						block.focused = v
-						block.root.classList.remove 'f'+w if w
-						block.root.classList.add 'f'+v
-					# done
-					return true
-			# }}}
 			slaveFocusInOut: (block, node) -> # {{{
 				return [
 					(e) !~>
@@ -317,13 +296,13 @@ SM = do ->
 					# done
 					return true
 			# }}}
-			resizeAccum: (f, ms = 100, max = 3) -> # {{{
+			resizeAccum: (f, ms = 99, max = 3) -> # {{{
 				bounce = newDelay!
 				count  = 0
 				return (e) ->>
-					# check observed
+					# check observed event
 					if e
-						# apply debounce algorithm
+						# apply debounce and throttle algorithm
 						if bounce.pending
 							count := count + 1
 							bounce.cancel (count == max)
@@ -332,6 +311,49 @@ SM = do ->
 						count := 0
 					# callback
 					f e
+					# done
+					return true
+			# }}}
+			hoverAccum: (B, f, ms = 99) -> # {{{
+				omap = new WeakMap!
+				calm = newDelay!
+				return (flag, ctrl) ->>
+					# get current control value
+					a = (omap.get ctrl) or 0
+					# accumulate changes,
+					# the effect of accumulation depends on the flag and
+					# aimed at fast incrementation and slow decrementation of the value
+					if flag
+						# increment instantly
+						omap.set ctrl, a + 1
+						# prevent self-decrement
+						calm.cancel! if calm.pending == ctrl
+						# prevent multiple increments
+						return false if a
+						# accumulate
+						++B.hovered
+					else
+						# prevent multiple decrements
+						return false if not a
+						# resolve previous decrement
+						if a = calm.pending
+							if a == ctrl
+								calm.cancel!
+							else
+								calm.resolve!
+						# wait
+						if not await (calm := newDelay ms, ctrl)
+							return false
+						# decrement eventually
+						omap.set ctrl, 0
+						--B.hovered
+					# set hovered class
+					if B.hovered == 1
+						B.root.classList.add 'h'
+					else if not B.hovered
+						B.root.classList.remove 'h'
+					# callback
+					f flag, ctrl
 					# done
 					return true
 			# }}}
@@ -346,14 +368,13 @@ SM = do ->
 				# state
 				@hovered = false
 				@focused = false
-				@pending = null
 				@locked  = true
 				# traps
 				@onHover = o.onHover or null
 				@onFocus = o.onFocus or null
 				@onClick = o.onClick or null
 				@onPress = o.onPress or null
-				# handlers (attach)
+				# handlers
 				a = 'addEventListener'
 				e = w3ui.event
 				root[a] 'pointerenter', e.hover @
@@ -365,22 +386,29 @@ SM = do ->
 					e.preventDefault!
 					e.stopPropagation!
 					# check
-					if not @locked and not @pending and @onClick
+					if not @locked and @onClick
 						# callback
 						if (e = @onClick @) instanceof Promise
 							# lock
-							@pending = e
+							@locked = e
+							@root.disabled = true
 							@root.classList.add 'w'
 							# wait complete
-							await e
-							# unlock
-							@pending = null
-							@root.classList.remove 'w'
+							if await e
+								# unlock
+								@root.disabled = @locked = false
+								@root.classList.remove 'w'
+						else if not e
+							# lock
+							@locked = newPromise!
+							@root.disabled = true
+							@root.classList.add 'w'
 				# }}}
 			Block.prototype =
 				lock: (flag = true) !-> # {{{
 					# check
 					if @locked != flag
+						# TODO: unlock busy-wait promise
 						# operate
 						@root.classList.toggle 'v', !(@locked = flag)
 						if flag or ~@current or ~@cfg.intermediate
@@ -1394,9 +1422,10 @@ SM = do ->
 								a[b.id].count -= 1
 								@set b
 								return false
-							# notify woo mini-cart
-							a = jQuery document.body
-							a.trigger 'added_to_cart', c
+							# update total
+							a.total.count++
+							# refresh mini-cart
+							CART.set a.total.count if CART
 							# done
 							return true
 						# }}}
@@ -4341,15 +4370,15 @@ SM = do ->
 						else 1
 			# }}}
 			fAssembly = (block, heap, parent) -> # {{{
-				# prepare
+				# get parent id
+				pid = (parent and parent.id) or 0
+				# iterate
 				a = []
-				b = (parent and parent.data.id) or '0'
-				# collect
-				for c,d of heap when c and d.parent == b
+				for b,c of heap when b and c.parent == pid
 					# create item
-					a[*] = c = new Item block, d, parent
+					a[*] = b = new Item block, +b, c, parent
 					# set children (recurse)
-					c.children = fAssembly block, heap, c
+					b.children = fAssembly block, heap, b
 				# check
 				if not a.length
 					return null
@@ -4368,9 +4397,10 @@ SM = do ->
 					@obs = new ResizeObserver @update
 					@obs.observer @block.root
 			# }}}
-			Item = (block, data, parent) !-> # {{{
+			Item = (block, id, data, parent) !-> # {{{
 				# base
 				@block    = block
+				@id       = id
 				@data     = data
 				@parent   = parent
 				@children = null
@@ -4387,7 +4417,7 @@ SM = do ->
 			###
 			Item.prototype =
 				init: (level = 0) !-> # {{{
-					# set item's level in the tree
+					# set item's depth level
 					@level = level
 					# create base control
 					a = w3ui.parse tItem, {
@@ -4403,6 +4433,10 @@ SM = do ->
 						onHover: @block.onHover
 						onClick: @block.onClick
 					}
+					# set current
+					if @data.current
+						b.root.classList.add 'x'
+						b.lock true
 					# initialize children
 					if @children
 						# create dropdown
@@ -4426,7 +4460,8 @@ SM = do ->
 				# }}}
 				lock: (v) !-> # {{{
 					# operate
-					@button.lock v
+					if not @data.current
+						@button.lock v
 					# recurse
 					if a = @children
 						for b in a
@@ -4438,121 +4473,135 @@ SM = do ->
 				@group    = 'route'
 				@root     = root
 				@rootBox  = root.firstChild
-				@cfg      = w3ui.config root.firstChild
+				@cfg      = w3ui.config root.firstChild, {
+					dropmode: 1 # dropdown alignment: 0=straight, 1=one-to-one
+					pads: [1, 1]
+					delayOpen:  400 # hover intent 0.3-0.5
+					delayClose: 700 # same but >0.5
+				}
 				# controls
 				@items    = null
 				@levels   = null
 				@resizer  = null
 				# state
-				@pads     = null
+				@padY     = null
 				@opened   = [] # items with opened dropdowns
-				@shutdown = newDelay!
-				@hovered  = false
+				@hover    = newDelay!
+				@hovered  = 0
 				@focused  = false
 				@locked   = -1
 				# handlers
-				@onHover = (flag, btn) ~>> # {{{
-					# abort dropdowns closing
-					if @shutdown.pending
-						@shutdown.cancel!
+				@onHover = w3ui.event.hoverAccum @, (flag, btn) ~>> # {{{
 					# prepare
-					o = @opened
+					list = @opened
 					item = btn.cfg
 					drop = item.dropdown
-					# check element heirarchy
-					if item.parent
-						if flag
-							# ENTRANCE
-							# check level already opened
-							if item.level < o.length
-								# CLOSE
-								# skip if item is already opened
-								if drop == o[item.level].dropdown
-									return true
-								# close all higher levels (including current)
-								a = o.length
-								while --a >= item.level
-									o[a].dropdown.classList.remove 'o'
-									o[a].button.root.classList.remove 'o'
-								# scrap
-								o.length = a + 1
-							# check item has dropdown
-							if drop
-								# OPEN
-								# determine dimensions
-								a = item.parent.dropdown.getBoundingClientRect!
-								b = btn.root.getBoundingClientRect!
-								#c = @rootBox.getBoundingClientRect!
-								# calculate
-								x = a.width + 1
-								y = b.y - a.y - @pads[item.level]
-								console.log item.level
-								w = a.width
-								# set
-								drop.style.left = x + 'px'
-								drop.style.top  = y + 'px'
-								drop.style.minWidth = w + 'px'
-								drop.classList.add 'o'
-								btn.root.classList.add 'o'
-								# store
-								o[*] = item
-						else
-							# EXIT
-							true
-					else if flag
-						# OPEN ROOT
-						# check opened
-						if o.length
-							# skip if already opened
-							if drop == o.0.dropdown
+					# check
+					if flag
+						# ENTRANCE
+						# abort previous call
+						@hover.cancel! if @hover.pending
+						# check level already opened
+						if item.level < list.length
+							# CLOSE
+							# skip if item is already opened
+							if drop == list[item.level].dropdown
 								return true
-							# close all
-							a = o.length
-							while ~--a
-								o[a].dropdown.classList.remove 'o'
-								o[a].button.root.classList.remove 'o'
-							# clear
-							o.length = 0
-						# check has dropdown
+							# close all higher levels (including current)
+							a = list.length
+							while --a >= item.level
+								list[a].dropdown.classList.remove 'o'
+								list[a].button.root.classList.remove 'o'
+							# scrap
+							list.length = a + 1
+						# check item has dropdown
 						if drop
-							# get position and size
-							a = btn.root.getBoundingClientRect!
-							b = @rootBox.getBoundingClientRect!
-							# set styles
-							drop.style.minWidth = a.width+'px'
-							drop.style.left = (a.x - b.x)+'px'
-							drop.style.top  = (a.y - b.y + a.height + 1)+'px'
+							# OPEN
+							# check user intent
+							if item.level == 0 and not await (@hover = newDelay @cfg.delayOpen)
+								return false
+							# determine position and size of a ..
+							if item.level
+								# tree node
+								if @cfg.dropmode
+									# one to one
+									a = item.parent.dropdown.getBoundingClientRect!
+									b = btn.root.getBoundingClientRect!
+									x = a.width + @cfg.pads.0
+									y = item.level - 1
+									y = b.y - a.y - @padY[y] - @cfg.pads.1
+									c = a.width
+								else
+									# straight
+									a = item.parent.dropdown.getBoundingClientRect!
+									#b = btn.root.getBoundingClientRect!
+									b = @rootBox.getBoundingClientRect!
+									x = item.level - 1
+									x = a.width - 1 + @cfg.pads.0
+									y = 0 - @cfg.pads.1
+									c = a.width
+							else
+								# root node
+								a = @rootBox.getBoundingClientRect!
+								b = btn.root.getBoundingClientRect!
+								x = b.x - a.x
+								y = b.y - a.y + b.height + @cfg.pads.1
+								c = b.width
+							# set
+							drop.style.left = x + 'px'
+							drop.style.top  = y + 'px'
+							drop.style.minWidth = c + 'px'
 							drop.classList.add 'o'
 							btn.root.classList.add 'o'
 							# store
-							o[*] = item
-					else if drop and o.length == 1 and o.0 == item
-						# CLOSE ROOT
-						# delay
-						if await (@shutdown = newDelay @cfg.delay.0)
+							list[*] = item
+					else if not @hovered
+						# EXIT
+						# abort previous call
+						@hover.cancel! if @hover.pending
+						# lazily close dropdowns
+						a = b = list.length
+						while --a >= item.level and \
+						      await (@hover = newDelay (@cfg.delayClose / (b - a + 1)))
+							###
 							# close
-							drop.classList.remove 'o'
-							btn.root.classList.remove 'o'
-							o.length = 0
+							list[a].dropdown.classList.remove 'o'
+							list[a].button.root.classList.remove 'o'
+							# scrap
+							list.length = a
 					# done
 					return true
 				# }}}
-				@onClick = (btn) !~> # {{{
-					console.log 'click'
+				@onClick = (btn) ~>> # {{{
+					# get data
+					a = btn.cfg.data
+					# check
+					switch a.type
+					case 'page', 'custom'
+						# naviagate the url
+						window.location.assign a.url
+						# suspend
+						@lock!
+						return false
+					# done
+					return true
 				# }}}
 				@resize = w3ui.event.resizeAccum (e) !~> # {{{
-					# assuming that dropdowns of the same level have same style
-					# prepare
-					@pads = []
+					# determine..
+					# assuming that dropdowns of the same level have same style,
+					# determine their absolute size parameters
+					@padY = []
 					# iterate levels with dropdowns
 					a = -1
 					b = @levels.length - 1
 					while ++a < b
 						# search first dropdown
 						for c in @levels[a] when c.dropdown
-							# get dropdown pads,
+							# determine top padding
 							d = getComputedStyle c.dropdown
-							@pads[a] = parseFloat (d.getPropertyValue 'padding-top')
+							e = parseFloat (d.getPropertyValue 'padding-top')
+							e = e + parseFloat (d.getPropertyValue 'border-top-width')
+							@padY[a] = e
 							break
 					# done
 					return true
@@ -4565,16 +4614,16 @@ SM = do ->
 					if @items = fAssembly @, c.routes, null
 						for a in @items
 							a.init!
-					# create tree levels
-					@levels = []
-					a = @items
-					b = -1
-					while a.length
-						@levels[++b] = a
-						c = []
-						for d in a when d.children
-							c.push ...d.children
-						a = c
+						# create tree levels
+						@levels = []
+						a = @items
+						b = -1
+						while a.length
+							@levels[++b] = a
+							c = []
+							for d in a when d.children
+								c.push ...d.children
+							a = c
 					# create resizer
 					@resizer = new ResizeObserver @resize
 					@resizer.observe @root
@@ -4921,24 +4970,20 @@ SM = do ->
 			# controllers
 			@loader   = null
 			@resizer  = null
+			# traps
+			@onLoad   = null
 			###
 			s = (m != M and 'custom ') or ''
 			consoleInfo 'new '+s+'supervisor'
 			# }}}
 		SuperVisor.prototype =
-			attach: (root, cfg = null) ->> # {{{
+			init: (root, cfg = null) ->> # {{{
 				# check
 				if not root
+					w3ui.console.error 'incorrect parameters'
 					return false
-				else if @state
-					# detach first
-					if not (await @detach!)
-						return false
-					# continue
-					consoleInfo 're-attaching..'
-				else
-					consoleInfo 'attaching..'
 				# prepare
+				w3ui.console.log 'initializing sm-blocks..'
 				@root     = root
 				@blocks   = B = []
 				@receiver = null
@@ -4962,7 +5007,7 @@ SM = do ->
 							G[a.group] = [a]
 				# check
 				if not B.length
-					consoleError 'nothing to attach'
+					w3ui.console.error 'no blocks found'
 					return false
 				# sort by priority level (ascending)
 				B.sort (a, b) ->
@@ -4979,23 +5024,20 @@ SM = do ->
 				@resizer = newResizer '.'+BRAND+'-resizer', B
 				# initialize
 				if not (await @loader.init cfg)
-					await @detach!
-					consoleError 'attachment failed'
+					w3ui.console.error 'failed to initialize'
 					return false
+				# callback
+				@onLoad @ if @onLoad
 				# enter the dragon
-				consoleInfo 'supervisor attached'
+				w3ui.console.log 'sm-blocks initialized'
 				while await @loader.run!
 					++@counter
 				# complete
-				consoleInfo 'supervisor detached, '+@counter+' actions'
+				w3ui.console.log 'sm-blocks terminated, '+@counter+' actions'
 				return true
 			# }}}
-			detach: ->> # {{{
-				# cleanup
-				# ...
-				# done
-				return true
-			# }}}
-		return (m, s) -> new SuperVisor m, s
+		SV = null
+		return (s, m) ->
+			return SV or (SV := new SuperVisor m, s)
 	# }}}
 ###

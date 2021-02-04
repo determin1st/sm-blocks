@@ -13,13 +13,13 @@
 .sm-blocks {
   --height: calc(var(--sm-size-height) * var(--sm-size-factor));
   --font-size: calc(0.3334 * var(--height));
+  font-size: var(--font-size);
   position: relative;
   box-sizing: border-box;
   min-width: 0;
   min-height: 0;
   padding: 0;
   margin: 0;
-  font-size: var(--font-size);
 }
 .sm-blocks div,
 .sm-blocks button,
@@ -185,7 +185,6 @@
 .sm-blocks button.w3-button.v.w > .label,
 .sm-blocks button.w3-button.v.w.h > .label,
 .sm-blocks button.w3-button.v.w.f > .label {
-  font-size: 0.313em;
   color: rgba(var(--sm-color-2),1);
 }
 .sm-blocks button.w3-button.v.w.f {
@@ -1290,9 +1289,10 @@
 .sm-blocks.menu > div {
   font-size: var(--height);
   width: 100%;
-  height: 1em;
+  height: auto;
   position: relative;
   overflow: visible;
+  opacity: 1;
   display: flex;
   flex-direction: row;
   align-items: stretch;
@@ -1302,7 +1302,7 @@
 }
 .sm-blocks.menu > div button {
   width: auto;
-  height: 100%;
+  height: 1em;
   padding: 0.125em 0.25em 0.125em 0.25em;
   position: relative;
   border: 0;
@@ -1329,6 +1329,7 @@
   display: block;
 }
 .sm-blocks.menu > div > button {
+  opacity: 0.6;
   flex: 0 0 auto;
 }
 .sm-blocks.menu > div > button > .label {
@@ -1384,11 +1385,12 @@
 .sm-blocks.menu > div > button.drop {
   padding-right: 0.75em;
 }
-.sm-blocks.menu > div > button.v.h {
-  box-shadow: inset 0 0 6px -2px rgba(var(--sm-color-3),1);
-}
-.sm-blocks.menu > div > button.v.h > .line {
+.sm-blocks.menu > div > button.v.h > .line,
+.sm-blocks.menu > div > button.v.f > .line {
   opacity: 1;
+}
+.sm-blocks.menu > div > button.v.f {
+  box-shadow: inset 0 0 6px -2px rgba(var(--sm-color-7),1);
 }
 .sm-blocks.menu > div > button.v.o {
   box-shadow: inset 0 0 6px -2px rgba(var(--sm-color-3),1);
@@ -1405,7 +1407,58 @@
 .sm-blocks.menu > div > button.v.o > .line {
   opacity: 1;
 }
+.sm-blocks.menu > div > button.v.o.f {
+  background-color: rgba(var(--sm-color-7),0.025);
+}
+.sm-blocks.menu > div > button.v.o.f > .arrow > .a {
+  fill: rgba(var(--sm-color-6),1);
+}
+.sm-blocks.menu > div > button.v.w,
+.sm-blocks.menu > div > button.v.w.h,
+.sm-blocks.menu > div > button.v.w.f {
+  opacity: 1;
+  background-color: rgba(var(--sm-color-0),1);
+}
+.sm-blocks.menu > div > button.v.w > .label,
+.sm-blocks.menu > div > button.v.w.h > .label,
+.sm-blocks.menu > div > button.v.w.f > .label {
+  color: rgba(var(--sm-color-1),1);
+}
+.sm-blocks.menu > div > button.v.w > .line,
+.sm-blocks.menu > div > button.v.w.h > .line,
+.sm-blocks.menu > div > button.v.w.f > .line {
+  height: 0.167em;
+  opacity: 1;
+}
+.sm-blocks.menu > div > button.v.w > .line > .a > .a,
+.sm-blocks.menu > div > button.v.w.h > .line > .a > .a,
+.sm-blocks.menu > div > button.v.w.f > .line > .a > .a,
+.sm-blocks.menu > div > button.v.w > .line > .b > .a,
+.sm-blocks.menu > div > button.v.w.h > .line > .b > .a,
+.sm-blocks.menu > div > button.v.w.f > .line > .b > .a {
+  fill: rgba(var(--sm-color-1),1);
+}
+.sm-blocks.menu > div > button.x {
+  opacity: 1;
+  background-color: rgba(var(--sm-color-0),1);
+}
+.sm-blocks.menu > div > button.x > .label {
+  color: rgba(var(--sm-color-1),1);
+}
+.sm-blocks.menu > div > button.x > .line {
+  height: 0.167em;
+  opacity: 1;
+}
+.sm-blocks.menu > div > button.x > .line > .a > .a,
+.sm-blocks.menu > div > button.x > .line > .b > .a {
+  fill: rgba(var(--sm-color-1),1);
+}
+.sm-blocks.menu > div > button.x > .line > .a > .b,
+.sm-blocks.menu > div > button.x > .line > .b > .b {
+  fill: rgba(var(--sm-color-0),1);
+}
 .sm-blocks.menu > div .dropdown {
+  box-sizing: content-box;
   position: absolute;
   z-index: 999;
   padding: 0.167em;
@@ -1430,9 +1483,9 @@
   color: rgba(var(--sm-color-4),1);
 }
 .sm-blocks.menu > div .dropdown > button > .arrow {
-  width: 0.75em;
-  height: 0.75em;
-  top: 0;
+  width: 0.667em;
+  height: 0.667em;
+  top: 0.0415em;
   right: 0;
   transform: rotate(90deg);
 }
@@ -1442,15 +1495,77 @@
 .sm-blocks.menu > div .dropdown > button > .arrow > .b {
   fill: rgba(var(--sm-color-4),1);
 }
-.sm-blocks.menu > div .dropdown > button.v.h {
+.sm-blocks.menu > div .dropdown > button.v.o {
   background-color: rgba(var(--sm-color-1),0.75);
   box-shadow: inset 0 0 1px 0 rgba(var(--sm-color-0),1);
+}
+.sm-blocks.menu > div .dropdown > button.v.o > .arrow {
+  transform: rotate(-90deg);
+}
+.sm-blocks.menu > div .dropdown > button.v.o > .arrow > .a {
+  fill: rgba(var(--sm-color-4),1);
+}
+.sm-blocks.menu > div .dropdown > button.v.o > .arrow > .b {
+  fill: rgba(var(--sm-color-5),1);
+}
+.sm-blocks.menu > div .dropdown > button.v.h {
+  background-color: rgba(var(--sm-color-1),0.75);
+  box-shadow: inset 0 0 2px 0 rgba(var(--sm-color-0),1);
 }
 .sm-blocks.menu > div .dropdown > button.v.h > .label {
   color: rgba(var(--sm-color-0),1);
 }
-.sm-blocks.menu > div .dropdown > button.v.h > .arrow {
-  transform: rotate(-90deg);
+.sm-blocks.menu > div.v > button {
+  opacity: 1;
+}
+.sm-blocks.minicart {
+  width: auto;
+  height: auto;
+  padding: 4px 2px 4px 2px;
+  overflow: visible;
+}
+.sm-blocks.minicart > div {
+  font-size: var(--height);
+  width: auto;
+  height: auto;
+  position: relative;
+  overflow: visible;
+  padding-right: 0.125em;
+}
+.sm-blocks.minicart > div > a {
+  width: 1em;
+  height: 1em;
+  padding: 0.125em;
+  box-sizing: border-box;
+  display: block;
+}
+.sm-blocks.minicart > div > a > svg {
+  fill: rgba(var(--sm-color-5),1);
+}
+.sm-blocks.minicart > div > a > .count {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0.4em;
+  height: 0.4em;
+  display: none;
+  background-color: #483d8b;
+  border-radius: 100%;
+}
+.sm-blocks.minicart > div > a > .count > div {
+  width: 100%;
+  height: 100%;
+  font-size: 0.25em;
+  font-weight: bold;
+  font-family: var(--sm-font-input);
+  line-height: 0;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sm-blocks.minicart > div > a > .count.v {
+  display: block;
 }
 .sm-blocks.paginator {
   width: 100%;

@@ -79,20 +79,22 @@ SM = function(){
         console.log(a, 'font-weight:bold;color:sandybrown', 'color:crimson');
       }
     },
-    config: function(node){
+    config: function(node, defs){
       var a, e;
-      if ((a = node.innerHTML).length <= 7) {
-        return null;
+      defs == null && (defs = {});
+      a = node.innerHTML;
+      node.innerHTML = '';
+      if (a.length <= 9) {
+        return defs;
       }
       a = a.slice(4, a.length - 3);
-      node.innerHTML = '';
       try {
-        a = JSON.parse(a);
+        Object.assign(defs, JSON.parse(a));
       } catch (e$) {
         e = e$;
-        a = null;
+        w3ui.console.error('incorrect config');
       }
-      return a;
+      return defs;
     },
     template: function(f){
       var a, b;
@@ -111,7 +113,7 @@ SM = function(){
       x = [];
       i = -1;
       while (++i < c) {
-        if ((b = a[i]) && b.hasOwnProperty(prop)) {
+        if ((b = a[i]) && prop in b) {
           x[x.length] = b[prop];
         } else if (!compact) {
           x[x.length] = null;
@@ -245,35 +247,6 @@ SM = function(){
           }
         };
       },
-      hoverAccum: function(block){
-        var bounce;
-        bounce = newDelay();
-        return async function(v, o){
-          var w;
-          if (bounce.pending) {
-            bounce.cancel();
-          }
-          if (o && !(await (bounce = newDelay(64)))) {
-            return false;
-          }
-          if ((w = block.focused) === v) {
-            return false;
-          }
-          if (o && block.onFocus && !(await block.onFocus(v, o))) {
-            return false;
-          }
-          if (o && block.setFocus) {
-            block.setFocus(v);
-          } else {
-            block.focused = v;
-            if (w) {
-              block.root.classList.remove('f' + w);
-            }
-            block.root.classList.add('f' + v);
-          }
-          return true;
-        };
-      },
       slaveFocusInOut: function(block, node){
         var this$ = this;
         return [
@@ -328,7 +301,7 @@ SM = function(){
       },
       resizeAccum: function(f, ms, max){
         var bounce, count;
-        ms == null && (ms = 100);
+        ms == null && (ms = 99);
         max == null && (max = 3);
         bounce = newDelay();
         count = 0;
@@ -346,6 +319,49 @@ SM = function(){
           f(e);
           return true;
         };
+      },
+      hoverAccum: function(B, f, ms){
+        var omap, calm;
+        ms == null && (ms = 99);
+        omap = new WeakMap();
+        calm = newDelay();
+        return async function(flag, ctrl){
+          var a;
+          a = omap.get(ctrl) || 0;
+          if (flag) {
+            omap.set(ctrl, a + 1);
+            if (calm.pending === ctrl) {
+              calm.cancel();
+            }
+            if (a) {
+              return false;
+            }
+            ++B.hovered;
+          } else {
+            if (!a) {
+              return false;
+            }
+            if (a = calm.pending) {
+              if (a === ctrl) {
+                calm.cancel();
+              } else {
+                calm.resolve();
+              }
+            }
+            if (!(await (calm = newDelay(ms, ctrl)))) {
+              return false;
+            }
+            omap.set(ctrl, 0);
+            --B.hovered;
+          }
+          if (B.hovered === 1) {
+            B.root.classList.add('h');
+          } else if (!B.hovered) {
+            B.root.classList.remove('h');
+          }
+          f(flag, ctrl);
+          return true;
+        };
       }
     },
     button: function(){
@@ -357,7 +373,6 @@ SM = function(){
         this.cfg = o.cfg;
         this.hovered = false;
         this.focused = false;
-        this.pending = null;
         this.locked = true;
         this.onHover = o.onHover || null;
         this.onFocus = o.onFocus || null;
@@ -372,13 +387,19 @@ SM = function(){
         root[a]('click', async function(e){
           e.preventDefault();
           e.stopPropagation();
-          if (!this$.locked && !this$.pending && this$.onClick) {
+          if (!this$.locked && this$.onClick) {
             if ((e = this$.onClick(this$)) instanceof Promise) {
-              this$.pending = e;
+              this$.locked = e;
+              this$.root.disabled = true;
               this$.root.classList.add('w');
-              (await e);
-              this$.pending = null;
-              this$.root.classList.remove('w');
+              if ((await e)) {
+                this$.root.disabled = this$.locked = false;
+                this$.root.classList.remove('w');
+              }
+            } else if (!e) {
+              this$.locked = newPromise();
+              this$.root.disabled = true;
+              this$.root.classList.add('w');
             }
           }
         });
@@ -1370,8 +1391,10 @@ SM = function(){
                   this$.set(b);
                   return false;
                 }
-                a = jQuery(document.body);
-                a.trigger('added_to_cart', c);
+                a.total.count++;
+                if (CART) {
+                  CART.set(a.total.count);
+                }
                 return true;
               };
             },
@@ -3969,14 +3992,14 @@ SM = function(){
           : a.data.order === b.data.order ? 0 : 1;
       };
       fAssembly = function(block, heap, parent){
-        var a, b, c, d;
+        var pid, a, b, c;
+        pid = (parent && parent.id) || 0;
         a = [];
-        b = (parent && parent.data.id) || '0';
-        for (c in heap) {
-          d = heap[c];
-          if (c && d.parent === b) {
-            a[a.length] = c = new Item(block, d, parent);
-            c.children = fAssembly(block, heap, c);
+        for (b in heap) {
+          c = heap[b];
+          if (b && c.parent === pid) {
+            a[a.length] = b = new Item(block, +b, c, parent);
+            b.children = fAssembly(block, heap, b);
           }
         }
         if (!a.length) {
@@ -3995,9 +4018,10 @@ SM = function(){
           this.obs.observer(this.block.root);
         }
       };
-      Item = function(block, data, parent){
+      Item = function(block, id, data, parent){
         var this$ = this;
         this.block = block;
+        this.id = id;
         this.data = data;
         this.parent = parent;
         this.children = null;
@@ -4028,6 +4052,10 @@ SM = function(){
             onHover: this.block.onHover,
             onClick: this.block.onClick
           });
+          if (this.data.current) {
+            b.root.classList.add('x');
+            b.lock(true);
+          }
           if (this.children) {
             this.dropdown = a = document.createElement('div');
             a.className = 'dropdown l' + level;
@@ -4048,7 +4076,9 @@ SM = function(){
         },
         lock: function(v){
           var a, i$, len$, b;
-          this.button.lock(v);
+          if (!this.data.current) {
+            this.button.lock(v);
+          }
           if (a = this.children) {
             for (i$ = 0, len$ = a.length; i$ < len$; ++i$) {
               b = a[i$];
@@ -4062,91 +4092,103 @@ SM = function(){
         this.group = 'route';
         this.root = root;
         this.rootBox = root.firstChild;
-        this.cfg = w3ui.config(root.firstChild);
+        this.cfg = w3ui.config(root.firstChild, {
+          dropmode: 1,
+          pads: [1, 1],
+          delayOpen: 400,
+          delayClose: 700
+        });
         this.items = null;
         this.levels = null;
         this.resizer = null;
-        this.pads = null;
+        this.padY = null;
         this.opened = [];
-        this.shutdown = newDelay();
-        this.hovered = false;
+        this.hover = newDelay();
+        this.hovered = 0;
         this.focused = false;
         this.locked = -1;
-        this.onHover = async function(flag, btn){
-          var o, item, drop, a, b, x, y, w;
-          if (this$.shutdown.pending) {
-            this$.shutdown.cancel();
-          }
-          o = this$.opened;
+        this.onHover = w3ui.event.hoverAccum(this, async function(flag, btn){
+          var list, item, drop, a, b, x, y, c;
+          list = this$.opened;
           item = btn.cfg;
           drop = item.dropdown;
-          if (item.parent) {
-            if (flag) {
-              if (item.level < o.length) {
-                if (drop === o[item.level].dropdown) {
-                  return true;
-                }
-                a = o.length;
-                while (--a >= item.level) {
-                  o[a].dropdown.classList.remove('o');
-                  o[a].button.root.classList.remove('o');
-                }
-                o.length = a + 1;
-              }
-              if (drop) {
-                a = item.parent.dropdown.getBoundingClientRect();
-                b = btn.root.getBoundingClientRect();
-                x = a.width + 1;
-                y = b.y - a.y - this$.pads[item.level];
-                console.log(item.level);
-                w = a.width;
-                drop.style.left = x + 'px';
-                drop.style.top = y + 'px';
-                drop.style.minWidth = w + 'px';
-                drop.classList.add('o');
-                btn.root.classList.add('o');
-                o[o.length] = item;
-              }
-            } else {
-              true;
+          if (flag) {
+            if (this$.hover.pending) {
+              this$.hover.cancel();
             }
-          } else if (flag) {
-            if (o.length) {
-              if (drop === o[0].dropdown) {
+            if (item.level < list.length) {
+              if (drop === list[item.level].dropdown) {
                 return true;
               }
-              a = o.length;
-              while (~--a) {
-                o[a].dropdown.classList.remove('o');
-                o[a].button.root.classList.remove('o');
+              a = list.length;
+              while (--a >= item.level) {
+                list[a].dropdown.classList.remove('o');
+                list[a].button.root.classList.remove('o');
               }
-              o.length = 0;
+              list.length = a + 1;
             }
             if (drop) {
-              a = btn.root.getBoundingClientRect();
-              b = this$.rootBox.getBoundingClientRect();
-              drop.style.minWidth = a.width + 'px';
-              drop.style.left = (a.x - b.x) + 'px';
-              drop.style.top = (a.y - b.y + a.height + 1) + 'px';
+              if (item.level === 0 && !(await (this$.hover = newDelay(this$.cfg.delayOpen)))) {
+                return false;
+              }
+              if (item.level) {
+                if (this$.cfg.dropmode) {
+                  a = item.parent.dropdown.getBoundingClientRect();
+                  b = btn.root.getBoundingClientRect();
+                  x = a.width + this$.cfg.pads[0];
+                  y = item.level - 1;
+                  y = b.y - a.y - this$.padY[y] - this$.cfg.pads[1];
+                  c = a.width;
+                } else {
+                  a = item.parent.dropdown.getBoundingClientRect();
+                  b = this$.rootBox.getBoundingClientRect();
+                  x = item.level - 1;
+                  x = a.width - 1 + this$.cfg.pads[0];
+                  y = 0 - this$.cfg.pads[1];
+                  c = a.width;
+                }
+              } else {
+                a = this$.rootBox.getBoundingClientRect();
+                b = btn.root.getBoundingClientRect();
+                x = b.x - a.x;
+                y = b.y - a.y + b.height + this$.cfg.pads[1];
+                c = b.width;
+              }
+              drop.style.left = x + 'px';
+              drop.style.top = y + 'px';
+              drop.style.minWidth = c + 'px';
               drop.classList.add('o');
               btn.root.classList.add('o');
-              o[o.length] = item;
+              list[list.length] = item;
             }
-          } else if (drop && o.length === 1 && o[0] === item) {
-            if ((await (this$.shutdown = newDelay(this$.cfg.delay[0])))) {
-              drop.classList.remove('o');
-              btn.root.classList.remove('o');
-              o.length = 0;
+          } else if (!this$.hovered) {
+            if (this$.hover.pending) {
+              this$.hover.cancel();
+            }
+            a = b = list.length;
+            while (--a >= item.level && (await (this$.hover = newDelay(this$.cfg.delayClose / (b - a + 1))))) {
+              list[a].dropdown.classList.remove('o');
+              list[a].button.root.classList.remove('o');
+              list.length = a;
             }
           }
           return true;
-        };
-        this.onClick = function(btn){
-          console.log('click');
+        });
+        this.onClick = async function(btn){
+          var a;
+          a = btn.cfg.data;
+          switch (a.type) {
+          case 'page':
+          case 'custom':
+            window.location.assign(a.url);
+            this$.lock();
+            return false;
+          }
+          return true;
         };
         this.resize = w3ui.event.resizeAccum(function(e){
           var a, b, i$, ref$, len$, c, d;
-          this$.pads = [];
+          this$.padY = [];
           a = -1;
           b = this$.levels.length - 1;
           while (++a < b) {
@@ -4154,7 +4196,9 @@ SM = function(){
               c = ref$[i$];
               if (c.dropdown) {
                 d = getComputedStyle(c.dropdown);
-                this$.pads[a] = parseFloat(d.getPropertyValue('padding-top'));
+                e = parseFloat(d.getPropertyValue('padding-top'));
+                e = e + parseFloat(d.getPropertyValue('border-top-width'));
+                this$.padY[a] = e;
                 break;
               }
             }
@@ -4171,20 +4215,20 @@ SM = function(){
               a = ref$[i$];
               a.init();
             }
-          }
-          this.levels = [];
-          a = this.items;
-          b = -1;
-          while (a.length) {
-            this.levels[++b] = a;
-            c = [];
-            for (i$ = 0, len$ = a.length; i$ < len$; ++i$) {
-              d = a[i$];
-              if (d.children) {
-                c.push.apply(c, d.children);
+            this.levels = [];
+            a = this.items;
+            b = -1;
+            while (a.length) {
+              this.levels[++b] = a;
+              c = [];
+              for (i$ = 0, len$ = a.length; i$ < len$; ++i$) {
+                d = a[i$];
+                if (d.children) {
+                  c.push.apply(c, d.children);
+                }
               }
+              a = c;
             }
-            a = c;
           }
           this.resizer = new ResizeObserver(this.resize);
           this.resizer.observe(this.root);
@@ -4212,7 +4256,7 @@ SM = function(){
     }()
   };
   return function(){
-    var Config, State, Loader, Group, newResizer, SuperVisor;
+    var Config, State, Loader, Group, newResizer, SuperVisor, SV;
     Config = function(){
       this.locale = null;
       this.routes = null;
@@ -4523,23 +4567,19 @@ SM = function(){
       this.state = null;
       this.loader = null;
       this.resizer = null;
+      this.onLoad = null;
       s = (m !== M && 'custom ') || '';
       consoleInfo('new ' + s + 'supervisor');
     };
     SuperVisor.prototype = {
-      attach: async function(root, cfg){
+      init: async function(root, cfg){
         var B, G, b, ref$, a, i$, ref1$, len$, c;
         cfg == null && (cfg = null);
         if (!root) {
+          w3ui.console.error('incorrect parameters');
           return false;
-        } else if (this.state) {
-          if (!(await this.detach())) {
-            return false;
-          }
-          consoleInfo('re-attaching..');
-        } else {
-          consoleInfo('attaching..');
         }
+        w3ui.console.log('initializing sm-blocks..');
         this.root = root;
         this.blocks = B = [];
         this.receiver = null;
@@ -4565,7 +4605,7 @@ SM = function(){
           }
         }
         if (!B.length) {
-          consoleError('nothing to attach');
+          w3ui.console.error('no blocks found');
           return false;
         }
         B.sort(function(a, b){
@@ -4582,23 +4622,23 @@ SM = function(){
         }
         this.resizer = newResizer('.' + BRAND + '-resizer', B);
         if (!(await this.loader.init(cfg))) {
-          (await this.detach());
-          consoleError('attachment failed');
+          w3ui.console.error('failed to initialize');
           return false;
         }
-        consoleInfo('supervisor attached');
+        if (this.onLoad) {
+          this.onLoad(this);
+        }
+        w3ui.console.log('sm-blocks initialized');
         while ((await this.loader.run())) {
           ++this.counter;
         }
-        consoleInfo('supervisor detached, ' + this.counter + ' actions');
-        return true;
-      },
-      detach: async function(){
+        w3ui.console.log('sm-blocks terminated, ' + this.counter + ' actions');
         return true;
       }
     };
-    return function(m, s){
-      return new SuperVisor(m, s);
+    SV = null;
+    return function(s, m){
+      return SV || (SV = new SuperVisor(m, s));
     };
   }();
 }();
