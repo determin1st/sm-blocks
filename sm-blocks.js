@@ -301,7 +301,7 @@ SM = function(){
       },
       resizeAccum: function(f, ms, max){
         var bounce, count;
-        ms == null && (ms = 99);
+        ms == null && (ms = 300);
         max == null && (max = 3);
         bounce = newDelay();
         count = 0;
@@ -4204,7 +4204,7 @@ SM = function(){
             }
           }
           return true;
-        });
+        }, 999, 9);
       };
       Block.prototype = {
         init: async function(s, c){

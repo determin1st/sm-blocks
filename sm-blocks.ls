@@ -296,7 +296,7 @@ SM = do ->
 					# done
 					return true
 			# }}}
-			resizeAccum: (f, ms = 99, max = 3) -> # {{{
+			resizeAccum: (f, ms = 300, max = 3) -> # {{{
 				bounce = newDelay!
 				count  = 0
 				return (e) ->>
@@ -4605,6 +4605,7 @@ SM = do ->
 							break
 					# done
 					return true
+				, 999, 9
 				# }}}
 			Block.prototype =
 				init: (s, c) ->> # {{{
