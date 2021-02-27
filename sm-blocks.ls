@@ -1,89 +1,68 @@
 "use strict"
-SM = do ->
-	# base
-	# helpers {{{
-	###
-	# TODO
-	# - unified focus handlers
-	# - section => treeview
-	# - new slave: selector (simple dropdown)
-	# - category count display (extra)
-	# - static paginator max-width auto-calc
-	###
-	BRAND = 'sm-blocks'
-	###
-	consoleError = (msg) !-> # {{{
-		a = '%c'+BRAND+': %c'+msg
-		console.log a, 'font-weight:bold;color:slateblue', 'color:orange'
+w3ui = do -> # {{{
+	# check requirements {{{
 	# }}}
-	consoleInfo = (msg) !-> # {{{
-		a = '%c'+BRAND+': %c'+msg
-		console.log a, 'font-weight:bold;color:slateblue', 'color:aquamarine'
+	# prepare {{{
+	# empty object without prototype
+	w3ui = (Object.create null)
+	# constructors
+	Events = (v) !->
+		@hover = v
+		@focus = v
+		@click = v
+		@mmove = v
 	# }}}
-	newPromise = (id = -1) -> # {{{
-		# create promise
-		r = null
-		p = new Promise (resolve) !->
-			r := resolve
-		# create resolver
-		p.pending = id
-		p.resolve = (data) !->
-			if not arguments.length
-				data = p.pending
-			p.pending = 0
-			r data
-		# done
-		return p
-	# }}}
-	newDelay = (ms = 0, id = -1) -> # {{{
-		# create custom promise
-		p = newPromise id
-		r = p.resolve
-		# start timer
-		t = setTimeout !->
-			r p.pending
-		, ms
-		# replace resolver
-		p.resolve = (flag) !->
-			clearTimeout t
-			r if arguments.length
-				then flag
-				else p.pending
-		# create cancellator
-		p.cancel = (flag) !->
-			clearTimeout t
-			r if arguments.length
-				then flag
-				else 0
-		# done
-		return p
-	# }}}
-	# }}}
-	# fetchers {{{
-	goFetch = httpFetch.create {
-		baseUrl: '/?rest_route=/'+BRAND+'/kiss'
-		mounted: true
-		notNull: true
-		method: 'POST'
-	}
-	soFetch = httpFetch.create {
-		baseUrl: '/?rest_route=/'+BRAND+'/kiss'
-		mounted: true
-		notNull: true
-		method: 'POST'
-		timeout: 0
-		parseResponse: 'stream'
-	}
-	# }}}
-	w3ui = # {{{
-		# helper functions
-		console: # debug messages {{{
+	# assemble
+	Object.assign w3ui, {
+		console: # {{{
 			log: (msg) !->
 				a = '%cw3ui: %c'+msg
 				console.log a, 'font-weight:bold;color:sandybrown', 'color:aquamarine'
 			error: (msg) !->
 				a = '%cw3ui: %c'+msg
 				console.log a, 'font-weight:bold;color:sandybrown', 'color:crimson'
+		# }}}
+		promise: (a) -> # {{{
+			# create custom promise
+			f = null
+			p = new Promise (resolve) !->
+				f := resolve
+			# set initial pending value
+			p.pending = a or -1
+			# create resolver
+			p.resolve = (a) !->
+				# if no argument specified, use pending value
+				a = p.pending if not arguments.length
+				# invalidate pending
+				p.pending = 0
+				# resolve
+				f a
+			# done
+			return p
+		# }}}
+		delay: (t = 0, a) -> # {{{
+			# create custom promise
+			f = null
+			p = new Promise (resolve) !->
+				f := resolve
+			# set initial pending value
+			p.pending = a or -1
+			# create timer
+			x = setTimeout !->
+				p.resolve!
+			, t
+			# create resolver
+			p.resolve = (a = p.pending) !->
+				clearTimeout x
+				p.pending = 0
+				f a
+			# create cancellator
+			p.cancel = !->
+				clearTimeout x
+				p.pending = 0
+				f 0
+			# done
+			return p
 		# }}}
 		config: (node, defs = {}) -> # JSON-in-HTML {{{
 			# extract and zap contents
@@ -110,21 +89,6 @@ SM = do ->
 			# tidy up html content and complete
 			f = (f.substring a, b).trim!replace />\s+</g, '><'
 			return f
-		# }}}
-		getArrayObjectProps: (a, prop, compact = false) -> # {{{
-			# check array-like
-			if not a or not (c = a.length)
-				return null
-			# iterate it and collect properties
-			x = []
-			i = -1
-			while ++i < c
-				if (b = a[i]) and prop of b
-					x[*] = b[prop]
-				else if not compact
-					x[*] = null
-			# done
-			return x
 		# }}}
 		parse: (template, tags) -> # the dumbest parser {{{
 			# prepare
@@ -174,249 +138,380 @@ SM = do ->
 			###
 			return item
 		# }}}
-		queryChildren: (parentNode, selector) -> # {{{
+		queryChildren: (node, selector) -> # {{{
 			# prepare
 			a = []
-			if not parentNode or not parentNode.children.length
+			if not node or not node.children.length
 				return a
 			# select all and filter result
-			for b in parentNode.querySelectorAll selector
-				if b.parentNode == parentNode
+			for b in node.querySelectorAll selector
+				if b.parentNode == node
 					a[*] = b
 			# done
 			return a
 		# }}}
-		queryChild: (parentNode, selector) -> # {{{
+		queryChild: (node, selector) -> # {{{
 			# check
-			if not parentNode
+			if not node
 				return null
 			# reuse
-			a = w3ui.queryChildren parentNode, selector
+			a = w3ui.queryChildren node, selector
 			# done
 			return if a.length
 				then a.0
 				else null
 		# }}}
-		event: # handlers {{{
-			# basic
-			hover: (B) -> (e) !-> # {{{
-				# pprepare
-				e.preventDefault!
-				# check
-				if not B.locked and not B.hovered
-					# operate
-					B.hovered = true
-					B.root.classList.add 'h' if B.root
-					# callback
-					B.onHover true, B if B.onHover
-			# }}}
-			unhover: (B) -> (e) !-> # {{{
-				# prepare
-				e.preventDefault!
-				# check
-				if B.hovered
-					# operate
-					B.hovered = false
-					B.root.classList.remove 'h' if B.root
-					# callback
-					B.onHover false, B if B.onHover
-			# }}}
-			focus: (B) -> (e) !-> # {{{
-				# check
-				if B.locked
-					# ignore
-					e.preventDefault!
-					#e.stopImmediatePropagation! # focusin bubbles
-				else
-					# operate
-					B.focused = true
-					B.root.classList.add 'f'
-					# callback
-					B.onFocus true, B if B.onFocus
-			# }}}
-			unfocus: (B) -> (e) !-> # blur {{{
-				# prepare
-				e.preventDefault!
-				# check
-				if B.focused
-					# operate
-					B.focused = false
-					B.root.classList.remove 'f'
-					# callback
-					B.onFocus false, B if B.onFocus
-			# }}}
-			# aggregators
-			slaveFocusInOut: (block, node) -> # {{{
-				return [
-					(e) !~>
-						# focusin handler
-						# check
-						if block.locked
-							# prevent
-							e.preventDefault!
-							e.stopPropagation!
-						else
-							# operate
-							block.focused = true
-							node.classList.add 'f'
-							# callback
-							if block.onFocus
-								block.onFocus true, block
-						###
-					(e) !~>
-						# focusout handler
-						# operate
-						block.focused = false
-						node.classList.remove 'f'
-						# callback
-						e @, false if e = @onFocus
-						###
-				]
-			# }}}
-			slaveFocusAggregator: (block) -> # {{{
-				bounce = newDelay!
-				return (v, o) ->>
-					# bounce
-					bounce.cancel! if bounce.pending
-					if o and not (await bounce := newDelay 64)
-						return false
-					# check
-					if (w = block.focused) == v
-						return false
-					# callback
-					if o and block.onFocus and not (await block.onFocus v, o)
-						return false
-					# operate
-					if o and block.setFocus
-						block.setFocus v
-					else
-						block.focused = v
-						block.root.classList.remove 'f'+w if w
-						block.root.classList.add 'f'+v
-					# done
-					return true
-			# }}}
-			resizeAccum: (f, ms = 300, max = 3) -> # {{{
-				bounce = newDelay!
-				count  = 0
-				return (e) ->>
-					# check observed event
-					if e
-						# apply debounce and throttle algorithm
-						if bounce.pending
-							count := count + 1
-							bounce.cancel (count == max)
-						if not await (bounce := newDelay ms)
-							return false
-						count := 0
-					# callback
-					f e
-					# done
-					return true
-			# }}}
-			hoverAccum: (B, f, ms = 99) -> # {{{
-				omap = new WeakMap!
-				calm = newDelay!
-				return (flag, ctrl) ->>
-					# get current control value
-					a = (omap.get ctrl) or 0
-					# accumulate changes,
-					# the effect of accumulation depends on the flag and
-					# aimed at fast incrementation and slow decrementation of the value
-					if flag
-						# increment instantly
-						omap.set ctrl, a + 1
-						# prevent self-decrement
-						calm.cancel! if calm.pending == ctrl
-						# prevent multiple increments
-						return false if a
-						# accumulate
-						++B.hovered
-					else
-						# prevent multiple decrements
-						return false if not a
-						# resolve previous decrement
-						if a = calm.pending
-							if a == ctrl
-								calm.cancel!
-							else
-								calm.resolve!
-						# wait
-						if not await (calm := newDelay ms, ctrl)
-							return false
-						# decrement eventually
-						omap.set ctrl, 0
-						--B.hovered
-					# set hovered class
-					if B.hovered == 1
-						B.root.classList.add 'h'
-					else if not B.hovered
-						B.root.classList.remove 'h'
-					# callback
-					f flag, ctrl
-					# done
-					return true
-			# }}}
+		getArrayObjectProps: (a, prop, compact = false) -> # {{{
+			# check array-like
+			if not a or not (c = a.length)
+				return null
+			# iterate it and collect properties
+			x = []
+			i = -1
+			while ++i < c
+				if (b = a[i]) and prop of b
+					x[*] = b[prop]
+				else if not compact
+					x[*] = null
+			# done
+			return x
 		# }}}
-		# basic
+		debounce: (F, t = 100, max = 3) -> # {{{
+			###
+			# PURPOSE:
+			# - improved debouncing of a function (event handler)
+			# - standard debouncing with max=0 (no penetration)
+			# - forced/immediate calls (reduced parameter count)
+			###
+			timer = w3ui.delay!
+			count = 0
+			return (...e) ->>
+				# check observed (non-forced)
+				while e.length == F.length
+					# check state
+					if timer.pending
+						# prevent previous call
+						timer.cancel!
+						# increment counter and check limit reached
+						if max and (count := count + 1) > max
+							break
+					# slowdown
+					if await (timer := w3ui.delay t)
+						break
+					# skip
+					return false
+				# reset counter
+				count := 0
+				# execute callback
+				return F.apply null, e
+		# }}}
+		event: do -> # {{{
+			map = new WeakMap! # node => events
+			evt = new Events null
+			get = (N) -> # {{{
+				# get node events
+				if e = map.get N
+					return e
+				# create and store
+				map.set N, (e = new Events null)
+				# done
+				return e
+			# }}}
+			Object.assign evt, {
+				hover: (N, F, I) !-> # {{{
+					# detach
+					if E = (e = get N).hover
+						e.hover = null
+						N.removeEventListener 'pointerenter', E.0
+						N.removeEventListener 'pointerleave', E.1
+					# check
+					return if not F
+					# create event handlers
+					I = N if arguments.length < 3
+					E = e.hover = [
+						(e) !->
+							if e.pointerType == 'mouse'
+								e.preventDefault!
+								F I, 1, e
+						(e) !->
+							if e.pointerType == 'mouse'
+								e.preventDefault!
+								F I, 0, e
+					]
+					# attach
+					N.addEventListener 'pointerenter', E.0
+					N.addEventListener 'pointerleave', E.1
+				# }}}
+				focus: (N, F, I) !-> # {{{
+					# detach
+					if E = (e = get N).focus
+						e.focus = null
+						N.removeEventListener 'focus', E.0
+						N.removeEventListener 'blur', E.1
+					# check
+					return if not F
+					# create handlers
+					I = N if arguments.length < 3
+					E = e.focus = [
+						(e) !-> F I, 1, e
+						(e) !-> F I, 0, e
+					]
+					# attach
+					N.addEventListener 'focus', E.0
+					N.addEventListener 'blur', E.1
+				# }}}
+				click: (N, F, I) !-> # {{{
+					# detach
+					if E = (e = get N).click
+						e.click = null
+						N.removeEventListener 'click', E
+					# check
+					return if not F
+					# create event handler
+					I = N if arguments.length < 3
+					E = e.click = (e) !->
+						e.preventDefault! # cancel activation behavior
+						F I, e
+					# attach
+					N.addEventListener 'click', E
+				# }}}
+				mmove: (N, F, I) !-> # {{{
+					# detach
+					if E = (e = get N).mmove
+						e.mmove = null
+						N.removeEventListener 'pointermove', E
+					# check
+					return if not F
+					# create handler
+					I = N if arguments.length < 3
+					E = e.mmove = (e) !->
+						if e.pointerType == 'mouse'
+							e.preventDefault!
+							F I, e
+					# attach
+					N.addEventListener 'pointermove', E
+				# }}}
+			}
+			return Object.freeze evt
+		# }}}
+	}
+	Object.assign w3ui, {
+		blockEvent: do -> # {{{
+			# prepare
+			map = new WeakMap! # block => events
+			eva = Object.assign (new Events null), {
+				hover: (B, f, a) -> # {{{
+					# attach
+					B.hovered = 0
+					w3ui.event.hover B.root, (null, v, e) !->
+						# check
+						if not B.locked or not v
+							# operate
+							B.hovered = v
+							B.root.classList.toggle 'h', v
+							# callback
+							f a, v, e if f
+					# done
+					return true
+				# }}}
+				focus: (B, f, a) -> # {{{
+					# attach
+					#B.focused = 0 # detect?
+					w3ui.event.focus B.root, (null, v, e) !->
+						# operate
+						B.focused = v
+						B.root.classList.toggle 'f', v
+						# callback
+						f a, v, e if f
+					# done
+					return true
+				# }}}
+				click: (B, f, a) -> # {{{
+					# check
+					if not f
+						return false
+					# attach
+					w3ui.event.click B.root, (null, e) ->>
+						# check
+						if B.locked
+							return false
+						# probe callback
+						if (v = f a) and v instanceof Promise
+							v = await v
+						# check variant
+						switch v
+						case 1
+							# deactivate block
+							e.stopImmediatePropagation!
+							B.lock 2
+							# callback, wait completed and
+							# check the result
+							if await f a, e
+								# re-activate
+								B.lock 0 if B.locked == 2
+						# done
+						return true
+					# done
+					return true
+				# }}}
+			}
+			return Object.freeze Object.assign (Object.create null), {
+				# immediate
+				attach: (B, o) !-> # {{{
+					# get block events
+					if not (E = map.get B)
+						map.set B, (E = new Events false)
+					# iterate
+					for e of eva when o.hasOwnProperty e
+						# detach
+						w3ui.event[e] B.root if E[e]
+						# prepare callback and it's argument
+						if f = o[e]
+							if typeof f == 'function'
+								a = B
+							else
+								a = f.1
+								f = f.0
+						else
+							f = a = null
+						# attach
+						E[e] = eva[e] B, f, a
+				# }}}
+				detach: (B) !-> # {{{
+					if E = map.get B
+						for e of E when E[e]
+							w3ui.event[e] B.root
+							E[e] = false
+				# }}}
+				# accumulative
+				hover: (B, F, t = 100, N = B.root) -> # {{{
+					###
+					# PURPOSE:
+					# - unification of multiple event sources (items)
+					# - deceleration of unhover (with exceptions)
+					# - total hovered value accumulation (groupping)
+					###
+					omap = new WeakMap!
+					return (item, v, e) ->>
+						# prepare
+						if not (o = omap.get item)
+							o = [0, w3ui.delay!]
+							o.1.cancel!
+							omap.set item, o
+						# check
+						if not e
+							# forced call
+							if not v
+								# instant unhover
+								# check
+								if not o.0
+									# already unhovered
+									return false
+								else if o.1.pending
+									# prevent lazy unhovering
+									o.1.cancel!
+								# set
+								o.0 = 0
+							else if v == -1
+								# activate or deactivate instant unhover
+								# check
+								if not o.0
+									return false
+								# set
+								o.0 = if o.0 == -1
+									then 1
+									else -1
+								# done, no callback
+								return true
+							else
+								# unsupported
+								return false
+						else if v == 1
+							# instant hover
+							# check
+							if o.1.pending
+								# prevent unhovering
+								o.1.cancel!
+								return true
+							else if o.0
+								# already hovered
+								return false
+							# set
+							o.0 = 1
+						else
+							# lazy unhover
+							# check
+							if not o.0
+								# already unhovered
+								return false
+							if o.1.pending
+								# prolong unhovering
+								o.1.cancel!
+							# slowdown
+							if ~o.0 and not await (o.1 = w3ui.delay t)
+								return false
+							# set
+							o.0 = 0
+						# accumulate
+						if o.0
+							# increment
+							if ++B.hovered == 1 and N
+								N.classList.add 'h'
+						else
+							# decrement
+							if --B.hovered == 0 and N
+								N.classList.remove 'h'
+						# callback
+						F item, v, e
+						# done
+						return true
+				# }}}
+			}
+		# }}}
 		button: do -> # {{{
 			Block = (root, o) !-> # {{{
+				# create object shape
 				# base
 				@root    = root
+				@cfg     = o.cfg or null
 				@label   = w3ui.queryChild root, '.label'
-				@cfg     = o.cfg
 				# state
-				@hovered = false
-				@focused = false
-				@locked  = true
-				# traps
-				@onHover = o.onHover or null
-				@onFocus = o.onFocus or null
-				@onClick = o.onClick or null
-				@onPress = o.onPress or null
-				# handlers
-				a = 'addEventListener'
-				e = w3ui.event
-				root[a] 'pointerenter', e.hover @
-				root[a] 'pointerleave', e.unhover @
-				root[a] 'focus', e.focus @
-				root[a] 'blur', e.unfocus @
-				root[a] 'click', (e) !~>> # {{{
-					# prepare
-					e.preventDefault!
-					e.stopPropagation!
-					# check
-					if not @locked and @onClick
-						# callback
-						if (e = @onClick @) instanceof Promise
-							# lock
-							@locked = e
-							@root.disabled = true
-							@root.classList.add 'w'
-							# wait complete
-							if await e
-								# unlock
-								@root.disabled = @locked = false
-								@root.classList.remove 'w'
-						else if not e
-							# lock
-							@locked = newPromise!
-							@root.disabled = true
-							@root.classList.add 'w'
-				# }}}
+				@rect    = null # DOMRect
+				@hovered = 0
+				@focused = 0
+				@locked  = 1 # 0=unlocked, 1=locked, 2=deactivated
+				# initialize
+				w3ui.blockEvent.attach @, o.event
+			###
 			Block.prototype =
-				lock: (flag = true) !-> # {{{
-					# check
-					if @locked != flag
-						# TODO: unlock busy-wait promise
-						# operate
-						@root.classList.toggle 'v', !(@locked = flag)
-						if flag or ~@current or ~@cfg.intermediate
-							@root.disabled = flag
+				lock: (v = 1) !-> # {{{
+					if @locked != v
+						switch v
+						case 2
+							# deactivate (always from unlocked)
+							@root.classList.add 'w'
+							@root.disabled = true
+							@locked = 2
+						case 1
+							# lock
+							if @locked
+								@root.classList.remove 'w'
+							else
+								@root.disabled = true
+							@root.classList.remove 'v'
+							@locked = 1
+						default
+							# unlock
+							if @locked == 2
+								@root.classList.remove 'w'
+							else
+								@root.classList.add 'v'
+							@root.disabled = false
+							@locked = 0
 				# }}}
 			# }}}
 			return (o = {}) -> # {{{
-				# construct
+				# assemble
 				a = document.createElement 'button'
 				a.type      = 'button'
 				a.disabled  = true
@@ -430,12 +525,152 @@ SM = do ->
 					a.appendChild b
 				else if o.html
 					a.innerHTML = o.html
-				# complete
-				return new Block a, o
+				# prepare events
+				e = {
+					hover: null
+					focus: null
+				}
+				o.event = if o.event
+					then e <<< o.event
+					else e
+				# construct
+				a = new Block a, o
+				# unlock if not locked explicitly
+				#a.lock 0 if not o.locked
+				# done
+				return a
 			# }}}
 		# }}}
-	<<<<
-		# compound
+		select: do -> # {{{
+			template = w3ui.template !-> # {{{
+				/*
+				<svg preserveAspectRatio="none" viewBox="0 0 48 48">
+					<polygon class="b" points="24,32 34,17 36,16 24,34 "/>
+					<polygon class="b" points="24,34 12,16 14,17 24,32 "/>
+					<polygon class="b" points="34,17 14,17 12,16 36,16 "/>
+					<polygon class="a" points="14,17 34,17 24,32 "/>
+				</svg>
+				*/
+			# }}}
+			Block = (root, select) !-> # {{{
+				# base
+				@root     = root
+				@select   = select
+				# state
+				@current  = -1
+				@hovered  = false
+				@focused  = false
+				@locked   = true
+				# traps
+				@onHover  = null
+				@onFocus  = null
+				@onChange = null
+				# handlers
+				@hover = (e) !~> # {{{
+					# fulfil event
+					e.preventDefault!
+					# operate
+					if not @locked and not @hovered
+						@hovered = true
+						@root.classList.add 'h'
+						e @ if e = @onHover
+				# }}}
+				@unhover = (e) !~> # {{{
+					# fulfil event
+					e.preventDefault!
+					# operate
+					if @hovered
+						@hovered = false
+						@root.classList.remove 'h'
+						e @ if e = @onHover
+				# }}}
+				@focus = (e) !~> # {{{
+					if @locked
+						# try to prevent
+						e.preventDefault!
+						e.stopPropagation!
+					else if not @focused
+						# opearate
+						@focused = true
+						@root.classList.add 'f'
+						e @ if e = @onFocus
+				# }}}
+				@unfocus = (e) !~> # {{{
+					# fulfil event
+					e.preventDefault!
+					# operate
+					if @focused
+						@focused = false
+						@root.classList.remove 'f'
+						e @ if e = @onFocus
+				# }}}
+				@input = (e) !~> # {{{
+					# prepare
+					e.preventDefault!
+					# check
+					if @locked or \
+							((e = @onChange) and not (e @select.selectedIndex))
+						###
+						# change is not allowed
+						@select.selectedIndex = @current
+					else
+						# update current
+						@current = @select.selectedIndex
+				# }}}
+			Block.prototype =
+				init: (list = null, index = -1) !-> # {{{
+					# set options
+					if list
+						# create options
+						for a in list
+							b = document.createElement 'option'
+							b.textContent = a
+							@select.appendChild b
+						# set current
+						@current = @select.selectedIndex = index
+					else
+						# reset and clear options
+						@current = @select.selectedIndex = -1
+						@select.innerHTML = ''
+					# set events
+					a = @root
+					b = if list
+						then 'addEventListener'
+						else 'removeEventListener'
+					###
+					a[b] 'pointerenter', @hover
+					a[b] 'pointerleave', @unhover
+					a[b] 'focusin', @focus
+					a[b] 'focusout', @unfocus
+					a[b] 'input', @input
+				# }}}
+				lock: (locked) !-> # {{{
+					if @locked != locked
+						@root.classList.toggle 'v', !(@locked = locked)
+						@select.disabled = locked
+				# }}}
+				set: (i) -> # {{{
+					@current = @select.selectedIndex = i if i != @current
+					return i
+				# }}}
+				get: -> # {{{
+					return @current
+				# }}}
+			# }}}
+			return (o = {}) -> # {{{
+				# create a container
+				a = document.createElement 'div'
+				a.className = 'w3-select'+((o.name and ' '+o.name) or '')
+				a.innerHTML = if o.hasOwnProperty 'svg'
+					then o.svg
+					else template
+				# create a select
+				b = document.createElement 'select'
+				a.appendChild b
+				# create block
+				return new Block a, b
+			# }}}
+		# }}}
 		checkbox: do -> # {{{
 			template = w3ui.template !-> # {{{
 				/*
@@ -574,7 +809,7 @@ SM = do ->
 					return true
 				# }}}
 			# }}}
-			return (o = {}) ->
+			return (o = {}) -> # {{{
 				# prepare
 				o.intermediate = if o.intermediate
 					then o.intermediate
@@ -586,135 +821,7 @@ SM = do ->
 				a.innerHTML = o.svg if o.svg
 				# create a block
 				return new Block a, o
-		# }}}
-		select: do -> # {{{
-			template = w3ui.template !-> # {{{
-				/*
-				<svg preserveAspectRatio="none" viewBox="0 0 48 48">
-					<polygon class="b" points="24,32 34,17 36,16 24,34 "/>
-					<polygon class="b" points="24,34 12,16 14,17 24,32 "/>
-					<polygon class="b" points="34,17 14,17 12,16 36,16 "/>
-					<polygon class="a" points="14,17 34,17 24,32 "/>
-				</svg>
-				*/
 			# }}}
-			Block = (root, select) !-> # {{{
-				# base
-				@root     = root
-				@select   = select
-				# state
-				@current  = -1
-				@hovered  = false
-				@focused  = false
-				@locked   = true
-				# traps
-				@onHover  = null
-				@onFocus  = null
-				@onChange = null
-				# handlers
-				@hover = (e) !~> # {{{
-					# fulfil event
-					e.preventDefault!
-					# operate
-					if not @locked and not @hovered
-						@hovered = true
-						@root.classList.add 'h'
-						e @ if e = @onHover
-				# }}}
-				@unhover = (e) !~> # {{{
-					# fulfil event
-					e.preventDefault!
-					# operate
-					if @hovered
-						@hovered = false
-						@root.classList.remove 'h'
-						e @ if e = @onHover
-				# }}}
-				@focus = (e) !~> # {{{
-					if @locked
-						# try to prevent
-						e.preventDefault!
-						e.stopPropagation!
-					else if not @focused
-						# opearate
-						@focused = true
-						@root.classList.add 'f'
-						e @ if e = @onFocus
-				# }}}
-				@unfocus = (e) !~> # {{{
-					# fulfil event
-					e.preventDefault!
-					# operate
-					if @focused
-						@focused = false
-						@root.classList.remove 'f'
-						e @ if e = @onFocus
-				# }}}
-				@input = (e) !~> # {{{
-					# prepare
-					e.preventDefault!
-					# check
-					if @locked or \
-					   ((e = @onChange) and not (e @select.selectedIndex))
-						###
-						# change is not allowed
-						@select.selectedIndex = @current
-					else
-						# update current
-						@current = @select.selectedIndex
-				# }}}
-			Block.prototype =
-				init: (list = null, index = -1) !-> # {{{
-					# set options
-					if list
-						# create options
-						for a in list
-							b = document.createElement 'option'
-							b.textContent = a
-							@select.appendChild b
-						# set current
-						@current = @select.selectedIndex = index
-					else
-						# reset and clear options
-						@current = @select.selectedIndex = -1
-						@select.innerHTML = ''
-					# set events
-					a = @root
-					b = if list
-						then 'addEventListener'
-						else 'removeEventListener'
-					###
-					a[b] 'pointerenter', @hover
-					a[b] 'pointerleave', @unhover
-					a[b] 'focusin', @focus
-					a[b] 'focusout', @unfocus
-					a[b] 'input', @input
-				# }}}
-				lock: (locked) !-> # {{{
-					if @locked != locked
-						@root.classList.toggle 'v', !(@locked = locked)
-						@select.disabled = locked
-				# }}}
-				set: (i) -> # {{{
-					@current = @select.selectedIndex = i if i != @current
-					return i
-				# }}}
-				get: -> # {{{
-					return @current
-				# }}}
-			# }}}
-			return (o = {}) ->
-				# create a container
-				a = document.createElement 'div'
-				a.className = BRAND+'-select'
-				a.innerHTML = if o.hasOwnProperty 'svg'
-					then o.svg
-					else template
-				# create a select
-				b = document.createElement 'select'
-				a.appendChild b
-				# create block
-				return new Block a, b
 		# }}}
 		section: do -> # {{{
 			Title = (node) !-> # {{{
@@ -745,12 +852,12 @@ SM = do ->
 				@opened  = false
 				@locked  = true
 				# handlers
-				hoverBounce = newDelay!
-				focusBounce = newDelay!
+				hoverBounce = w3ui.delay!
+				focusBounce = w3ui.delay!
 				@onHover = (e, hovered) ~>> # {{{
 					# bounce
 					hoverBounce.cancel! if hoverBounce.pending
-					if await hoverBounce := newDelay 66
+					if await hoverBounce := w3ui.delay 66
 						# determine hover variant
 						a = @title.arrow
 						x = @extra
@@ -788,7 +895,7 @@ SM = do ->
 				@onFocus = (e, focused) ~>> # {{{
 					# bounce
 					focusBounce.cancel! if focusBounce.pending
-					if await focusBounce := newDelay 66
+					if await focusBounce := w3ui.delay 66
 						# determine focus variant
 						a = @title.arrow
 						x = @extra
@@ -1111,7 +1218,7 @@ SM = do ->
 						if item.focused
 							@focused = true
 							@root.classList.add 'f'
-						else if await (p := newDelay 60)
+						else if await (p := w3ui.delay 60)
 							@focused = false
 							@root.classList.remove 'f'
 						# done
@@ -1130,10 +1237,42 @@ SM = do ->
 			return (o) ->
 				return new Block o
 		# }}}
+	}
+	return Object.freeze w3ui
+###
+# }}}
+SM = do ->
+	# {{{
+	###
+	# INFO:
+	# SM stands for slave-master blocks managed in groups by supervising controller.
+	###
+	# TODO:
+	# - w3ui focus aggregator
+	# - w3ui dropdown
+	# - rename section => treeview
+	# - category count display (extra)
+	# - static paginator max-width auto-calc
+	###
+	BRAND = 'sm-blocks'
+	goFetch = httpFetch.create {
+		baseUrl: '/?rest_route=/'+BRAND+'/kiss'
+		mounted: true
+		notNull: true
+		method: 'POST'
+	}
+	soFetch = httpFetch.create {
+		baseUrl: '/?rest_route=/'+BRAND+'/kiss'
+		mounted: true
+		notNull: true
+		method: 'POST'
+		timeout: 0
+		parseResponse: 'stream'
+	}
 	# }}}
-	S = # slaves
+	S = # Slaves
 		productCard: do -> # {{{
-			init  = newPromise!
+			init  = w3ui.promise!
 			sizes = null # dimensions of the card elements
 			template = w3ui.template !-> # {{{
 				/*
@@ -1166,7 +1305,7 @@ SM = do ->
 				</div>
 				*/
 			# }}}
-			section = # {{{
+			area = # {{{
 				image: do -> # {{{
 					Item = (block) !->
 						@block  = block
@@ -1369,12 +1508,14 @@ SM = do ->
 								name: 'add'
 								html: tCartIcon
 								hint: cfg.locale.hint.0
-								onClick: @addToCart!
+								event:
+									click: [@addToCart, @]
 							}
 							w3ui.button {
 								name: 'open'
 								label: cfg.locale.label.1
-								onClick: @openDetails!
+								event:
+									click: [@openDetails, block]
 							}
 						]
 						@cartNum = btn.0.root.querySelector 'text.e'
@@ -1400,27 +1541,29 @@ SM = do ->
 								b.1.lock true
 								b.0.lock true
 						# }}}
-						addToCart: -> ~>> # {{{
+						addToCart: (I, e) ~>> # {{{
 							# TODO: miniCart block
+							# select click mode
+							return 1 if not e
 							# update cart data
-							a = @block.master.group.config.cart
-							b = @block.data
+							a = I.block.master.group.config.cart
+							b = I.block.data
 							if c = a[b.id]
 								c.count += 1
 							else
 								a[b.id] = {count: 1}
 							# refresh view
-							@set b
+							I.set b
 							# send request
 							c = await goFetch {
-									action: 'a_CartAdd'
-									params: [@block.data.id, 1]
+								action: 'a_CartAdd'
+								params: [b.id, 1]
 							}
 							# check
 							if c instanceof Error
 								# restore previous view
 								a[b.id].count -= 1
-								@set b
+								I.set b
 								return false
 							# update total
 							a.total.count++
@@ -1429,13 +1572,14 @@ SM = do ->
 							# done
 							return true
 						# }}}
-						openDetails: -> ~>> # {{{
+						openDetails: (B, e) ~>> # {{{
 							# TODO: productDetails block
+							# select click mode
+							return 1 if not e
 							# naviagate the link
-							window.location.assign @block.data.link
-							await newDelay 20000
+							window.location.assign B.data.link
 							# done
-							return true
+							return false
 						# }}}
 						getProduct: (id) -> # {{{
 							# check
@@ -1453,8 +1597,8 @@ SM = do ->
 			# }}}
 			Items = (block) !-> # {{{
 				cfg = block.master.group.config
-				for a of section
-					@[a] = new section[a] block, cfg
+				for a of area
+					@[a] = new area[a] block, cfg
 			# }}}
 			Block = (master) !-> # {{{
 				# construct
@@ -1542,7 +1686,7 @@ SM = do ->
 				return m
 			# }}}
 		# }}}
-	M = # masters
+	M = # Masters
 		'rows-selector': do -> # {{{
 			template = w3ui.template !-> # {{{
 				/*
@@ -1693,7 +1837,7 @@ SM = do ->
 				@sizes    = [0,0,0] # item's width,height,dot-height
 				@layout   = [0,0]   # current columns,rows
 				@factor   = 1       # current size factor
-				@ready    = newPromise! # current state promise
+				@ready    = w3ui.promise! # current state promise
 				@i_opt    = {       # intersection options
 					root: null        # window
 					rootMargin: '0px' # no margin
@@ -1707,33 +1851,36 @@ SM = do ->
 				###
 				@onChange = null    # master resizer callback
 				@observer = null    # [resize,intersect]
-				@intense  = newDelay! # scroll throttler
-				@dot      = newPromise! # intersect promise
-				@debounce = newDelay!
+				@intense  = w3ui.delay! # scroll throttler
+				@dot      = w3ui.promise! # intersect promise
+				@debounce = w3ui.delay!
 				@bounces  = 0       # for more gradual control
-				@resize = (e) ~>> # {{{
-					# check mode
+				@resize = w3ui.debounce (e) ~> # {{{
+					# check parameter
 					if e
 						# observed,
-						# apply debounce algorithm
-						if @debounce.pending
-							@debounce.cancel (++@bounces == 3)
-						if not await (@debounce = newDelay 100)
-							return false
-						@bounces = 0
 						# get width of the grid
 						w = e.0.contentRect.width
 					else
 						# forced,
 						# determine width of the grid
 						w = @block.root.clientWidth - @pads.0
-					# assuming no size factor applied,
-					# determine column count and space they take
-					[a,b] = @getCols w, 1
-					# calculate size factor
-					e = c = if b > w
-						then w / b # reduced
-						else 1     # normal
+					# check display mode
+					if @block.config.lines
+						# lines,
+						# always single column, takes all available width
+						a = 1
+						b = w
+						c = e = 1
+					else
+						# cards,
+						# assuming no size factor applied,
+						# determine column count and width taken
+						[a,b] = @getCols w, 1
+						# calculate size factor
+						e = c = if b > w
+							then w / b # reduced
+							else 1     # normal
 					# check master control
 					if @onChange
 						# callback master
@@ -1757,6 +1904,8 @@ SM = do ->
 						c.1 and @block.setCount (a * c.1)
 					# done
 					return true
+					###
+				, 500, 10
 				# }}}
 				@intersect = (e) ~>> # {{{
 					# fixed rows
@@ -1816,7 +1965,7 @@ SM = do ->
 						@s_opt.1.top = b - h - x
 						@s_opt.2.top = b - h - z
 						# wait repositions (should be cancelled)
-						await (@dot = newPromise -1)
+						await (@dot = w3ui.promise -1)
 						@observer.1.disconnect!
 						@observer.1.observe @block.dot
 						# done
@@ -1834,7 +1983,7 @@ SM = do ->
 						# determine decrement's trigger point
 						i = @s_opt.1.top - y - @pads.2
 						# wait triggered
-						if not (e = await (@dot = newPromise i))
+						if not (e = await (@dot = w3ui.promise i))
 							break
 						# check
 						if e == 1
@@ -1905,7 +2054,7 @@ SM = do ->
 						then 60  # increase
 						else 100 # decrease
 					# throttle (lock and accumulate)
-					while (await (@intense = newDelay i, 1)) > 1
+					while (await (@intense = w3ui.delay i, 1)) > 1
 						true
 					# get current position
 					e = e.scrollTop
@@ -1997,7 +2146,7 @@ SM = do ->
 					@dot.resolve 0
 				# }}}
 				getCols: (w, e) -> # {{{
-					# parameters: available (w)idth, siz(e) factor
+					# parameters: available (w)idth and siz(e) factor
 					# prepare
 					C = @block.config.layout
 					a = e * @sizes.0
@@ -2029,7 +2178,7 @@ SM = do ->
 						o.0.disconnect!
 						o.1.disconnect!
 					# reset
-					@ready = newPromise!
+					@ready = w3ui.promise!
 				# }}}
 			# }}}
 			refresher = (block) !-> # {{{
@@ -2089,6 +2238,9 @@ SM = do ->
 					s.range = @range
 					c.rows  = (o = @config.layout).1 # refresh guarantee
 					c.count = o.0 * o.1 # minimal
+					# check lines mode
+					if @config.lines
+						@rootBox.classList.add 'lines'
 					# activate resizer
 					@resizer.attach!
 					# TODO: activate refresher (refactor)
@@ -2432,7 +2584,7 @@ SM = do ->
 			Control = (block) !-> # {{{
 				# data
 				@block     = block
-				@lock      = newDelay! # common promise
+				@lock      = w3ui.delay! # common promise
 				@dragbox   = [
 					0,0,  # 0/1: first area size and runway
 					0,    #   2: middle area size
@@ -2581,12 +2733,12 @@ SM = do ->
 						###
 						return true
 					# create drag lock
-					@lock = lock = newPromise 3
+					@lock = lock = w3ui.promise 3
 					# set drag style
 					R.focus! # solves cursor refresh issue?
 					R.box.classList.add 'active', 'drag'
 					# cooldown
-					await Promise.race [(newDelay 200), lock]
+					await Promise.race [(w3ui.delay 200), lock]
 					# check
 					if not lock.pending
 						# aborted, remove drag style
@@ -2731,7 +2883,7 @@ SM = do ->
 					if (C = B.current) < 2
 						return false
 					# create new lock
-					@lock = lock = newPromise if event
+					@lock = lock = w3ui.promise if event
 						then 2 # pointer
 						else 1 # keyboard
 					# determine first index
@@ -2744,7 +2896,7 @@ SM = do ->
 					C.0 = first
 					await @fastUpdate!
 					# cooldown
-					L = await Promise.race [(newDelay 200), lock]
+					L = await Promise.race [(w3ui.delay 200), lock]
 					# check finished or cancelled
 					if not lock.pending
 						# when finished normally,
@@ -2784,7 +2936,7 @@ SM = do ->
 							# throttle
 							b = step
 							d = 1000 / (1 + d)
-							L = await Promise.race [(newDelay d), lock]
+							L = await Promise.race [(w3ui.delay d), lock]
 						else if step*b < @fastCfg.0 and --c == 0
 							# accelerate
 							b = b + step
@@ -2804,7 +2956,7 @@ SM = do ->
 				# }}}
 				fastUpdate: -> # {{{
 					# prepare
-					a = newPromise!
+					a = w3ui.promise!
 					b = @block
 					# start
 					requestAnimationFrame !->
@@ -2887,13 +3039,13 @@ SM = do ->
 				###
 				@observer  = null # resize observer
 				@onChange  = null
-				@debounce  = newDelay!
+				@debounce  = w3ui.delay!
 				@bounces   = 0
 				@resize    = (e) ~>> # {{{
 					# apply debounce algorithm
 					if @debounce.pending
-						@debounce.cancel (++@bounces == 3)
-					if not await (@debounce = newDelay 100)
+						@debounce.resolve (++@bounces == 3)
+					if not await (@debounce = w3ui.delay 100)
 						return false
 					@bounces = 0
 					# prepare
@@ -3521,7 +3673,7 @@ SM = do ->
 				@onScroll = null
 				@onChange = null
 				# private
-				wheelLock = newDelay!
+				wheelLock = w3ui.delay!
 				eUnsignedInt = /^[0-9]{0,9}$/
 				# handlers
 				@hover = (e) !~> # {{{
@@ -3552,7 +3704,7 @@ SM = do ->
 					e.stopPropagation!
 					# bounce
 					wheelLock.cancel! if wheelLock.pending
-					if not await (wheelLock := newDelay 17)
+					if not await (wheelLock := w3ui.delay 17)
 						return false
 					# callback
 					@onScroll @, (e.deltaY < 0)
@@ -3751,12 +3903,12 @@ SM = do ->
 						# callback
 						@onSubmit @current if @onSubmit
 				# }}}
-				focusBounce = newDelay 0
+				focusBounce = w3ui.delay 0
 				@numFocus = (v, o) ~>> # {{{
 					/***/
 					# bounce
 					focusBounce.cancel! if focusBounce.pending
-					if not (await focusBounce := newDelay 66) or @focused == v
+					if not (await focusBounce := w3ui.delay 66) or @focused == v
 						return false
 					# operate
 					@focused = v
@@ -3872,7 +4024,7 @@ SM = do ->
 					/***
 					# bounce
 					focusBounce.cancel! if focusBounce.pending
-					if not (await focusBounce := newDelay 66) or @focused == v
+					if not (await focusBounce := w3ui.delay 66) or @focused == v
 						return false
 					# operate
 					@focused = v
@@ -4002,13 +4154,13 @@ SM = do ->
 					# complete
 					@group.submit!
 				# }}}
-				focusBounce = newDelay 0
+				focusBounce = w3ui.delay!
 				focusLast   = null
 				@onFocus = (o, v) ~>> # {{{
 					# bounce range only
 					if o == @range
 						focusBounce.cancel! if focusBounce.pending
-						if not (await focusBounce := newDelay 66)
+						if not (await focusBounce := w3ui.delay 66)
 							focusLast := o
 							return false
 					# aggregator guard
@@ -4309,6 +4461,14 @@ SM = do ->
 		# }}}
 		'menu': do -> # {{{
 			# {{{
+			tRootBox = w3ui.template !-> # {{{
+				/*
+				<svg class="shield" viewBox="0 0 100 100" preserveAspectRatio="none">
+					<polygon class="a" points="0,8 0,0 100,100 100,0 "/>
+					<polygon class="b" points="0,0 0,8 100,8 100,0 "/>
+				</svg>
+				*/
+			# }}}
 			tItem = w3ui.template !-> # {{{
 				/*
 				{{lineA}}
@@ -4362,6 +4522,24 @@ SM = do ->
 				</div>
 				*/
 			# }}}
+			tSep = w3ui.template !-> # {{{
+				/*
+				<div class="line b">
+					<svg class="a" preserveAspectRatio="none" viewBox="0 0 48 48">
+						<polygon class="a" points="0,0 48,12 48,20 0,8 "/>
+						<polygon class="b" points="0,8 48,20 48,48 0,48 "/>
+					</svg>
+					<svg class="b" preserveAspectRatio="none" viewBox="0 0 48 48">
+						<polygon class="a" points="0,12 48,12 48,20 0,20 "/>
+						<polygon class="b" points="0,20 48,20 48,48 0,48 "/>
+					</svg>
+					<svg class="a" preserveAspectRatio="none" viewBox="0 0 48 48">
+						<polygon class="a" points="0,12 48,0 48,8 0,20 "/>
+						<polygon class="b" points="0,20 48,8 48,48 0,48 "/>
+					</svg>
+				</div>
+				*/
+			# }}}
 			fOrder = (a, b) -> # {{{
 				return if a.data.order < b.data.order
 					then -1
@@ -4388,14 +4566,51 @@ SM = do ->
 				return a
 			# }}}
 			# }}}
-			Resizer = (block) !-> # {{{
-				@block = block
-				@obs   = null
-			Resizer.prototype =
-				init: !->
-					# create observer
-					@obs = new ResizeObserver @update
-					@obs.observer @block.root
+			Dropdown = (item) !-> # {{{
+				# create object shape
+				@item = item
+				@root = a = document.createElement 'div'
+				@cs   = getComputedStyle a
+				@pads = [0,0,0,0] # [padX,padY,borderX,borderY]
+				@rect = null  # DOMRect
+				# state
+				@hovered = 0
+				@locked  = 0 # never true
+				# initialize
+				a.className = 'dropdown l'+item.level
+				w3ui.blockEvent.attach @, {
+					hover: [item.block.onHover, item]
+				}
+			###
+			Dropdown.prototype =
+				resize: !-> # {{{
+					# drop current inline style
+					@root.removeAttribute 'style'
+					# determine pads
+					a   = @pads
+					b   = 'getPropertyValue'
+					a.0 = parseFloat (@cs[b] 'padding-left')
+					a.1 = parseFloat (@cs[b] 'padding-top')
+					a.2 = parseFloat (@cs[b] 'border-left-width')
+					a.3 = parseFloat (@cs[b] 'border-top-width')
+					# determine bounding rect
+					@rect = @root.getBoundingClientRect!
+					# recurse
+					if @item.depth
+						for a in @item.children when b = a.dropdown
+							b.resize!
+				# }}}
+				getMax: (prop) -> # {{{
+					# prepare
+					a = @rect[prop]
+					# search maximal value
+					if @item.depth
+						for b in @item.children
+							if b.dropdown and (c = b.dropdown.getMax prop) > a
+								a = c
+					# done
+					return a
+				# }}}
 			# }}}
 			Item = (block, id, data, parent) !-> # {{{
 				# base
@@ -4404,230 +4619,421 @@ SM = do ->
 				@data     = data
 				@parent   = parent
 				@children = null
-				@level    = 0
+				@level    = 0 # how many parents above?
+				@depth    = 0 # how many levels below?
 				# controls
 				@button   = null
 				@dropdown = null
-				# state
-				@hovered  = false
-				@locked   = false # never
-				# handlers
-				@onHover  = (flag, drop) !~>
-					@block.onHover flag, @button
 			###
 			Item.prototype =
-				init: (level = 0) !-> # {{{
-					# set item's depth level
+				init: (level = 0) -> # {{{
+					# set item's level
 					@level = level
-					# create base control
-					a = w3ui.parse tItem, {
-						lineA: (not @parent and tLineA) or ''
-						name: @data.name
-						arrow: (@children and tArrow) or ''
-						lineB: (not @parent and tLineB) or ''
-					}
-					@button = b = w3ui.button {
-						html: a
-						name: (@children and 'drop') or ''
-						cfg: @
-						onHover: @block.onHover
-						onClick: @block.onClick
-					}
-					# set current
-					if @data.current
-						b.root.classList.add 'x'
-						b.lock true
-					# initialize children
-					if @children
-						# create dropdown
-						@dropdown = a = document.createElement 'div'
-						a.className = 'dropdown l'+level
-						a.addEventListener 'pointerenter', w3ui.event.hover @
-						a.addEventListener 'pointerleave', w3ui.event.unhover @
-						# recurse
-						for a in @children
-							a.init (level + 1)
-					# preserve natural focus order
-					# attach button
-					a = if @parent
-						then @parent.dropdown
-						else @block.rootBox
-					a.appendChild b.root
-					# attach dropdown
-					if b = @dropdown
-						a.appendChild b
+					# check type
+					if @data.url
+						# active menu item {{{
+						# create button
+						a = w3ui.parse tItem, {
+							lineA: (not @parent and tLineA) or ''
+							name: @data.name
+							arrow: (@children and tArrow) or ''
+							lineB: (not @parent and tLineB) or ''
+						}
+						@button = b = w3ui.button {
+							html: a
+							name: (@children and 'drop') or ''
+							event:
+								hover: [@block.onHover, @]
+								click: [@block.onClick, @]
+						}
+						# TODO: set current
+						if @data.current
+							b.root.classList.add 'x'
+							#b.lock true
+						# attach
+						a = if @parent
+							then @parent.dropdown.root
+							else @block.rootBox
+						a.appendChild b.root
+						# check
+						if @children
+							# create dropdown
+							@dropdown = b = new Dropdown @
+							# initialize children and determine depth
+							d = 0
+							for c in @children
+								if (e = c.init (level + 1)) > d
+									d = e
+							# set item's depth
+							@depth = d + 1
+							# attach
+							a.appendChild b.root
+						# }}}
+					else if @data.type
+						# separator {{{
+						true
+						# }}}
+					###
 					# done
+					return @depth
 				# }}}
 				lock: (v) !-> # {{{
 					# operate
-					if not @data.current
+					if @button and not @data.current
 						@button.lock v
 					# recurse
 					if a = @children
 						for b in a
 							b.lock v
 				# }}}
+				resize: (x, y, w, h) !-> # {{{
+					# prepare
+					a = @dropdown.root.style
+					b = @dropdown.pads
+					# check
+					if @block.cfg.stretch.0
+						# determine stretched width
+						c = w / @depth
+						# determine vertical alignment
+						if @level and @block.cfg.align == 1
+							y = @button.root.offsetTop - b.1 - b.3
+						# apply
+						a.left   = x+'px'
+						a.top    = y+'px'
+						a.width  = c+'px'
+						a.height = h+'px' if h
+						# determine next level offsets and width
+						d = @block.cfg.gap.0
+						x = c - b.2 + d
+						y = 0 - b.3
+						w = w - c - d
+						# recurse
+						for a in @children when a.depth
+							a.resize x, y, w, h
+						# cleanup (rects are obsolete now)
+						@dropdown.rect = null
+						@button.rect   = null
+					else
+						# TODO: better looking variant,
+						# ...
+						# 1) SUM(max[1..N]) <= w
+						# 2) decrease max[1..N] by % to fit w
+						# ...
+						true
+					# done
+				# }}}
+				open: !-> # {{{
+					@button.root.classList.add 'o'
+					@dropdown.root.classList.add 'o'
+				# }}}
+				close: !-> # {{{
+					@button.root.classList.remove 'o'
+					@dropdown.root.classList.remove 'o'
+				# }}}
+			# }}}
+			Shield = (block) !-> # {{{
+				# INFO: protects from accidental hovering/unhovering
+				# create object shape
+				@block  = block
+				@root   = root = w3ui.queryChild block.rootBox, '.shield'
+				@item   = null
+				@guided = 0
+				@fly    = w3ui.delay!
+				@onHover = (node, v, e) !~>> # {{{
+					# check
+					if not (item = @item)
+						return
+					# redirect
+					@block.onHover item, v, e
+					# cancel flight
+					@fly.cancel! if @fly.pending
+					# operate
+					if node == @root.children.1
+						# set
+						@guided = v
+					else if v
+						# takeoff,
+						# approximate time required to reach item's dropdown,
+						# using simplified Fitt's formula, first,
+						# determine target [r]adius and [d]istance to go
+						r = item.button.rect.height / 2
+						a = item.dropdown
+						d = (a.rect.x + a.pads.0 + r) - e.clientX
+						# determine time
+						# https://www.cip.ifi.lmu.de/~drewes/science/fitts/A%20Lecture%20on%20Fitts%20Law.pdf
+						t = 80 + 400 * Math.log2 (2*d / r)
+						# determine current position and step size
+						a = @root.children.0.points
+						d = a.0.x
+						r = (100 - d) * (30 / t)
+						# fly
+						while await (@fly = w3ui.delay 30)
+							d += r
+							a.0.x = d
+							a.1.x = d
+					else
+						# initiate landing
+						if await (@fly = w3ui.delay 30)
+							# check item preserved
+							if item == @item
+								# shorten runway
+								@set!
+				# }}}
+				@onGuide = w3ui.debounce (null, e) !~> # {{{
+					@set e if @guided
+				# }}}
+				@onClick = (null, e) !~> # {{{
+					if @item
+						# redirect
+						e = new e.constructor e.type, e
+						@item.button.root.dispatchEvent e
+				# }}}
+				# initialize
+				a = root.children
+				e = w3ui.event
+				e.hover a.0, @onHover
+				e.hover a.1, @onHover
+				e.mmove a.1, @onGuide
+				e.click a.1, @onClick
+			###
+			Shield.prototype =
+				attach: (item, e) !-> # {{{
+					# prepare
+					#if not b = (a = item.parent.dropdown).rect
+					#	b = a.rect = a.root.getBoundingClientRect!
+					if not c = (a = item.dropdown).rect
+						c = a.rect = a.root.getBoundingClientRect!
+					if not d = (a = item.button).rect
+						d = a.rect = a.root.getBoundingClientRect!
+					a = @block.rect
+					# SVG container
+					# determine offsets (button/dropdown border) and size
+					x = d.x - a.x
+					y = c.y - a.y
+					w = c.x - d.x + item.dropdown.pads.2
+					h = if d.y + d.height > c.y + c.height
+						then d.y + d.height - c.y
+						else c.height
+					# apply
+					o = @root.style
+					o.left   = x+'px'
+					o.top    = y+'px'
+					o.width  = w+'px'
+					o.height = h+'px'
+					# guiding polygon
+					# determine opposite side offset
+					x = 100 * d.width / w
+					# determine base vertical offset and addition
+					y = 100 * (d.y - c.y) / h
+					z = 100 * d.height / h
+					# apply
+					o = @root.children.1.points
+					o.2.x = o.3.x = x
+					o.0.y = o.3.y = y
+					o.1.y = o.2.y = y + z
+					# tracking polygon
+					# determine vertical offsets only (button borders)
+					y = d.y - c.y
+					z = y + d.height
+					# apply
+					o = @root.children.0.points
+					o.0.y = 100 * y / h
+					o.1.y = 100 * z / h
+					# check current state
+					if @item
+						# re-activate
+						@fly.cancel! if @fly.pending
+						@item = item
+						@set e
+					else
+						# activate
+						@item = item
+						@set e
+						@root.classList.add 'v'
+				# }}}
+				set: (e) !-> # {{{
+					# POLYGON TRIANGLE: guiding point positioning
+					# prepare
+					c = @item.dropdown.rect
+					d = @item.button.rect
+					# determine horizontal offset (with alignment)
+					if e
+						x = e.clientX - d.x
+						x = x - (d.height / 2)
+						x = 0 if x < 0
+					else
+						x = d.width
+					# determine container's width and point position inside
+					w = c.x - d.x + @item.dropdown.pads.2
+					x = 100 * (x / w)
+					# apply
+					c = @root.children.0.points
+					c.0.x = x
+					c.1.x = x
+				# }}}
+				detach: !-> # {{{
+					if @item
+						@item = null
+						@fly.cancel! if @fly.pending
+						@guided = 0
+						@root.classList.remove 'v'
+				# }}}
 			# }}}
 			Block = (root) !-> # {{{
 				# base
-				@group    = 'route'
-				@root     = root
-				@rootBox  = root.firstChild
-				@cfg      = w3ui.config root.firstChild, {
-					dropmode: 1 # dropdown alignment: 0=straight, 1=one-to-one
-					pads: [1, 1]
-					delayOpen:  400 # hover intent 0.3-0.5
-					delayClose: 700 # same but >0.5
+				@group   = 'route'
+				@root    = root
+				@rootBox = root.firstChild
+				@cfg     = w3ui.config root.firstChild, {
+					stretch: [true, true] # width,height dropdown stretching
+					gap: [1, 1] # px vertical(root),horizontal(inner item)
+					delay: [ # hover intents
+						300 # root open, item close: 300-500 ms
+						600 # full close >500 ms
+					]
+					intent: 300 # hover intent to open/close item
+					align:  0 # dropdowns alignment variant 0=box2box 1=item2item
+					shield: true # hover guide/triangle
 				}
 				# controls
-				@items    = null
-				@levels   = null
-				@resizer  = null
+				@items   = null # roots
+				@shield  = null # item hover shield
+				@resizer = null
 				# state
-				@padY     = null
-				@opened   = [] # items with opened dropdowns
-				@hover    = newDelay!
-				@hovered  = 0
-				@focused  = false
-				@locked   = -1
+				@rect    = null # rootBox DOMRect
+				@opened  = [] # items
+				@intent  = w3ui.delay!
+				@hovered = 0
+				@focused = 0
+				@locked  = -1
 				# handlers
-				@onHover = w3ui.event.hoverAccum @, (flag, btn) ~>> # {{{
+				@onHover = w3ui.blockEvent.hover @, (item, v, e) !~>> # {{{
 					# prepare
 					list = @opened
-					item = btn.cfg
-					drop = item.dropdown
 					# check
-					if flag
-						# ENTRANCE
-						# abort previous call
-						@hover.cancel! if @hover.pending
-						# check level already opened
+					if v
+						# ENTER THE DRAGON
+						# deactivate previous call
+						@intent.cancel! if @intent.pending
+						# check current level opened
 						if item.level < list.length
-							# CLOSE
-							# skip if item is already opened
-							if drop == list[item.level].dropdown
-								return true
-							# close all higher levels (including current)
+							# check current item opened
+							if item == list[item.level]
+								return
+							# close items
 							a = list.length
 							while --a >= item.level
-								list[a].dropdown.classList.remove 'o'
-								list[a].button.root.classList.remove 'o'
-							# scrap
-							list.length = a + 1
-						# check item has dropdown
-						if drop
-							# OPEN
-							# check user intent
-							if item.level == 0 and not await (@hover = newDelay @cfg.delayOpen)
-								return false
-							# determine position and size of a ..
-							if item.level
-								# tree node
-								if @cfg.dropmode
-									# one to one
-									a = item.parent.dropdown.getBoundingClientRect!
-									b = btn.root.getBoundingClientRect!
-									x = a.width + @cfg.pads.0
-									y = item.level - 1
-									y = b.y - a.y - @padY[y] - @cfg.pads.1
-									c = a.width
-								else
-									# straight
-									a = item.parent.dropdown.getBoundingClientRect!
-									#b = btn.root.getBoundingClientRect!
-									b = @rootBox.getBoundingClientRect!
-									x = item.level - 1
-									x = a.width - 1 + @cfg.pads.0
-									y = 0 - @cfg.pads.1
-									c = a.width
-							else
-								# root node
-								a = @rootBox.getBoundingClientRect!
-								b = btn.root.getBoundingClientRect!
-								x = b.x - a.x
-								y = b.y - a.y + b.height + @cfg.pads.1
-								c = b.width
-							# set
-							drop.style.left = x + 'px'
-							drop.style.top  = y + 'px'
-							drop.style.minWidth = c + 'px'
-							drop.classList.add 'o'
-							btn.root.classList.add 'o'
-							# store
+								# unhover if hovered (async recursion)
+								if not await (@onHover list[a], 0)
+									# was not hovered, close explicitly
+									list[a].close!
+									list.length = a
+						# check has dropdown
+						if item.dropdown
+							# check root
+							if not item.level
+								# activate instant unhover
+								await @onHover item, -1
+								# check intent
+								if not await (@intent = w3ui.delay @cfg.intent)
+									return
+								# deactivate instant unhover
+								await @onHover item, -1
+							# activate dropdown
+							item.open!
 							list[*] = item
+							# activate shield for non-root item
+							if item.level and @shield
+								@shield.attach item, e
+						###
 					else if not @hovered
-						# EXIT
-						# abort previous call
-						@hover.cancel! if @hover.pending
-						# lazily close dropdowns
-						a = b = list.length
-						while --a >= item.level and \
-						      await (@hover = newDelay (@cfg.delayClose / (b - a + 1)))
-							###
-							# close
-							list[a].dropdown.classList.remove 'o'
-							list[a].button.root.classList.remove 'o'
-							# scrap
-							list.length = a
+						# CLOSE ALL
+						# deactivate previous call
+						@intent.cancel! if @intent.pending
+						# deactivate shield
+						@shield.detach! if @shield
+						# deactivate all dropdowns
+						a = list.length
+						while ~--a
+							list[a].close!
+						list.length = 0
+						###
+					else if item.dropdown and list[list.length - 1] == item
+						# CLOSE LAST ITEM
+						# re-activate shield
+						if @shield
+							if (a = item.parent) and a.parent and @shield.item != a
+								@shield.attach a, null
+							else
+								@shield.detach!
+						# deactivate dropdown
+						item.close!
+						--list.length
 					# done
-					return true
+				, @cfg.intent
 				# }}}
-				@onClick = (btn) ~>> # {{{
-					# get data
-					a = btn.cfg.data
+				@onClick = (item, e) ~> # {{{
 					# check
-					switch a.type
-					case 'page', 'custom'
-						# naviagate the url
-						window.location.assign a.url
-						# suspend
+					switch (data = item.data).type
+					case 'page'
+						# page naviagation
+						window.location.assign data.url
 						@lock!
-						return false
+					case 'ext'
+						# open external link
+						window.open data.url, 'noopener,noreferrer'
 					# done
-					return true
+					return 0
 				# }}}
-				@resize = w3ui.event.resizeAccum (e) !~> # {{{
-					# determine..
-					# assuming that dropdowns of the same level have same style,
-					# determine their absolute size parameters
-					@padY = []
-					# iterate levels with dropdowns
-					a = -1
-					b = @levels.length - 1
-					while ++a < b
-						# search first dropdown
-						for c in @levels[a] when c.dropdown
-							# determine top padding
-							d = getComputedStyle c.dropdown
-							e = parseFloat (d.getPropertyValue 'padding-top')
-							e = e + parseFloat (d.getPropertyValue 'border-top-width')
-							@padY[a] = e
-							break
+				@resize = w3ui.debounce (e) !~> # {{{
+					# check
+					if not @items
+						return
+					# TODO:
+					# get container's dimensions
+					@rect = a = @rootBox.getBoundingClientRect!
+					# check menu mode?
+					# ...
+					# iterate root items
+					for item in @items when item.depth
+						# prepare
+						b = item.button
+						c = item.dropdown
+						# determine button dimensions
+						b.rect = b.root.getBoundingClientRect!
+						# determine initial offsets and available width
+						x = b.rect.x - a.x
+						y = b.rect.y - a.y + b.rect.height + @cfg.gap.1
+						w = a.width - x
+						# determine dropdown's natural sizes
+						c.resize!
+						# determine stretched height (max)
+						h = if @cfg.stretch.1
+							then c.getMax 'height'
+							else 0 # no stretching
+						# operate
+						item.resize x, y, w, h
 					# done
 					return true
-				, 999, 9
+				, 1000, 10
 				# }}}
 			Block.prototype =
 				init: (s, c) ->> # {{{
 					# configure state
 					s.route = [c.routes[''], -1]
-					# create and attach items
+					# initialize root box
+					@rootBox.innerHTML = tRootBox
+					# assemble
 					if @items = fAssembly @, c.routes, null
+						# initialize
 						for a in @items
 							a.init!
-						# create tree levels
-						@levels = []
-						a = @items
-						b = -1
-						while a.length
-							@levels[++b] = a
-							c = []
-							for d in a when d.children
-								c.push ...d.children
-							a = c
-					# create resizer
-					@resizer = new ResizeObserver @resize
-					@resizer.observe @root
+						# create shield
+						if @cfg.shield
+							@shield = new Shield @
+						# create resizer
+						@resizer = new ResizeObserver @resize
+						@resizer.observe @root
 					# done
 					return true
 				# }}}
@@ -4647,7 +5053,7 @@ SM = do ->
 			# }}}
 			return Block
 		# }}}
-	# supervisor
+	# SuperVisor
 	return do -> # {{{
 		Config = !-> # {{{
 			@locale   = null  # interface labels, titles, etc
@@ -4682,7 +5088,7 @@ SM = do ->
 				# get configuration
 				if not c
 					if (c = await goFetch s.state) instanceof Error
-						consoleError c.message
+						w3ui.console.error c.message
 						return false
 				# set configuration
 				for a of c when s.config.hasOwnProperty a
@@ -4693,7 +5099,7 @@ SM = do ->
 					a[*] = s.groups[c].init!
 				# wait completed and check the results
 				for a,c in (await Promise.all a) when not a
-					consoleError 'failed to initialize '+s.groups[c].name
+					w3ui.console.error 'failed to initialize '+s.groups[c].name
 					return false
 				# refresh (ordered)
 				for a in b
@@ -4712,7 +5118,7 @@ SM = do ->
 						a.unlock 0
 				# done
 				t = (window.performance.now! - t) .|. 0
-				consoleInfo 'initialized in '+t+'ms'
+				w3ui.console.log 'initialized in '+t+'ms'
 				return true
 			# }}}
 			finit: !-> # {{{
@@ -4747,8 +5153,8 @@ SM = do ->
 				# except the soft/programmatic restarts made by routine itself,
 				# otherwise a lock is clean - instant charge by the user.
 				@lock = if @dirty
-					then newDelay (~@dirty and 400)
-					else newPromise 1
+					then w3ui.delay (~@dirty and 400)
+					else w3ui.promise 1
 				# wait for the charge
 				if not (await @lock)
 					return true
@@ -4795,11 +5201,11 @@ SM = do ->
 					if f.id == 4
 						return true
 					# fatal
-					consoleError f.message
+					w3ui.console.error f.message
 					return false
 				# read total records count
 				if (s.config.total = a = await f.readInt!) == null
-					consoleError 'fetch stream failed'
+					w3ui.console.error 'fetch stream failed'
 					f.cancel!
 					return false
 				# }}}
@@ -4827,7 +5233,7 @@ SM = do ->
 					while not @dirty and b = await f.readJSON!
 						# check
 						if b instanceof Error
-							consoleError 'fetch stream failed, '+b.message
+							w3ui.console.error 'fetch stream failed, '+b.message
 							return false
 						# load
 						if @dirty or not s.receiver.load a++, b
@@ -4975,7 +5381,7 @@ SM = do ->
 			@onLoad   = null
 			###
 			s = (m != M and 'custom ') or ''
-			consoleInfo 'new '+s+'supervisor'
+			w3ui.console.log 'new '+s+'supervisor'
 			# }}}
 		SuperVisor.prototype =
 			init: (root, cfg = null) ->> # {{{

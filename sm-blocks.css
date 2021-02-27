@@ -13,7 +13,7 @@
 .sm-blocks {
   --height: calc(var(--sm-size-height) * var(--sm-size-factor));
   --font-size: calc(0.3334 * var(--height));
-  font-size: var(--font-size);
+  font-size: var(--height);
   position: relative;
   box-sizing: border-box;
   min-width: 0;
@@ -99,9 +99,7 @@
   left: 0;
   width: 100%;
   height: 100%;
-}
-.sm-blocks svg {
-  fill: rgba(192,192,192,0.2);
+  fill: rgba(var(--sm-color-3),1);
 }
 .sm-blocks.v > div {
   opacity: 0.6;
@@ -137,13 +135,13 @@
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  line-height: 0;
   user-select: none;
   pointer-events: none;
   font-size: 0.334em;
   font-family: 'Arial Black', 'Arial Bold', Gadget, sans-serif;
   font-weight: bold;
   text-decoration: none;
+  line-height: 100%;
   letter-spacing: 0;
   background-color: transparent;
   color: rgba(var(--sm-color-5),1);
@@ -189,6 +187,107 @@
 }
 .sm-blocks button.w3-button.v.w.f {
   background-color: rgba(var(--sm-color-6),0.125);
+}
+.sm-blocks div.w3-select {
+  font-size: var(--height);
+  width: auto;
+  min-width: 2.1em;
+  height: 1em;
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: flex-start;
+  pointer-events: none;
+}
+.sm-blocks div.w3-select > select {
+  flex: 1 1 0;
+  font-size: var(--font-size);
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 1em;
+  padding-right: var(--height);
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  display: block;
+  background-color: #dcdcdc;
+  color: transparent;
+  box-shadow: inset 0 0 0.6em 0 #c0c0c0;
+  border-style: solid;
+  border-color: #c0c0c0;
+  border-width: 0.025em;
+  border-radius: 0.05em;
+  outline: none;
+  font-family: 'Arial Black', 'Arial Bold', Gadget, sans-serif;
+  font-weight: bold;
+  text-align: left;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+.sm-blocks div.w3-select > select:-ms-expand {
+  display: none;
+}
+.sm-blocks div.w3-select > svg {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 1em;
+  height: 100%;
+  pointer-events: none;
+  fill: #c0c0c0;
+}
+.sm-blocks div.w3-select > svg > .b {
+  fill: transparent;
+}
+.sm-blocks div.w3-select.a > select {
+  color: #483d8b;
+}
+.sm-blocks div.w3-select.a > svg > .a {
+  fill: rgba(106,90,205,0.6);
+}
+.sm-blocks div.w3-select.v {
+  pointer-events: auto;
+}
+.sm-blocks div.w3-select.v > select {
+  color: #708090;
+  cursor: pointer;
+}
+.sm-blocks div.w3-select.v > select > option {
+  color: #2f4f4f;
+  background-color: #dcdcdc;
+  border: 1px solid #f00;
+}
+.sm-blocks div.w3-select.v > select > option:checked {
+  color: rgba(106,90,205,0.6);
+}
+.sm-blocks div.w3-select.v > select > option:hover {
+  background-color: #000;
+  color: #fff;
+}
+.sm-blocks div.w3-select.v > svg > .a {
+  fill: #c0c0c0;
+}
+.sm-blocks div.w3-select.v > svg > .b {
+  fill: #708090;
+}
+.sm-blocks div.w3-select.v.h > select {
+  color: #2f4f4f;
+  border-color: #2f4f4f;
+}
+.sm-blocks div.w3-select.v.f > select {
+  color: #2f4f4f;
+  background-color: #c0c0c0;
+  border-color: #2f4f4f;
+  box-shadow: inset 0 0 0 0.04em #fff;
+}
+.sm-blocks div.w3-select.v.f > svg > .a {
+  fill: #708090;
+}
+.sm-blocks div.w3-select.v.f > svg > .b {
+  fill: #dcdcdc;
 }
 .sm-blocks button.sm-checkbox {
   width: 100%;
@@ -311,106 +410,322 @@
   background-color: #c0c0c0;
   box-shadow: inset 0 0 0 0.01em #fff;
 }
-.sm-blocks .sm-blocks-select {
-  font-size: var(--height);
-  width: auto;
-  min-width: 2.1em;
-  height: 1em;
+.sm-blocks.menu {
+  --root-size: 1em;
+  --item-size: 0.75em;
+  width: 100%;
+  height: auto;
+  padding: 4px 2px 4px 2px;
+  overflow: visible;
+}
+.sm-blocks.menu > div {
+  width: 100%;
+  height: var(--root-size);
   position: relative;
+  overflow: visible;
+  opacity: 1;
   display: flex;
   flex-direction: row;
   align-items: stretch;
   justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+.sm-blocks.menu > div > svg.shield {
+  position: absolute;
+  z-index: 999;
+  width: 0;
+  height: 0;
   pointer-events: none;
+  display: none;
+  opacity: 1;
 }
-.sm-blocks .sm-blocks-select > select {
-  flex: 1 1 0;
-  font-size: var(--font-size);
-  padding-top: 0;
-  padding-bottom: 0;
-  padding-left: 1em;
-  padding-right: var(--height);
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
+.sm-blocks.menu > div > svg.shield > polygon {
+  pointer-events: auto;
+  opacity: 0;
+}
+.sm-blocks.menu > div > svg.shield > polygon.a {
+  cursor: default;
+  fill: #dc143c;
+  opacity: 0.5;
+}
+.sm-blocks.menu > div > svg.shield > polygon.b {
+  cursor: pointer;
+  fill: #708090;
+}
+.sm-blocks.menu > div > svg.shield.v {
   display: block;
-  background-color: #dcdcdc;
-  color: transparent;
-  box-shadow: inset 0 0 0.6em 0 #c0c0c0;
-  border-style: solid;
-  border-color: #c0c0c0;
-  border-width: 0.025em;
-  border-radius: 0.05em;
-  outline: none;
-  font-family: 'Arial Black', 'Arial Bold', Gadget, sans-serif;
-  font-weight: bold;
-  text-align: left;
-  text-decoration: none;
-  text-overflow: ellipsis;
-  letter-spacing: 0;
-  white-space: nowrap;
 }
-.sm-blocks .sm-blocks-select > select:-ms-expand {
+.sm-blocks.menu > div button {
+  width: auto;
+  padding: 0.125em 0.25em 0.125em 0.25em;
+  position: relative;
+  border: 0;
+  background-color: transparent;
+  box-shadow: none;
+}
+.sm-blocks.menu > div button > .label {
+  width: auto;
+  height: 100%;
+  align-items: center;
+  font-family: Verdana, Helvetica, Arial, sans-serif;
+}
+.sm-blocks.menu > div button > .arrow {
+  position: absolute;
   display: none;
 }
-.sm-blocks .sm-blocks-select > svg {
+.sm-blocks.menu > div button > .arrow > .a {
+  fill: rgba(var(--sm-color-5),1);
+}
+.sm-blocks.menu > div button > .arrow > .b {
+  fill: rgba(var(--sm-color-2),1);
+}
+.sm-blocks.menu > div button.drop > .arrow {
+  display: block;
+}
+.sm-blocks.menu > div > button {
+  width: auto;
+  height: var(--root-size);
+  opacity: 0.6;
+  flex: 0 0 auto;
+}
+.sm-blocks.menu > div > button > .label {
+  width: auto;
+  height: 100%;
+  justify-content: center;
+  font-size: calc(var(--root-size) / 2);
+}
+.sm-blocks.menu > div > button > .arrow {
+  width: calc(0.75 * var(--root-size));
+  height: calc(0.75 * var(--root-size));
+  top: calc(0.125 * var(--root-size));
+  right: 0;
+  transform: rotate(90deg);
+}
+.sm-blocks.menu > div > button > .arrow > .a {
+  fill: rgba(var(--sm-color-5),1);
+}
+.sm-blocks.menu > div > button > .arrow > .b {
+  fill: rgba(var(--sm-color-2),1);
+}
+.sm-blocks.menu > div > button > .line {
+  width: 100%;
+  height: calc(0.084 * var(--root-size));
+  position: absolute;
+  left: 0;
+  display: flex;
+  flex-direction: row;
+  opacity: 0;
+}
+.sm-blocks.menu > div > button > .line > svg {
+  height: 100%;
+}
+.sm-blocks.menu > div > button > .line > svg.a {
+  flex: 0 0 0;
+  min-width: calc(0.125 * var(--root-size));
+}
+.sm-blocks.menu > div > button > .line > svg.b {
+  flex: 1 1 0;
+}
+.sm-blocks.menu > div > button > .line > svg > .a {
+  fill: rgba(var(--sm-color-4),1);
+}
+.sm-blocks.menu > div > button > .line > svg > .b {
+  fill: rgba(var(--sm-color-2),1);
+}
+.sm-blocks.menu > div > button > .line.a {
+  top: 0;
+}
+.sm-blocks.menu > div > button > .line.b {
+  bottom: 0;
+}
+.sm-blocks.menu > div > button.drop {
+  padding-right: calc(0.75 * var(--root-size));
+}
+.sm-blocks.menu > div > button.v.h > .line,
+.sm-blocks.menu > div > button.v.f > .line {
+  opacity: 1;
+}
+.sm-blocks.menu > div > button.v.f {
+  box-shadow: inset 0 0 6px -2px rgba(var(--sm-color-7),1);
+}
+.sm-blocks.menu > div > button.v.o {
+  box-shadow: inset 0 0 6px -2px rgba(var(--sm-color-3),1);
+}
+.sm-blocks.menu > div > button.v.o > .arrow {
+  transform: rotate(0deg);
+}
+.sm-blocks.menu > div > button.v.o > .arrow > .a {
+  fill: rgba(var(--sm-color-4),1);
+}
+.sm-blocks.menu > div > button.v.o > .arrow > .b {
+  fill: rgba(var(--sm-color-3),1);
+}
+.sm-blocks.menu > div > button.v.o > .line {
+  opacity: 1;
+}
+.sm-blocks.menu > div > button.v.o.f {
+  background-color: rgba(var(--sm-color-7),0.025);
+}
+.sm-blocks.menu > div > button.v.o.f > .arrow > .a {
+  fill: rgba(var(--sm-color-6),1);
+}
+.sm-blocks.menu > div > button.v.w,
+.sm-blocks.menu > div > button.v.w.h,
+.sm-blocks.menu > div > button.v.w.f {
+  opacity: 1;
+  background-color: rgba(var(--sm-color-0),1);
+}
+.sm-blocks.menu > div > button.v.w > .label,
+.sm-blocks.menu > div > button.v.w.h > .label,
+.sm-blocks.menu > div > button.v.w.f > .label {
+  color: rgba(var(--sm-color-1),1);
+}
+.sm-blocks.menu > div > button.v.w > .line,
+.sm-blocks.menu > div > button.v.w.h > .line,
+.sm-blocks.menu > div > button.v.w.f > .line {
+  height: 0.167em;
+  opacity: 1;
+}
+.sm-blocks.menu > div > button.v.w > .line > .a > .a,
+.sm-blocks.menu > div > button.v.w.h > .line > .a > .a,
+.sm-blocks.menu > div > button.v.w.f > .line > .a > .a,
+.sm-blocks.menu > div > button.v.w > .line > .b > .a,
+.sm-blocks.menu > div > button.v.w.h > .line > .b > .a,
+.sm-blocks.menu > div > button.v.w.f > .line > .b > .a {
+  fill: rgba(var(--sm-color-1),1);
+}
+.sm-blocks.menu > div > button.x {
+  opacity: 1;
+  background-color: rgba(var(--sm-color-3),1);
+}
+.sm-blocks.menu > div > button.x > .line {
+  height: 0.167em;
+  opacity: 1;
+}
+.sm-blocks.menu > div > button.x > .line > .a > .a,
+.sm-blocks.menu > div > button.x > .line > .b > .a {
+  fill: rgba(var(--sm-color-1),1);
+}
+.sm-blocks.menu > div > button.x > .line > .a > .b,
+.sm-blocks.menu > div > button.x > .line > .b > .b {
+  fill: rgba(var(--sm-color-0),1);
+}
+.sm-blocks.menu > div .dropdown {
+  padding: 0.333em 0.167em;
+  background-color: rgba(var(--sm-color-3),1);
+  border: 2px solid rgba(var(--sm-color-4),1);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  box-sizing: border-box;
+  position: absolute;
+  z-index: 998;
+  visibility: hidden;
+}
+.sm-blocks.menu > div .dropdown.o {
+  visibility: visible;
+}
+.sm-blocks.menu > div .dropdown > button {
+  height: 0.75em;
+  padding-right: 0.542em;
+}
+.sm-blocks.menu > div .dropdown > button > .label {
+  font-size: 0.375em;
+  display: block;
+  text-align: left;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  color: rgba(var(--sm-color-4),1);
+}
+.sm-blocks.menu > div .dropdown > button > .arrow {
+  width: 0.667em;
+  height: 0.667em;
+  top: 0.0415em;
+  right: 0;
+  transform: rotate(90deg);
+}
+.sm-blocks.menu > div .dropdown > button > .arrow > .a {
+  fill: rgba(var(--sm-color-5),1);
+}
+.sm-blocks.menu > div .dropdown > button > .arrow > .b {
+  fill: rgba(var(--sm-color-4),1);
+}
+.sm-blocks.menu > div .dropdown > button.v.h,
+.sm-blocks.menu > div .dropdown > button.v.o {
+  background-color: rgba(var(--sm-color-1),0.75);
+  box-shadow: inset 0 0 2px 0 rgba(var(--sm-color-0),1);
+  border-color: rgba(var(--sm-color-0),0.65);
+}
+.sm-blocks.menu > div .dropdown > button.v.h > .label,
+.sm-blocks.menu > div .dropdown > button.v.o > .label {
+  font-weight: bolder;
+  color: rgba(var(--sm-color-0),1);
+}
+.sm-blocks.menu > div .dropdown > button.v.o > .arrow {
+  transform: rotate(-90deg);
+}
+.sm-blocks.menu > div .dropdown > button.v.o > .arrow > .a {
+  fill: rgba(var(--sm-color-4),1);
+}
+.sm-blocks.menu > div .dropdown > button.v.o > .arrow > .b {
+  fill: rgba(var(--sm-color-5),1);
+}
+.sm-blocks.menu > div.v > button {
+  opacity: 1;
+}
+.sm-blocks.minicart {
+  width: auto;
+  height: auto;
+  padding: 4px 2px;
+  overflow: visible;
+}
+.sm-blocks.minicart > div {
+  width: auto;
+  height: auto;
+  position: relative;
+  overflow: visible;
+  padding-right: 0.125em;
+}
+.sm-blocks.minicart > div > a {
+  width: 1em;
+  height: 1em;
+  padding: 0.125em;
+  box-sizing: border-box;
+  display: block;
+}
+.sm-blocks.minicart > div > a > svg {
+  fill: rgba(var(--sm-color-5),1);
+}
+.sm-blocks.minicart > div > a > .count {
   position: absolute;
   top: 0;
   right: 0;
-  width: 1em;
+  width: 0.4em;
+  height: 0.4em;
+  display: none;
+  background-color: #483d8b;
+  border-radius: 100%;
+}
+.sm-blocks.minicart > div > a > .count > div {
+  width: 100%;
   height: 100%;
-  pointer-events: none;
-  fill: #c0c0c0;
-}
-.sm-blocks .sm-blocks-select > svg > .b {
-  fill: transparent;
-}
-.sm-blocks .sm-blocks-select.a > select {
-  color: #483d8b;
-}
-.sm-blocks .sm-blocks-select.a > svg > .a {
-  fill: rgba(106,90,205,0.6);
-}
-.sm-blocks .sm-blocks-select.v {
-  pointer-events: auto;
-}
-.sm-blocks .sm-blocks-select.v > select {
-  color: #708090;
-  cursor: pointer;
-}
-.sm-blocks .sm-blocks-select.v > select > option {
-  color: #2f4f4f;
-  background-color: #dcdcdc;
-  border: 1px solid #f00;
-}
-.sm-blocks .sm-blocks-select.v > select > option:checked {
-  color: rgba(106,90,205,0.6);
-}
-.sm-blocks .sm-blocks-select.v > select > option:hover {
-  background-color: #000;
+  font-size: 0.25em;
+  font-weight: bold;
+  font-family: var(--sm-font-input);
+  line-height: 0;
   color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.sm-blocks .sm-blocks-select.v > svg > .a {
-  fill: #c0c0c0;
-}
-.sm-blocks .sm-blocks-select.v > svg > .b {
-  fill: #708090;
-}
-.sm-blocks .sm-blocks-select.v.h > select {
-  color: #2f4f4f;
-  border-color: #2f4f4f;
-}
-.sm-blocks .sm-blocks-select.v.f > select {
-  color: #2f4f4f;
-  background-color: #c0c0c0;
-  border-color: #2f4f4f;
-  box-shadow: inset 0 0 0 0.04em #fff;
-}
-.sm-blocks .sm-blocks-select.v.f > svg > .a {
-  fill: #708090;
-}
-.sm-blocks .sm-blocks-select.v.f > svg > .b {
-  fill: #dcdcdc;
+.sm-blocks.minicart > div > a > .count.v {
+  display: block;
 }
 .sm-blocks.section {
   width: 100%;
@@ -964,6 +1279,7 @@
   --gap-y: calc(var(--row-gap) * var(--sm-size-factor));
   --grid-width: calc(var(--columns) * var(--item-x) + calc(var(--columns) - 1) * var(--gap-x));
   --grid-height: calc(var(--rows) * var(--item-y) + calc(var(--rows) - 1) * var(--gap-y));
+  --grid-height-2: calc(var(--rows) * var(--item-x) + calc(var(--rows) - 1) * var(--gap-y));
   display: flex;
   flex-direction: row;
   justify-content: center;
@@ -985,10 +1301,8 @@
 .sm-blocks.products > div > div {
   justify-self: stretch;
   align-self: stretch;
-  max-width: var(--item-x);
-  height: var(--item-y);
-  display: none;
   contain: strict;
+  display: none;
 }
 .sm-blocks.products > div > div.v {
   display: block;
@@ -997,6 +1311,8 @@
   --a-size: 60;
   --b-size: 27;
   --c-size: 12;
+  max-width: var(--item-x);
+  height: var(--item-y);
   padding: 2px;
   overflow: hidden;
 }
@@ -1010,6 +1326,7 @@
 }
 .sm-blocks.products > div > .product > div > .section {
   flex: 1 1 0;
+  max-height: 100%;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -1262,6 +1579,254 @@
 .sm-blocks.products > div > .product.x > svg {
   display: none;
 }
+.sm-blocks.products > div.lines {
+  max-width: 100%;
+  height: var(--grid-height-2);
+}
+.sm-blocks.products > div.lines > div {
+  max-width: 100%;
+  height: var(--item-x);
+}
+.sm-blocks.products > div.lines > .product > div {
+  flex-direction: row;
+}
+.sm-blocks.products > div.lines > .product > div > .section {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  font-size: var(--font-size);
+}
+.sm-blocks.products > div.lines > .product > div > .section > div {
+  flex: 1 1 0;
+}
+.sm-blocks.products > div.lines > .product > div > .section.a {
+  max-width: calc(1% * var(--b-size));
+}
+.sm-blocks.products > div.lines > .product > div > .section.a > .image {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+}
+.sm-blocks.products > div.lines > .product > div > .section.a > .image > img {
+  flex: 1 0 0;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  display: none;
+}
+.sm-blocks.products > div.lines > .product > div > .section.a > .image > svg {
+  flex: 1 1 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.sm-blocks.products > div.lines > .product > div > .section.a > .image.v > img {
+  display: block;
+}
+.sm-blocks.products > div.lines > .product > div > .section.a > .image.v > svg {
+  display: none;
+}
+.sm-blocks.products > div.lines > .product > div > .section.b {
+  max-width: calc(1% * var(--a-size));
+}
+.sm-blocks.products > div.lines > .product > div > .section.b > .title {
+  order: 1;
+  flex: 0 0 0;
+  min-height: 3.45em;
+  padding-bottom: 0.4em;
+}
+.sm-blocks.products > div.lines > .product > div > .section.b > .title > div {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: Verdana, Helvetica, Arial, sans-serif;
+  font-size: 1.1em;
+  font-weight: bold;
+  line-height: 1;
+  text-align: center;
+  word-break: keep-all;
+  owerflow-break: keep-all;
+  overflow: hidden;
+  color: #000;
+}
+.sm-blocks.products > div.lines > .product > div > .section.b > .price {
+  order: 0;
+  max-height: 2.2em;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: center;
+  padding-bottom: 0.4em;
+}
+.sm-blocks.products > div.lines > .product > div > .section.b > .price > div {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  line-height: 1;
+}
+.sm-blocks.products > div.lines > .product > div > .section.b > .price > .currency {
+  justify-content: flex-end;
+  font-family: Verdana, Helvetica, Arial, sans-serif;
+  font-size: 1.8em;
+  padding-right: 0.15em;
+  color: #708090;
+}
+.sm-blocks.products > div.lines > .product > div > .section.b > .price > .pad {
+  flex: 1 1 0;
+}
+.sm-blocks.products > div.lines > .product > div > .section.b > .price > .value > div {
+  font-family: 'Arial Black', 'Arial Bold', Gadget, sans-serif;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+}
+.sm-blocks.products > div.lines > .product > div > .section.b > .price > .value.a {
+  justify-content: center;
+  padding-bottom: 0.14em;
+}
+.sm-blocks.products > div.lines > .product > div > .section.b > .price > .value.a > .integer {
+  font-size: 1.4em;
+  color: #2f4f4f;
+}
+.sm-blocks.products > div.lines > .product > div > .section.b > .price > .value.a > .fraction {
+  font-size: 1.2em;
+  color: #708090;
+  padding-bottom: 0.03em;
+}
+.sm-blocks.products > div.lines > .product > div > .section.b > .price > .value.b {
+  flex: 0 1 auto;
+  padding-left: 1em;
+  padding-bottom: 0.25em;
+  text-decoration: line-through;
+  text-decoration-color: #2f4f4f;
+}
+.sm-blocks.products > div.lines > .product > div > .section.b > .price > .value.b > .integer {
+  font-size: 1em;
+  color: #708090;
+}
+.sm-blocks.products > div.lines > .product > div > .section.b > .price > .value.b > .fraction {
+  font-size: 0.8em;
+  color: #708090;
+  padding-bottom: 0.1em;
+}
+.sm-blocks.products > div.lines > .product > div > .section.b > .price.equal > .value.b > div {
+  display: none;
+}
+.sm-blocks.products > div.lines > .product > div > .section.c {
+  max-width: calc(1% * var(--c-size));
+}
+.sm-blocks.products > div.lines > .product > div > .section.c > .actions {
+  font-size: calc(var(--item-y) * var(--c-size) / 100);
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+}
+.sm-blocks.products > div.lines > .product > div > .section.c > .actions > button {
+  flex: 1 1 0;
+}
+.sm-blocks.products > div.lines > .product > div > .section.c > .actions > button.add {
+  flex: 0 0 0;
+  min-width: 1.217em;
+  padding: 0.0415em 0.125em 0.0415em 0.125em;
+}
+.sm-blocks.products > div.lines > .product > div > .section.c > .actions > button.add > svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.sm-blocks.products > div.lines > .product > div > .section.c > .actions > button.add > svg > text {
+  font-size: 0.417em;
+  font-family: 'Arial Black', 'Arial Bold', Gadget, sans-serif;
+  font-weight: bold;
+  fill: transparent;
+}
+.sm-blocks.products > div.lines > .product > div > .section.c > .actions > button.add > svg > .a {
+  fill: rgba(var(--sm-color-4),0.75);
+}
+.sm-blocks.products > div.lines > .product > div > .section.c > .actions > button.add > svg > .b {
+  fill: rgba(var(--sm-color-5),1);
+}
+.sm-blocks.products > div.lines > .product > div > .section.c > .actions > button.add > svg > .c {
+  fill: rgba(var(--sm-color-5),0.5);
+}
+.sm-blocks.products > div.lines > .product > div > .section.c > .actions > button.add > svg > .d {
+  font-size: 0.458em;
+}
+.sm-blocks.products > div.lines > .product > div > .section.c > .actions > button.add > svg > .e {
+  fill: transparent;
+}
+.sm-blocks.products > div.lines > .product > div > .section.c > .actions > button.add.v.h > svg > .b {
+  fill: rgba(var(--sm-color-4),0.75);
+}
+.sm-blocks.products > div.lines > .product > div > .section.c > .actions > button.add.v.h > svg > .c {
+  fill: rgba(var(--sm-color-1),0.25);
+}
+.sm-blocks.products > div.lines > .product > div > .section.c > .actions > button.add.v.h > svg > .d {
+  fill: rgba(var(--sm-color-0),1);
+}
+.sm-blocks.products > div.lines > .product > div > .section.c > .actions > button.add.v.f > svg > .a {
+  fill: rgba(var(--sm-color-6),0.65);
+}
+.sm-blocks.products > div.lines > .product > div > .section.c > .actions > button.add.v.f > svg > .c {
+  fill: rgba(var(--sm-color-7),0.25);
+}
+.sm-blocks.products > div.lines > .product > div > .section.c > .actions > button.add.v.f.h > svg > .c {
+  fill: rgba(var(--sm-color-7),0.125);
+}
+.sm-blocks.products > div.lines > .product > div > .section.c > .actions > button.add.v.f.h > svg > .d {
+  fill: rgba(var(--sm-color-7),1);
+}
+.sm-blocks.products > div.lines > .product > div > .section.c > .actions > button.add.v.w > svg > .a,
+.sm-blocks.products > div.lines > .product > div > .section.c > .actions > button.add.v.w.f > svg > .a {
+  fill: rgba(var(--sm-color-2),1);
+}
+.sm-blocks.products > div.lines > .product > div > .section.c > .actions > button.add.v.w > svg > .b,
+.sm-blocks.products > div.lines > .product > div > .section.c > .actions > button.add.v.w.f > svg > .b {
+  fill: rgba(var(--sm-color-2),1);
+}
+.sm-blocks.products > div.lines > .product > div > .section.c > .actions > button.add.v.w > svg > .c,
+.sm-blocks.products > div.lines > .product > div > .section.c > .actions > button.add.v.w.f > svg > .c {
+  fill: rgba(var(--sm-color-7),0.125);
+}
+.sm-blocks.products > div.lines > .product > div > .section.c > .actions > button.add.v.w > svg > .d,
+.sm-blocks.products > div.lines > .product > div > .section.c > .actions > button.add.v.w.f > svg > .d {
+  fill: transparent;
+}
+.sm-blocks.products > div.lines > .product > div > .section.c > .actions > button.add.v.x > svg > .c {
+  fill: rgba(var(--sm-color-1),0.4);
+}
+.sm-blocks.products > div.lines > .product > div > .section.c > .actions > button.add.v.x > svg > .d {
+  fill: transparent;
+}
+.sm-blocks.products > div.lines > .product > div > .section.c > .actions > button.add.v.x > svg > .e {
+  fill: rgba(var(--sm-color-0),1);
+}
+.sm-blocks.products > div.lines > .product > div > .section.c > .actions > button.add.v.x.h > svg > .c {
+  fill: rgba(var(--sm-color-1),0.25);
+}
+.sm-blocks.products > div.lines > .product > div > .section.c > .actions > button.add.v.x.h > svg > .e {
+  fill: rgba(var(--sm-color-5),1);
+}
+.sm-blocks.products > div.lines > .product > div > .section.c > .actions > button.add.v.x.f > svg > .c {
+  fill: rgba(var(--sm-color-7),0.15);
+}
+.sm-blocks.products > div.lines > .product > div > .section.c > .actions > button.add.v.x.f > svg > .e {
+  fill: rgba(var(--sm-color-6),1);
+}
+.sm-blocks.products > div.lines > .product > div > .section.c > .actions > button.add.v.x.f.h > svg > .d {
+  fill: transparent;
+}
+.sm-blocks.products > div.lines > .product > div > .section.c > .actions > button.add.v.x.w > svg > .e,
+.sm-blocks.products > div.lines > .product > div > .section.c > .actions > button.add.v.x.w.f > svg > .e {
+  fill: rgba(var(--sm-color-7),1);
+}
 .sm-blocks.products > hr {
   --size: calc(var(--gap-y) + var(--item-y));
   position: absolute;
@@ -1278,293 +1843,6 @@
   display: none;
 }
 .sm-blocks.products > hr.v {
-  display: block;
-}
-.sm-blocks.menu {
-  width: 100%;
-  height: auto;
-  padding: 4px 2px 4px 2px;
-  overflow: visible;
-}
-.sm-blocks.menu > div {
-  font-size: var(--height);
-  width: 100%;
-  height: auto;
-  position: relative;
-  overflow: visible;
-  opacity: 1;
-  display: flex;
-  flex-direction: row;
-  align-items: stretch;
-  justify-content: flex-start;
-  flex-wrap: wrap;
-  gap: 2px;
-}
-.sm-blocks.menu > div button {
-  width: auto;
-  height: 1em;
-  padding: 0.125em 0.25em 0.125em 0.25em;
-  position: relative;
-  border: 0;
-  background-color: transparent;
-  box-shadow: none;
-}
-.sm-blocks.menu > div button > .label {
-  width: auto;
-  height: 100%;
-  align-items: center;
-  font-family: Verdana, Helvetica, Arial, sans-serif;
-}
-.sm-blocks.menu > div button > .arrow {
-  position: absolute;
-  display: none;
-}
-.sm-blocks.menu > div button > .arrow > .a {
-  fill: rgba(var(--sm-color-5),1);
-}
-.sm-blocks.menu > div button > .arrow > .b {
-  fill: rgba(var(--sm-color-2),1);
-}
-.sm-blocks.menu > div button.drop > .arrow {
-  display: block;
-}
-.sm-blocks.menu > div > button {
-  opacity: 0.6;
-  flex: 0 0 auto;
-}
-.sm-blocks.menu > div > button > .label {
-  width: auto;
-  height: 100%;
-  justify-content: center;
-  font-size: 0.5em;
-}
-.sm-blocks.menu > div > button > .arrow {
-  width: 0.75em;
-  height: 0.75em;
-  top: 0.125em;
-  right: 0;
-  transform: rotate(90deg);
-}
-.sm-blocks.menu > div > button > .arrow > .a {
-  fill: rgba(var(--sm-color-5),1);
-}
-.sm-blocks.menu > div > button > .arrow > .b {
-  fill: rgba(var(--sm-color-2),1);
-}
-.sm-blocks.menu > div > button > .line {
-  width: 100%;
-  height: 0.084em;
-  position: absolute;
-  left: 0;
-  display: flex;
-  flex-direction: row;
-  opacity: 0;
-}
-.sm-blocks.menu > div > button > .line > svg {
-  height: 100%;
-}
-.sm-blocks.menu > div > button > .line > svg.a {
-  flex: 0 0 0;
-  min-width: 0.125em;
-}
-.sm-blocks.menu > div > button > .line > svg.b {
-  flex: 1 1 0;
-}
-.sm-blocks.menu > div > button > .line > svg > .a {
-  fill: rgba(var(--sm-color-4),1);
-}
-.sm-blocks.menu > div > button > .line > svg > .b {
-  fill: rgba(var(--sm-color-2),1);
-}
-.sm-blocks.menu > div > button > .line.a {
-  top: 0;
-}
-.sm-blocks.menu > div > button > .line.b {
-  bottom: 0;
-}
-.sm-blocks.menu > div > button.drop {
-  padding-right: 0.75em;
-}
-.sm-blocks.menu > div > button.v.h > .line,
-.sm-blocks.menu > div > button.v.f > .line {
-  opacity: 1;
-}
-.sm-blocks.menu > div > button.v.f {
-  box-shadow: inset 0 0 6px -2px rgba(var(--sm-color-7),1);
-}
-.sm-blocks.menu > div > button.v.o {
-  box-shadow: inset 0 0 6px -2px rgba(var(--sm-color-3),1);
-}
-.sm-blocks.menu > div > button.v.o > .arrow {
-  transform: rotate(0deg);
-}
-.sm-blocks.menu > div > button.v.o > .arrow > .a {
-  fill: rgba(var(--sm-color-4),1);
-}
-.sm-blocks.menu > div > button.v.o > .arrow > .b {
-  fill: rgba(var(--sm-color-3),1);
-}
-.sm-blocks.menu > div > button.v.o > .line {
-  opacity: 1;
-}
-.sm-blocks.menu > div > button.v.o.f {
-  background-color: rgba(var(--sm-color-7),0.025);
-}
-.sm-blocks.menu > div > button.v.o.f > .arrow > .a {
-  fill: rgba(var(--sm-color-6),1);
-}
-.sm-blocks.menu > div > button.v.w,
-.sm-blocks.menu > div > button.v.w.h,
-.sm-blocks.menu > div > button.v.w.f {
-  opacity: 1;
-  background-color: rgba(var(--sm-color-0),1);
-}
-.sm-blocks.menu > div > button.v.w > .label,
-.sm-blocks.menu > div > button.v.w.h > .label,
-.sm-blocks.menu > div > button.v.w.f > .label {
-  color: rgba(var(--sm-color-1),1);
-}
-.sm-blocks.menu > div > button.v.w > .line,
-.sm-blocks.menu > div > button.v.w.h > .line,
-.sm-blocks.menu > div > button.v.w.f > .line {
-  height: 0.167em;
-  opacity: 1;
-}
-.sm-blocks.menu > div > button.v.w > .line > .a > .a,
-.sm-blocks.menu > div > button.v.w.h > .line > .a > .a,
-.sm-blocks.menu > div > button.v.w.f > .line > .a > .a,
-.sm-blocks.menu > div > button.v.w > .line > .b > .a,
-.sm-blocks.menu > div > button.v.w.h > .line > .b > .a,
-.sm-blocks.menu > div > button.v.w.f > .line > .b > .a {
-  fill: rgba(var(--sm-color-1),1);
-}
-.sm-blocks.menu > div > button.x {
-  opacity: 1;
-  background-color: rgba(var(--sm-color-0),1);
-}
-.sm-blocks.menu > div > button.x > .label {
-  color: rgba(var(--sm-color-1),1);
-}
-.sm-blocks.menu > div > button.x > .line {
-  height: 0.167em;
-  opacity: 1;
-}
-.sm-blocks.menu > div > button.x > .line > .a > .a,
-.sm-blocks.menu > div > button.x > .line > .b > .a {
-  fill: rgba(var(--sm-color-1),1);
-}
-.sm-blocks.menu > div > button.x > .line > .a > .b,
-.sm-blocks.menu > div > button.x > .line > .b > .b {
-  fill: rgba(var(--sm-color-0),1);
-}
-.sm-blocks.menu > div .dropdown {
-  box-sizing: content-box;
-  position: absolute;
-  z-index: 999;
-  padding: 0.167em;
-  background-color: rgba(var(--sm-color-3),1);
-  border: 1px solid rgba(var(--sm-color-4),1);
-  border-radius: 2px;
-  display: none;
-}
-.sm-blocks.menu > div .dropdown.o {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: flex-start;
-}
-.sm-blocks.menu > div .dropdown > button {
-  height: 0.75em;
-  padding-right: 0.542em;
-}
-.sm-blocks.menu > div .dropdown > button > .label {
-  font-size: 0.375em;
-  justify-content: flex-start;
-  color: rgba(var(--sm-color-4),1);
-}
-.sm-blocks.menu > div .dropdown > button > .arrow {
-  width: 0.667em;
-  height: 0.667em;
-  top: 0.0415em;
-  right: 0;
-  transform: rotate(90deg);
-}
-.sm-blocks.menu > div .dropdown > button > .arrow > .a {
-  fill: rgba(var(--sm-color-5),1);
-}
-.sm-blocks.menu > div .dropdown > button > .arrow > .b {
-  fill: rgba(var(--sm-color-4),1);
-}
-.sm-blocks.menu > div .dropdown > button.v.o {
-  background-color: rgba(var(--sm-color-1),0.75);
-  box-shadow: inset 0 0 1px 0 rgba(var(--sm-color-0),1);
-}
-.sm-blocks.menu > div .dropdown > button.v.o > .arrow {
-  transform: rotate(-90deg);
-}
-.sm-blocks.menu > div .dropdown > button.v.o > .arrow > .a {
-  fill: rgba(var(--sm-color-4),1);
-}
-.sm-blocks.menu > div .dropdown > button.v.o > .arrow > .b {
-  fill: rgba(var(--sm-color-5),1);
-}
-.sm-blocks.menu > div .dropdown > button.v.h {
-  background-color: rgba(var(--sm-color-1),0.75);
-  box-shadow: inset 0 0 2px 0 rgba(var(--sm-color-0),1);
-}
-.sm-blocks.menu > div .dropdown > button.v.h > .label {
-  color: rgba(var(--sm-color-0),1);
-}
-.sm-blocks.menu > div.v > button {
-  opacity: 1;
-}
-.sm-blocks.minicart {
-  width: auto;
-  height: auto;
-  padding: 4px 2px 4px 2px;
-  overflow: visible;
-}
-.sm-blocks.minicart > div {
-  font-size: var(--height);
-  width: auto;
-  height: auto;
-  position: relative;
-  overflow: visible;
-  padding-right: 0.125em;
-}
-.sm-blocks.minicart > div > a {
-  width: 1em;
-  height: 1em;
-  padding: 0.125em;
-  box-sizing: border-box;
-  display: block;
-}
-.sm-blocks.minicart > div > a > svg {
-  fill: rgba(var(--sm-color-5),1);
-}
-.sm-blocks.minicart > div > a > .count {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 0.4em;
-  height: 0.4em;
-  display: none;
-  background-color: #483d8b;
-  border-radius: 100%;
-}
-.sm-blocks.minicart > div > a > .count > div {
-  width: 100%;
-  height: 100%;
-  font-size: 0.25em;
-  font-weight: bold;
-  font-family: var(--sm-font-input);
-  line-height: 0;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.sm-blocks.minicart > div > a > .count.v {
   display: block;
 }
 .sm-blocks.paginator {

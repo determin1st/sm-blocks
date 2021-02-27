@@ -16,17 +16,43 @@ class StorefrontModernBlocks {
   private static
     $I = null;
   private
-    $BRAND  = 'sm-blocks',
-    $ERROR  = '',
-    $dir    = __DIR__.DIRECTORY_SEPARATOR.'inc'.DIRECTORY_SEPARATOR,
-    $db     = null,
-    $prefix = null,
-    $lang   = 'en',
+    $BRAND = 'sm-blocks',
+    $ERROR = '',
+    $DIR   = __DIR__.DIRECTORY_SEPARATOR.'inc'.DIRECTORY_SEPARATOR,
+    $LANG  = 'en',
+    ###
+    $db  = null,# database interface handle (MySQLi)
+    $pfx = null,# database tables prefix ("_wp", usually)
+    $tp  = null,# template parser (mustache)
     $unique_id = 0,
     $base_attr = [ # TODO: DELETE
       'customClass',
       'class',
       'style',
+    ],
+    $callback = [], # SSR parsers ['sm-*' => function]
+    $common = [
+      'customClass' => 'custom',
+    ],
+    $options = [
+      'products' => [ # {{{
+        # dynamic grid layout: [min,max]
+        'columns' => [1,4],
+        'rows'    => [2,0],
+        # display mode: false=cards (vertical), true=lines (horizontal)
+        'lines' => false,
+        # item dimensions: [width,height]
+        # absolute units (px), 0=autodetect (take from css)
+        'cardSize' => [0,0],
+        'lineSize' => [0,0],
+        # records ordering
+        'order' => ['price',1],
+        # should empty grid cells at the last page
+        # be filled with items from the first page?
+        # (vertical display mode only)
+        'wrapAround' => true,
+      ],
+      # }}}
     ],
     $blocks = [
       'products' => [ # {{{
@@ -58,6 +84,10 @@ class StorefrontModernBlocks {
           'wrapAround'    => [
             'type'        => 'boolean',
             'default'     => true,
+          ],
+          'display'       => [
+            'type'        => 'number',
+            'default'     => 1,
           ],
         ],
       ],
@@ -187,7 +217,6 @@ class StorefrontModernBlocks {
       ],
       # }}}
     ],
-    $template = '<div class="{{cls}}"><div><!--{{cfg}}--></div>{{svg}}</div>',
     $templates = [
       'base' => # {{{
         '
@@ -423,12 +452,14 @@ class StorefrontModernBlocks {
   # constructor {{{
   private function __construct()
   {
-    global $wpdb;
+    global $wpdb;# reuse WordPress database instance
     # prepare
-    $I         = $this;
-    $I->db     = $wpdb->dbh;
-    $I->prefix = $wpdb->prefix;
-    $I->lang   = substr(get_locale(), 0, 2);
+    $I       = $this;
+    $I->LANG = substr(get_locale(), 0, 2);
+    $I->db   = $wpdb->dbh;
+    $I->pfx  = $wpdb->prefix;
+    ###
+    # initialize
     # set renderers
     foreach ($I->blocks as &$a) {
       $a['render_callback'][0] = $I;
@@ -448,22 +479,36 @@ class StorefrontModernBlocks {
         'callback' => [$I, 'apiEntry'],
       ]);
     });
+    ###
     # register scripts and styles
+    # external
     $a = plugins_url().'/'.$I->BRAND.'/';
-    $b = file_exists($I->dir.'httpFetch')
+    $b = file_exists($I->DIR.'httpFetch')
       ? $a.'inc/httpFetch/httpFetch.js'
       : 'https://cdn.jsdelivr.net/npm/http-fetch-json@2/httpFetch.js';
     wp_register_script('http-fetch', $b, [], false, false);
-    ###
+    # internal
     $b = $a.$I->BRAND.'.';
     wp_register_script($I->BRAND, $b.'js', ['http-fetch'], false, false);
     wp_register_style($I->BRAND, $b.'css');
+    ###
+    # register mustache autoloader
+    # https://github.com/bobthecow/mustache.php
+    $a = $I->DIR.'Mustache'.DIRECTORY_SEPARATOR.'Autoloader.php';
+    require_once $a;
+    Mustache_Autoloader::register();
+    # create parser instance
+    $I->tp = new Mustache_Engine([
+      'charset'          => 'UTF-8',
+      'strict_callables' => true,
+      'escape'           => (function($v) {return $v;}),
+    ]);
   }
   # }}}
   # api {{{
   public static function init()
   {
-    # create instance {{{
+    # instantiator {{{
     if (!self::$I) {
       self::$I = new StorefrontModernBlocks();
     }
@@ -471,10 +516,14 @@ class StorefrontModernBlocks {
   }
   public static function config($menu)
   {
-    # get initial configuration {{{
-    $I = self::$I;
+    # configurator {{{
+    # get instance
+    if (!($I = self::$I)) {
+      return '';
+    }
+    # create JSON configuration
     return $I->apiConfig([
-      'lang'     => $I->lang,
+      'lang'     => $I->LANG,
       'route'    => [$I->db_Menu($menu), -1],
       'category' => null,
     ]);
@@ -482,25 +531,41 @@ class StorefrontModernBlocks {
   }
   public static function render($name, $cfg = null)
   {
-    # create CSR block {{{
-    $I    = self::$I;
+    # CSR parser {{{
+    # get instance
+    if (!($I = self::$I)) {
+      return '';
+    }
+    # prepare
     $name = $I->BRAND.' '.$name;
     $cfg  = is_array($cfg)
       ? json_encode($cfg, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)
       : '';
-    ###
-    return $I->parseTemplate($I->template, [
-      'cls' => $name,
-      'cfg' => $cfg,
-      'svg' => $I->templates['svg']['placeholder'],
+    # create CSR block
+    return $I->parseTemplate(
+    '
+      <div class="{{name}}">
+        <div><!--{{config}}--></div>
+        {{placeholder}}
+      </div>
+    ', [
+      'name'   => $name,
+      'config' => $cfg,
+      'placeholder' => $I->templates['svg']['placeholder'],
     ]);
     # }}}
   }
-  public static function parse($html)
+  public static function parse($html, $data)
   {
-    # create SSR block  {{{
-    # TODO: drop gutenberg parser
-    return apply_filters('the_content', $html);
+    # SSR parser {{{
+    # get instance
+    if (!($I = self::$I)) {
+      return '';
+    }
+    # strip html comments
+    $html = preg_replace('/<!--(.|\s)*?-->/', '', $html);
+    # parse template
+    return $I->tp->render($html, $data);
     # }}}
   }
   # }}}
@@ -568,6 +633,7 @@ class StorefrontModernBlocks {
         'order'   => $attr['order'],
         'options' => $attr['options'],
         'wrapAround' => $attr['wrapAround'],
+        'lines' => true,
       ]),
       'placeholder' => $this->templates['svg']['placeholder'],
     ]);
@@ -767,7 +833,7 @@ class StorefrontModernBlocks {
     }
     # check language
     if (!($a = $p['lang'])) {
-      $p['lang'] = $this->lang;
+      $p['lang'] = $this->LANG;
     }
     else if (!is_string($a) || strlen($a) > 2) {
       $this->apiFail(400, 'incorrect language');
@@ -990,7 +1056,7 @@ class StorefrontModernBlocks {
       return null;
     }
     # get locale and language
-    $locale = (include $this->dir.'lang.inc');
+    $locale = (include $this->DIR.'lang.inc');
     $lang = array_key_exists($p['lang'], $locale)
       ? $p['lang']
       : 'en';
@@ -1087,42 +1153,61 @@ class StorefrontModernBlocks {
     foreach ($b as $a)
     {
       # prepare
-      $oid  = intval($a->object_id);
-      $type = $a->object;
-      $flag = false;
-      # check type and determine current flag
-      if ($type === 'custom')
+      $oid     = intval($a->object_id);
+      $current = false;
+      $type    = $a->object;
+      $url     = $a->url;
+      # check wp reference type
+      if ($type === 'page')
       {
-        $c = strlen($home);
-        if (substr($a->url, 0, $c) === $home)
+        # INNER PAGE LINK
+        # check current
+        if ($id && $id === $oid) {
+          $current = true;
+        }
+      }
+      else if ($type === 'custom')
+      {
+        if (substr($url, 0, 1) === '#')
         {
-          # valid internal link
-          if (!$id && substr($a->url, $c) === '/') {
-            $flag = true;# frontpage
+          # APPLICATION
+          $type = 'app';
+          $url  = '#';
+        }
+        else if (substr($url, 0, strlen($home)) === $home)
+        {
+          # INNER PAGE LINK
+          $type = 'page';
+          # check current
+          if (!$id && substr($url, strlen($home)) === '/') {
+            $current = true;# frontpage
           }
         }
-        else if (!wp_http_validate_url($a->url)) {
-          $type = '';# invalid
+        else if (wp_http_validate_url($url))
+        {
+          # OUTER PAGE LINK
+          $type = 'ext';
+        }
+        else
+        {
+          # INCORRECT
+          $type = $url = '';
         }
       }
-      else if ($type === 'page')
+      else
       {
-        if ($id && $id === $oid) {
-          $flag = true;
-        }
+        # UNKNOWN
+        $type = $url = '';
       }
-      else {
-        $type = '';# not supported
-      }
-      # create item
+      # create item's data
       $x[$a->ID] = [
         'id'       => $oid,
         'type'     => $type,
-        'current'  => $flag,
+        'url'      => $url,
+        'current'  => $current,
         'parent'   => intval($a->menu_item_parent),
         'order'    => $a->menu_order,
         'name'     => $a->title,
-        'url'      => $a->url,
       ];
     }
     # done
@@ -1137,9 +1222,9 @@ class StorefrontModernBlocks {
     if (!!($a = $o['category']) && count($a) > 0)
     {
       $joins .= <<<EOD
-        JOIN {$this->prefix}term_taxonomy AS tCat
+        JOIN {$this->pfx}term_taxonomy AS tCat
           ON tCat.taxonomy = 'product_cat'
-        JOIN {$this->prefix}term_relationships AS tCatRel
+        JOIN {$this->pfx}term_relationships AS tCatRel
           ON tCatRel.term_taxonomy_id = tCat.term_taxonomy_id AND
              tCatRel.object_id = p.ID
 EOD;
@@ -1153,7 +1238,7 @@ EOD;
     if ($a = $o['price'])
     {
       $joins .= <<<EOD
-        LEFT JOIN {$this->prefix}postmeta as mPrice
+        LEFT JOIN {$this->pfx}postmeta as mPrice
           ON mPrice.post_id  = p.ID AND
              mPrice.meta_key = '_price'
 EOD;
@@ -1174,9 +1259,9 @@ EOD;
       if ($o['order'][0] === 'featured')
       {
         $joins .= <<<EOD
-          LEFT JOIN {$this->prefix}terms as tFeatured
+          LEFT JOIN {$this->pfx}terms as tFeatured
             ON tFeatured.name = 'featured'
-          LEFT JOIN {$this->prefix}term_relationships as tFeatRel
+          LEFT JOIN {$this->pfx}term_relationships as tFeatRel
             ON tFeatRel.term_taxonomy_id = tFeatured.term_id AND
               tFeatRel.object_id = p.ID
 EOD;
@@ -1192,7 +1277,7 @@ EOD;
         if (!$o['price'])
         {
           $joins .= <<<EOD
-            LEFT JOIN {$this->prefix}postmeta as mPrice
+            LEFT JOIN {$this->pfx}postmeta as mPrice
               ON mPrice.post_id  = p.ID AND
                 mPrice.meta_key = '_price'
 EOD;
@@ -1208,16 +1293,16 @@ EOD;
     $q = <<<EOD
 
       SELECT DISTINCT p.ID
-      FROM {$this->prefix}posts AS p {$joins}
+      FROM {$this->pfx}posts AS p {$joins}
       WHERE p.post_type = 'product' {$filts}
       ORDER BY {$order}
 
 EOD;
     # query the database
     if (($res = $this->db->query($q)) === false) {
-      $a = mysqli_error($this->db);
-      print_r($q);
-      print_r($a);
+      #$a = mysqli_error($this->db);
+      #print_r($q);
+      #print_r($a);
       return null;
     }
     # get the result and cleanup
@@ -1236,7 +1321,7 @@ EOD;
   {
     # prepare
     $ids = implode(',', $ids);
-    $wp  = $this->prefix;
+    $wp  = $this->pfx;
     # compose query
     $q = <<<EOD
 
@@ -1311,7 +1396,7 @@ EOD;
   {
     # prepare
     $db  = $this->db;
-    $wp_ = $this->prefix;
+    $wp_ = $this->pfx;
     $x   = null;
     # get posts {{{
     # assemble a query
@@ -1443,7 +1528,7 @@ EOD;
           $q = <<<EOD
 
             SELECT term_id
-            FROM {$this->prefix}terms
+            FROM {$this->pfx}terms
             WHERE slug = '{$q}'
 
 EOD;
@@ -1486,13 +1571,13 @@ EOD;
           tx.parent,
           CAST(tmo.meta_value AS UNSIGNED) AS t_order,
           tmc.meta_value
-        FROM {$this->prefix}term_taxonomy AS tx
-          JOIN {$this->prefix}terms AS tm
+        FROM {$this->pfx}term_taxonomy AS tx
+          JOIN {$this->pfx}terms AS tm
             ON tm.term_id = tx.term_id
-          LEFT JOIN {$this->prefix}termmeta AS tmo
+          LEFT JOIN {$this->pfx}termmeta AS tmo
             ON tmo.term_id  = tx.term_id AND
               tmo.meta_key = 'order'
-          LEFT JOIN {$this->prefix}termmeta AS tmc
+          LEFT JOIN {$this->pfx}termmeta AS tmc
             ON tmc.term_id  = tx.term_id AND
               tmc.meta_key = 'product_count_product_cat'
         WHERE
