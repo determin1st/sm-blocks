@@ -4,7 +4,7 @@
 * Description: storefront modern blocks
 * Plugin URI: github.com/determin1st/sm-blocks
 * Author: determin1st
-* Version: 1
+* Version: 0.1
 * Requires at least: 5.5
 * Requires PHP: 7.2
 * License: UNLICENSE
@@ -13,28 +13,31 @@
 class StorefrontModernBlocks {
   # base
   # data {{{
+  public static
+    $X     = 0;
   private static
-    $I = null;
+    $I     = null;
   private
     $BRAND = 'sm-blocks',
     $ERROR = '',
     $DIR   = __DIR__.DIRECTORY_SEPARATOR.'inc'.DIRECTORY_SEPARATOR,
     $LANG  = 'en',
+    $db    = null,# database interface handle (MySQLi)
+    $pfx   = null,# database tables prefix ("_wp", usually)
+    $tp    = null,# template parser (mustache)
     ###
-    $db  = null,# database interface handle (MySQLi)
-    $pfx = null,# database tables prefix ("_wp", usually)
-    $tp  = null,# template parser (mustache)
-    $unique_id = 0,
-    $base_attr = [ # TODO: DELETE
-      'customClass',
-      'class',
-      'style',
+    $renderers = [
+      # {{{
+      'sm-products'        => null,
+      'sm-paginator'       => null,
+      'sm-orderer'         => null,
+      'sm-rows-selector'   => null,
+      'sm-category-filter' => null,
+      'sm-price-filter'    => null,
+      'sm-menu'            => null,
+      # }}}
     ],
-    $callback = [], # SSR parsers ['sm-*' => function]
-    $common = [
-      'customClass' => 'custom',
-    ],
-    $options = [
+    $defs = [
       'products' => [ # {{{
         # dynamic grid layout: [min,max]
         'columns' => [1,4],
@@ -54,44 +57,7 @@ class StorefrontModernBlocks {
       ],
       # }}}
     ],
-    $blocks = [
-      'products' => [ # {{{
-        'render_callback' => [null, 'renderProducts'],
-        'attributes'      => [
-          ### common
-          'customClass'   => [
-            'type'        => 'string',
-            'default'     => 'custom',
-          ],
-          ### grid dimensions
-          'layout'        => [
-            'type'        => 'string',
-            'default'     => '4:2:1:0',# [maxColumns:minRows:minColumns:maxRows]
-          ],
-          'itemSize'     => [
-            'type'        => 'string',
-            'default'     => '0:0',# [width:height]
-          ],
-          ### records ordering
-          'options'  => [
-            'type'        => 'array',
-            'default'     => ['featured','new','price'],
-          ],
-          'order'         => [
-            'type'        => 'array',
-            'default'     => ['price',1],
-          ],
-          'wrapAround'    => [
-            'type'        => 'boolean',
-            'default'     => true,
-          ],
-          'display'       => [
-            'type'        => 'number',
-            'default'     => 1,
-          ],
-        ],
-      ],
-      # }}}
+    $blocks = [ # TODO: DELET
       'rows-selector' => [ # {{{
         'render_callback' => [null, 'renderBase'],
         'attributes'      => [
@@ -217,7 +183,7 @@ class StorefrontModernBlocks {
       ],
       # }}}
     ],
-    $templates = [
+    $templates = [ # TODO: DELET
       'base' => # {{{
         '
         <div class="{{name}}">
@@ -444,43 +410,39 @@ class StorefrontModernBlocks {
       ],
       # }}}
     ],
+    $base_attr = [ # TODO: DELETE
+      'customClass',
+      'class',
+      'style',
+    ],
     $cache = [
+      # {{{
       'categoryTree' => [], # key  => tree
       'categorySlug' => [], # slug => id
+      # }}}
     ];
   # }}}
   # constructor {{{
   private function __construct()
   {
+    # plugins loaded
+    # PREPARE instance {{{
     global $wpdb;# reuse WordPress database instance
-    # prepare
+    # set base
     $I       = $this;
     $I->LANG = substr(get_locale(), 0, 2);
     $I->db   = $wpdb->dbh;
     $I->pfx  = $wpdb->prefix;
-    ###
-    # initialize
     # set renderers
-    foreach ($I->blocks as &$a) {
-      $a['render_callback'][0] = $I;
+    foreach ($I->renderers as $a => &$b)
+    {
+      $b = (function ($text = '') use ($I, $a) {
+        return $I->render($a, $text);
+      });
     }
-    unset($a);
-    # set hooks
-    add_action('init', function() use ($I)
-    {
-      foreach ($I->blocks as $a => $b) {
-        register_block_type($I->BRAND.'/'.$a, $b);
-      }
-    });
-    add_action('rest_api_init', function() use ($I)
-    {
-      register_rest_route($I->BRAND, 'kiss', [
-        'methods'  => 'POST',
-        'callback' => [$I, 'apiEntry'],
-      ]);
-    });
-    ###
-    # register scripts and styles
+    unset($a, $b);
+    # }}}
+    # REGISTER files {{{
     # external
     $a = plugins_url().'/'.$I->BRAND.'/';
     $b = file_exists($I->DIR.'httpFetch')
@@ -494,34 +456,36 @@ class StorefrontModernBlocks {
     ###
     # register mustache autoloader
     # https://github.com/bobthecow/mustache.php
-    $a = $I->DIR.'Mustache'.DIRECTORY_SEPARATOR.'Autoloader.php';
-    require_once $a;
-    Mustache_Autoloader::register();
+    require_once $I->DIR.'Mustache'.DIRECTORY_SEPARATOR.'Autoloader.php';
+    \Mustache_Autoloader::register();
     # create parser instance
-    $I->tp = new Mustache_Engine([
+    $I->tp = new \Mustache_Engine([
       'charset'          => 'UTF-8',
       'strict_callables' => true,
       'escape'           => (function($v) {return $v;}),
     ]);
+    # }}}
+    add_action('rest_api_init', function() use ($I) {
+      # REGISTER REST api endpoint {{{
+      register_rest_route($I->BRAND, 'kiss', [
+        'methods'  => 'POST',
+        'callback' => [$I, 'apiEntry'],
+      ]);
+      # }}}
+    });
   }
   # }}}
   # api {{{
-  public static function init()
-  {
-    # instantiator {{{
-    if (!self::$I) {
-      self::$I = new StorefrontModernBlocks();
-    }
-    # }}}
+  public static function init() {
+    if (!self::$I) {self::$I = new StorefrontModernBlocks();}
   }
-  public static function config($menu)
-  {
-    # configurator {{{
+  public static function config($menu) {
+    # {{{
     # get instance
     if (!($I = self::$I)) {
       return '';
     }
-    # create JSON configuration
+    # create initial configuration (SSR)
     return $I->apiConfig([
       'lang'     => $I->LANG,
       'route'    => [$I->db_Menu($menu), -1],
@@ -529,18 +493,50 @@ class StorefrontModernBlocks {
     ]);
     # }}}
   }
-  public static function render($name, $cfg = null)
-  {
-    # CSR parser {{{
+  public static function parse($html, $ctx = null) {
+    # {{{
     # get instance
     if (!($I = self::$I)) {
       return '';
     }
+    # strip html comments,
+    # this step is important for the following parse steps,
+    # as it removes editor's fold markers {{{..}}}
+    $html = preg_replace('/<!--(.|\s)*?-->/', '', $html);
+    # combine specified context with block renderers
+    if ($ctx) {
+      $ctx = array_merge($I->renderers, $ctx);
+    }
+    # complete
+    return $I->tp->render($html, $ctx);
+    # }}}
+  }
+  private function render($name, $cfg = '') {
+    # {{{
+    # get instance
+    if (!($I = self::$I)) {
+      return '';
+    }
+    return '['.$name.']';
+    # prepare config
+    if (is_array($cfg)) {
+      $cfg = json_encode($cfg, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+    }
+    else {
+      $cfg = '{'.$cfg.'}';
+    }
     # prepare
-    $name = $I->BRAND.' '.$name;
-    $cfg  = is_array($cfg)
-      ? json_encode($cfg, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)
-      : '';
+    $x = '';
+    # parse config
+    $o = json_decode('{'.$o.'}', true);
+    # ...
+    # ...
+    # check variant
+    switch ($name) {
+    }
+    $x = '['.$name.']';
+    # done
+    return $x;
     # create CSR block
     return $I->parseTemplate(
     '
@@ -555,21 +551,8 @@ class StorefrontModernBlocks {
     ]);
     # }}}
   }
-  public static function parse($html, $data)
-  {
-    # SSR parser {{{
-    # get instance
-    if (!($I = self::$I)) {
-      return '';
-    }
-    # strip html comments
-    $html = preg_replace('/<!--(.|\s)*?-->/', '', $html);
-    # parse template
-    return $I->tp->render($html, $data);
-    # }}}
-  }
   # }}}
-  # renderers
+  # TODO: DELET
   # CSR base, TODO: DELETE {{{
   public function renderBase($attr, $content, $block)
   {
@@ -1375,11 +1358,11 @@ EOD;
     return $a;
   }
   # }}}
-  private function db_Cart() # {{{
+  private function db_Cart() # TODO {{{
   {
-    global $woocommerce;
+    return [];
     ###
-    $a = $woocommerce->cart->get_cart_contents();
+    $a = WC()->cart->get_cart_contents();
     $b = ['count' => 0];
     $c = ['total' => &$b];
     foreach ($a as $d)
@@ -1711,6 +1694,8 @@ EOD;
   # parser {{{
   private function parseTemplate($template, $data, $attr = [])
   {
+    static $unique_id = 0;
+    ###
     $depth = 0;
     while (true)
     {
@@ -1746,8 +1731,8 @@ EOD;
           # check special
           switch(substr($a, 0, 4)) {
           case 'UID=':
-            ++$this->unique_id;
-            $attr[$a] = $b = $this->BRAND.'-'.$this->unique_id;
+            ++$unique_id;
+            $attr[$a] = $b = $this->BRAND.'-'.$unique_id;
             break;
           }
         }
@@ -1838,22 +1823,131 @@ EOD;
 # check wordpress loaded
 if (defined('ABSPATH') && function_exists('add_action'))
 {
-  register_activation_hook(__FILE__, function()
-  {
-    # try to activate woo plugin
-    if (!class_exists('WooCommerce', false))
+  /***/
+  register_activation_hook(__FILE__, function() {
+    StorefrontModernBlocks::$X = 1;
+  });
+  /***/
+  add_filter('option_active_plugins', function ($a) {
+    # deactivate WooCommerce plugin in front {{{
+    if (!is_admin() && function_exists('WC'))
     {
-      $a = 'woocommerce';
-      $a = activate_plugin($a.DIRECTORY_SEPARATOR.$a.'.php');
+      # search and exclude single item
+      foreach ($a as $b => $c)
+      {
+        if (strpos($c, 'woocommerce') === 0)
+        {
+          array_splice($a, $b, 1);
+          break;
+        }
+      }
     }
+    return $a;
+    # }}}
   });
-  add_action('plugins_loaded', function()
-  {
-    # create blocks instance
-    if (class_exists('WooCommerce', false)) {
-      StorefrontModernBlocks::init();
+  add_action('plugins_loaded', function() {
+    # unhook woocommerce at front {{{
+    global $GLOBALS;
+    if (!is_admin() && function_exists('WC'))
+    {
+      # WooCommerce class
+      $a = WC();
+      remove_action('plugins_loaded', [$a, 'on_plugins_loaded'], -1);
+      remove_action('admin_notices', [$a, 'build_dependencies_notice']);
+      remove_action('after_setup_theme', [$a, 'setup_environment']);
+      remove_action('after_setup_theme', [$a, 'include_template_functions'], 11);
+      remove_action('init', [$a, 'init'], 0);
+      remove_action('init', ['WC_Shortcodes', 'init']);
+      remove_action('init', ['WC_Emails', 'init_transactional_emails']);
+      remove_action('init', [$a, 'add_image_sizes']);
+      remove_action('init', [$a, 'load_rest_api']);
+      remove_action('switch_blog', [$a, 'wpdb_table_fix'], 0 );
+      remove_action('activated_plugin', [$a, 'activated_plugin']);
+      remove_action('deactivated_plugin', [$a, 'deactivated_plugin']);
+      # WC_API
+      $b = $a->api;
+      remove_action('parse_request', [$b, 'handle_rest_api_requests'], 0);
+      remove_action('init', [$b, 'add_endpoint'], 0);
+      remove_filter('query_vars', [$b, 'add_query_vars'], 0);
+      remove_action('parse_request', [$b, 'handle_api_requests'], 0);
+      remove_action('rest_api_init', [$b, 'register_wp_admin_settings']);
+      # WC_AJAX
+      $b = 'WC_AJAX';
+      remove_action('init', [$b, 'define_ajax'], 0);
+      remove_action('template_redirect', [$b, 'do_wc_ajax'], 0);
+      # WC_Install
+      $b = 'WC_Install';
+      remove_action('init', [$b, 'check_version'], 5);
+      remove_action('init', [$b, 'manual_database_update'], 20);
+      remove_action('admin_init', [$b, 'wc_admin_db_update_notice']);
+      remove_action('woocommerce_run_update_callback', [$b, 'run_update_callback']);
+      remove_action('admin_init', [$b, 'install_actions']);
+      remove_filter('plugin_action_links_'.WC_PLUGIN_BASENAME, [$b, 'plugin_action_links']);
+      remove_filter('plugin_row_meta', [$b, 'plugin_row_meta'], 10, 2);
+      remove_filter('wpmu_drop_tables', [$b, 'wpmu_drop_tables']);
+      remove_filter('cron_schedules', [$b, 'cron_schedules']);
+      # WC_Post_Types 
+      $b = 'WC_Post_Types';
+      remove_action('init', [$b, 'register_taxonomies'], 5);
+      remove_action('init', [$b, 'register_post_types'], 5);
+      remove_action('init', [$b, 'register_post_status'], 9);
+      remove_action('init', [$b, 'support_jetpack_omnisearch']);
+      remove_filter('term_updated_messages', [$b, 'updated_term_messages']);
+      remove_filter('rest_api_allowed_post_types', [$b, 'rest_api_allowed_post_types']);
+      remove_action('woocommerce_after_register_post_type', [$b, 'maybe_flush_rewrite_rules']);
+      remove_action('woocommerce_flush_rewrite_rules', [$b, 'flush_rewrite_rules']);
+      remove_filter('gutenberg_can_edit_post_type', [$b, 'gutenberg_can_edit_post_type'], 10, 2);
+      remove_filter('use_block_editor_for_post_type', [$b, 'gutenberg_can_edit_post_type'], 10, 2);
+      # WC_Query
+      $b = $a->query;
+      remove_action('init', [$b, 'add_endpoints']);
+      remove_action('wp_loaded', [$b, 'get_errors'], 20);
+      remove_filter('query_vars', [$b, 'add_query_vars'], 0);
+      remove_action('parse_request', [$b, 'parse_request'], 0);
+      remove_action('pre_get_posts', [$b, 'pre_get_posts']);
+      remove_filter('get_pagenum_link', [$b, 'remove_add_to_cart_pagination'], 10, 1);
+      # WC_Frontend_Scripts
+      $b = 'WC_Frontend_Scripts';
+      remove_action('wp_enqueue_scripts', [$b, 'load_scripts']);
+      remove_action('wp_print_scripts', [$b, 'localize_printed_scripts'], 5);
+      remove_action('wp_print_footer_scripts', [$b, 'localize_printed_scripts'], 5);
+      # template hooks
+      remove_action('wp_footer', 'wc_print_js', 25);
+      remove_action('wp_footer', 'woocommerce_demo_store');
+      # other
+      remove_action('init', 'woocommerce_legacy_paypal_ipn');
+      remove_action('init', ['WC_Marketplace_Updater', 'init']);
+      remove_action('init', ['WC_Auth', 'add_endpoint'], 0);
+      remove_action('init', ['WC_Regenerate_Images', 'init']);
+      remove_action('init', ['WC_Template_Loader', 'init']);
+      remove_action('woocommerce_tracker_send_event', ['WC_Tracker', 'send_tracking_data']);
+      # Action Scheduler
+      remove_action('plugins_loaded', ['ActionScheduler_Versions', 'initialize_latest_version'], 1);
+      remove_action('plugins_loaded', 'action_scheduler_register_3_dot_1_dot_6', 0);
+      ###
+      #var_dump($GLOBALS['wp_filter']['plugins_loaded']);
+      #var_dump(_get_cron_array());
     }
-  });
+    # }}}
+    # remove cron jobs once, after activation {{{
+    if (StorefrontModernBlocks::$X === 1 && ($a = _get_cron_array()))
+    {
+      foreach ($a as $b)
+      {
+        foreach ($b as $c => $d)
+        {
+          if (strpos($c, 'woocommerce') === 0)
+          {
+            var_dump($c);
+            break;
+          }
+        }
+      }
+    }
+    # }}}
+    # create instance
+    StorefrontModernBlocks::init();
+  }, -2);
 }
 # }}}
 ?>

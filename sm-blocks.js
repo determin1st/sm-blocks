@@ -1262,7 +1262,7 @@ SM = function(){
       template = w3ui.template(function(){
         /*
         <div>
-        	<div class="section a">
+        	<div class="a">
         		<div class="image">
         			<img alt="product">
         			<svg preserveAspectRatio="none" fill-rule="evenodd" clip-rule="evenodd" viewBox="0 0 270.92 270.92">
@@ -1270,7 +1270,7 @@ SM = function(){
         			</svg>
         		</div>
         	</div>
-        	<div class="section b">
+        	<div class="b">
         		<div class="title"><div><span></span></div></div>
         		<div class="price">
         			<div class="currency"><span></span></div>
@@ -1284,7 +1284,7 @@ SM = function(){
         			</div>
         		</div>
         	</div>
-        	<div class="section c">
+        	<div class="c">
         		<div class="actions"></div>
         	</div>
         </div>
@@ -1558,7 +1558,7 @@ SM = function(){
       Block = function(master){
         var R;
         R = document.createElement('div');
-        R.className = 'product';
+        R.className = 'item';
         R.innerHTML = template;
         R.appendChild(master.root.children[1].cloneNode(true));
         this.master = master;
@@ -1624,6 +1624,129 @@ SM = function(){
           init.resolve();
         }
         return m;
+      };
+    }(),
+    productPrice: function(){
+      var template, price, Block;
+      template = w3ui.template(function(){
+        /*
+        <div class="currency"><span></span></div>
+        <div class="value a">
+        	<div class="integer"><span></span></div>
+        	<div class="fraction"><span></span><span></span></div>
+        </div>
+        <div class="value b">
+        	<div class="integer"><span></span></div>
+        	<div class="fraction"><span></span><span></span></div>
+        </div>
+        */
+      });
+      price = function(){
+        var eBreakThousands, eNotNumber, Item;
+        eBreakThousands = /\B(?=(\d{3})+(?!\d))/;
+        eNotNumber = /[^0-9]/;
+        Item = function(block){
+          var box;
+          this.block = block;
+          this.box = box = block.rootBox.querySelector('.price');
+          this.currency = w3ui.queryChild(box, '.currency');
+          this.boxes = box = [w3ui.queryChild(box, '.value.a'), w3ui.queryChild(box, '.value.b')];
+          this.values = [box[0].children[0], box[0].children[1], box[1].children[0], box[1].children[1]];
+          this.money = [0, 0];
+        };
+        Item.prototype = {
+          set: function(data){
+            var C, b, a, c, d;
+            if (data && (data = data.price)) {
+              C = this.block.master.group.config.currency;
+              b = data[0].split(eNotNumber, 2);
+              a = data[1].split(eNotNumber, 2);
+              a[1] = a[1]
+                ? a[1].substring(0, C[3]).padEnd(C[3], '0')
+                : '0'.repeat(C[3]);
+              b[1] = b[1]
+                ? b[1].substring(0, C[3]).padEnd(C[3], '0')
+                : '0'.repeat(C[3]);
+              c = this.money;
+              d = +('1' + '0'.repeat(C[3]));
+              c[0] = d * (+a[0]) + (+a[1]);
+              c[1] = d * (+b[0]) + (+b[1]);
+              if (C[2]) {
+                a[0] = a[0].replace(eBreakThousands, C[2]);
+                b[0] = b[0].replace(eBreakThousands, C[2]);
+              }
+              this.currency.firstChild.textContent = C[0];
+              c = this.values;
+              c[0].firstChild.textContent = a[0];
+              c[1].firstChild.textContent = C[1];
+              c[1].lastChild.textContent = a[1];
+              c[2].firstChild.textContent = b[0];
+              c[3].firstChild.textContent = C[1];
+              c[3].lastChild.textContent = b[1];
+              c = this.money;
+              d = c[0] === c[1]
+                ? 'equal'
+                : c[0] > c[1] ? 'lower' : 'higher';
+              this.box.classList.add(d);
+              d = C[4] ? 'right' : 'left';
+              this.box.classList.add(d, 'v');
+            } else {
+              this.box.className = 'price';
+            }
+          }
+        };
+        return Item;
+      }();
+      Block = function(master){
+        this.master = master;
+        this.root = R;
+        this.items = new Items(this);
+        this.data = null;
+      };
+      Block.prototype = {
+        set: function(data){
+          var a, b, c, ref$;
+          if (data) {
+            if (!this.data || this.data.id !== data.id) {
+              a = data.stock.status;
+              if (this.data && (b = this.data.stock.status) !== a) {
+                c = (b === 'instock' && 's1') || 's0';
+                this.root.classList.remove(c);
+              }
+              if (!this.data || b !== a) {
+                c = (a === 'instock' && 's1') || 's0';
+                this.root.classList.add(c);
+              }
+              for (a in ref$ = this.items) {
+                a = ref$[a];
+                a.set(data);
+              }
+              if (!this.data) {
+                this.root.classList.add('x');
+              }
+              this.data = data;
+            }
+          } else if (this.data) {
+            a = this.data.stock.status;
+            c = (a === 'instock' && 's1') || 's0';
+            this.root.classList.remove(c);
+            for (a in ref$ = this.items) {
+              a = ref$[a];
+              a.set();
+            }
+            this.root.classList.remove('x');
+            this.data = null;
+          }
+          return true;
+        }
+      };
+      return function(m){
+        var R;
+        R = document.createElement('div');
+        R.className = 'sm-product-price';
+        R.innerHTML = template;
+        R.appendChild(master.root.children[1].cloneNode(true));
+        return new Block(m, R);
       };
     }()
   };
@@ -2001,8 +2124,8 @@ SM = function(){
           a[0] = parseInt(s.getPropertyValue('--column-gap'));
           a[1] = parseInt(s.getPropertyValue('--row-gap'));
           a = this.sizes;
-          a[0] = parseInt(s.getPropertyValue('--item-width'));
-          a[1] = parseInt(s.getPropertyValue('--item-height'));
+          a[0] = parseInt(s.getPropertyValue('--card-width'));
+          a[1] = parseInt(s.getPropertyValue('--card-height'));
           a[2] = a[1] + this.gaps[1];
           a = parseFloat(s.getPropertyValue('--foot-size'));
           this.i_opt.threshold[1] = a / 100;
@@ -2100,9 +2223,8 @@ SM = function(){
           s.range = this.range;
           c.rows = (o = this.config.layout)[1];
           c.count = o[0] * o[1];
-          if (this.config.lines) {
-            this.rootBox.classList.add('lines');
-          }
+          a = this.config.lines ? 'lines' : 'cards';
+          this.rootBox.classList.add(a);
           this.resizer.attach();
           refresher(this);
           s = window.screen;

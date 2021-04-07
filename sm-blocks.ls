@@ -1277,7 +1277,7 @@ SM = do ->
 			template = w3ui.template !-> # {{{
 				/*
 				<div>
-					<div class="section a">
+					<div class="a">
 						<div class="image">
 							<img alt="product">
 							<svg preserveAspectRatio="none" fill-rule="evenodd" clip-rule="evenodd" viewBox="0 0 270.92 270.92">
@@ -1285,7 +1285,7 @@ SM = do ->
 							</svg>
 						</div>
 					</div>
-					<div class="section b">
+					<div class="b">
 						<div class="title"><div><span></span></div></div>
 						<div class="price">
 							<div class="currency"><span></span></div>
@@ -1299,7 +1299,7 @@ SM = do ->
 							</div>
 						</div>
 					</div>
-					<div class="section c">
+					<div class="c">
 						<div class="actions"></div>
 					</div>
 				</div>
@@ -1604,7 +1604,7 @@ SM = do ->
 				# construct
 				# create root
 				R = document.createElement 'div'
-				R.className = 'product'
+				R.className = 'item'
 				R.innerHTML = template
 				# create placeholder (reuse master)
 				R.appendChild (master.root.children.1.cloneNode true)
@@ -1684,6 +1684,149 @@ SM = do ->
 					init.resolve!
 				# done
 				return m
+			# }}}
+		# }}}
+		productPrice: do -> # {{{
+			template = w3ui.template !-> # {{{
+				/*
+				<div class="currency"><span></span></div>
+				<div class="value a">
+					<div class="integer"><span></span></div>
+					<div class="fraction"><span></span><span></span></div>
+				</div>
+				<div class="value b">
+					<div class="integer"><span></span></div>
+					<div class="fraction"><span></span><span></span></div>
+				</div>
+				*/
+			# }}}
+			price = do -> # {{{
+				eBreakThousands = /\B(?=(\d{3})+(?!\d))/
+				eNotNumber = /[^0-9]/
+				Item = (block) !->
+					@block    = block
+					@box      = box = block.rootBox.querySelector '.price'
+					@currency = w3ui.queryChild box, '.currency'
+					@boxes    = box = [
+						w3ui.queryChild box, '.value.a' # current
+						w3ui.queryChild box, '.value.b' # regular
+					]
+					@values   = [
+						box.0.children.0 # integer
+						box.0.children.1 # fraction
+						box.1.children.0
+						box.1.children.1
+					]
+					@money    = [0,0] # integers (no fraction)
+				###
+				Item.prototype =
+					set: (data) !-> # {{{
+						if data and (data = data.price)
+							# set
+							# prepare
+							# get global config
+							C = @block.master.group.config.currency
+							# split numbers [regular,current] into integer and fraction
+							b = data.0.split eNotNumber, 2
+							a = data.1.split eNotNumber, 2
+							# truncate fraction point
+							a.1 = if a.1
+								then (a.1.substring 0, C.3).padEnd C.3, '0'
+								else '0'.repeat C.3
+							b.1 = if b.1
+								then (b.1.substring 0, C.3).padEnd C.3, '0'
+								else '0'.repeat C.3
+							# determine money values
+							c = @money
+							d = +('1' + ('0'.repeat C.3))
+							c.0 = d*(+(a.0)) + (+a.1)
+							c.1 = d*(+(b.0)) + (+b.1)
+							# separate integer thousands
+							if C.2
+								a.0 = a.0.replace eBreakThousands, C.2
+								b.0 = b.0.replace eBreakThousands, C.2
+							# set values
+							@currency.firstChild.textContent = C.0
+							c = @values
+							c.0.firstChild.textContent = a.0
+							c.1.firstChild.textContent = C.1
+							c.1.lastChild.textContent  = a.1
+							c.2.firstChild.textContent = b.0
+							c.3.firstChild.textContent = C.1
+							c.3.lastChild.textContent  = b.1
+							# set styles
+							# price difference
+							c = @money
+							d = if c.0 == c.1
+								then 'equal'
+								else if c.0 > c.1
+									then 'lower'
+									else 'higher'
+							@box.classList.add d
+							# currency sign position
+							d = if C.4
+								then 'right'
+								else 'left'
+							@box.classList.add d, 'v'
+							###
+						else
+							# clear
+							@box.className = 'price'
+					# }}}
+				###
+				return Item
+			# }}}
+			Block = (master) !-> # {{{
+				# create object shape
+				@master = master
+				@root   = R
+				@items  = new Items @
+				@data   = null
+			###
+			Block.prototype =
+				set: (data) -> # {{{
+					# check
+					if data
+						if not @data or @data.id != data.id
+							# set stock status
+							a = data.stock.status
+							if @data and (b = @data.stock.status) != a
+								c = (b == 'instock' and 's1') or 's0'
+								@root.classList.remove c
+							if not @data or b != a
+								c = (a == 'instock' and 's1') or 's0'
+								@root.classList.add c
+							# set items
+							for a,a of @items
+								a.set data
+							# set self
+							@root.classList.add 'x' if not @data
+							@data = data
+					else if @data
+						# clear stock status
+						a = @data.stock.status
+						c = (a == 'instock' and 's1') or 's0'
+						@root.classList.remove c
+						# clear items
+						for a,a of @items
+							a.set!
+						# clear self
+						@root.classList.remove 'x'
+						@data = null
+					# done
+					return true
+				# }}}
+			# }}}
+			return (m) -> # {{{
+				# construct
+				# create root
+				R = document.createElement 'div'
+				R.className = 'sm-product-price'
+				R.innerHTML = template
+				# create placeholder (reuse master)
+				R.appendChild (master.root.children.1.cloneNode true)
+				# done
+				return new Block m, R
 			# }}}
 		# }}}
 	M = # Masters
@@ -2119,10 +2262,10 @@ SM = do ->
 					a   = @gaps
 					a.0 = parseInt (s.getPropertyValue '--column-gap')
 					a.1 = parseInt (s.getPropertyValue '--row-gap')
-					# determine item size
+					# determine item dimensions
 					a   = @sizes
-					a.0 = parseInt (s.getPropertyValue '--item-width')
-					a.1 = parseInt (s.getPropertyValue '--item-height')
+					a.0 = parseInt (s.getPropertyValue '--card-width')
+					a.1 = parseInt (s.getPropertyValue '--card-height')
 					a.2 = a.1 + @gaps.1
 					# determine dot intersection threshold
 					a = parseFloat (s.getPropertyValue '--foot-size')
@@ -2238,9 +2381,11 @@ SM = do ->
 					s.range = @range
 					c.rows  = (o = @config.layout).1 # refresh guarantee
 					c.count = o.0 * o.1 # minimal
-					# check lines mode
-					if @config.lines
-						@rootBox.classList.add 'lines'
+					# set grid display mode
+					a = if @config.lines
+						then 'lines'
+						else 'cards'
+					@rootBox.classList.add a
 					# activate resizer
 					@resizer.attach!
 					# TODO: activate refresher (refactor)
