@@ -13,8 +13,6 @@
 class StorefrontModernBlocks {
   # base
   # data {{{
-  public static
-    $X     = 0;
   private static
     $I     = null;
   private
@@ -1823,11 +1821,6 @@ EOD;
 # check wordpress loaded
 if (defined('ABSPATH') && function_exists('add_action'))
 {
-  /***/
-  register_activation_hook(__FILE__, function() {
-    StorefrontModernBlocks::$X = 1;
-  });
-  /***/
   add_filter('option_active_plugins', function ($a) {
     # deactivate WooCommerce plugin in front {{{
     if (!is_admin() && function_exists('WC'))
@@ -1886,7 +1879,7 @@ if (defined('ABSPATH') && function_exists('add_action'))
       remove_filter('plugin_row_meta', [$b, 'plugin_row_meta'], 10, 2);
       remove_filter('wpmu_drop_tables', [$b, 'wpmu_drop_tables']);
       remove_filter('cron_schedules', [$b, 'cron_schedules']);
-      # WC_Post_Types 
+      # WC_Post_Types
       $b = 'WC_Post_Types';
       remove_action('init', [$b, 'register_taxonomies'], 5);
       remove_action('init', [$b, 'register_post_types'], 5);
@@ -1922,32 +1915,28 @@ if (defined('ABSPATH') && function_exists('add_action'))
       remove_action('init', ['WC_Template_Loader', 'init']);
       remove_action('woocommerce_tracker_send_event', ['WC_Tracker', 'send_tracking_data']);
       # Action Scheduler
-      remove_action('plugins_loaded', ['ActionScheduler_Versions', 'initialize_latest_version'], 1);
-      remove_action('plugins_loaded', 'action_scheduler_register_3_dot_1_dot_6', 0);
-      ###
+      if (class_exists('ActionScheduler'))
+      {
+        remove_action('plugins_loaded', ['ActionScheduler_Versions', 'initialize_latest_version'], 1);
+        remove_action('plugins_loaded', 'action_scheduler_register_3_dot_1_dot_6', 0);
+        remove_action('action_scheduler_run_queue', [ActionScheduler::runner(), 'run']);
+      }
+      define('DISABLE_WP_CRON', true);
       #var_dump($GLOBALS['wp_filter']['plugins_loaded']);
       #var_dump(_get_cron_array());
-    }
-    # }}}
-    # remove cron jobs once, after activation {{{
-    if (StorefrontModernBlocks::$X === 1 && ($a = _get_cron_array()))
-    {
-      foreach ($a as $b)
-      {
-        foreach ($b as $c => $d)
-        {
-          if (strpos($c, 'woocommerce') === 0)
-          {
-            var_dump($c);
-            break;
-          }
-        }
-      }
     }
     # }}}
     # create instance
     StorefrontModernBlocks::init();
   }, -2);
+  /***/
+  register_activation_hook(__FILE__, function() {
+    # remove cron jobs {{{
+    wp_clear_scheduled_hook('woocommerce_geoip_updater');
+    wp_clear_scheduled_hook('woocommerce_tracker_send_event');
+    # }}}
+  });
+  /***/
 }
 # }}}
 ?>
