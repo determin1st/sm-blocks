@@ -10,8 +10,10 @@
 * License: UNLICENSE
 * License URI: https://unlicense.org/
 */
-class StorefrontModernBlocks {
-  # base
+namespace StorefrontModern;
+define(__NAMESPACE__.'\DIR_INC', __DIR__.DIRECTORY_SEPARATOR.'inc'.DIRECTORY_SEPARATOR);
+require_once DIR_INC.'mustache.php';
+class Blocks {
   # data {{{
   private static
     $I     = null;
@@ -26,13 +28,13 @@ class StorefrontModernBlocks {
     ###
     $renderers = [
       # {{{
-      'sm-products'        => null,
-      'sm-paginator'       => null,
-      'sm-orderer'         => null,
-      'sm-rows-selector'   => null,
-      'sm-category-filter' => null,
-      'sm-price-filter'    => null,
-      'sm-menu'            => null,
+      'menu'            => null,
+      'products'        => null,
+      'paginator'       => null,
+      'orderer'         => null,
+      'rows-selector'   => null,
+      'category-filter' => null,
+      'price-filter'    => null,
       # }}}
     ],
     $defs = [
@@ -54,24 +56,19 @@ class StorefrontModernBlocks {
         'wrapAround' => true,
       ],
       # }}}
-    ],
-    $blocks = [ # TODO: DELET
       'rows-selector' => [ # {{{
-        'render_callback' => [null, 'renderBase'],
-        'attributes'      => [
-          ###
-          ###
-          'list'          => [
-            'type'        => 'array',
-            'default'     => [0,2,4,8,16], # 0=auto
-          ],
-          'index'         => [
-            'type'        => 'number',
-            'default'     => 1,
-          ],
-        ],
+        'list'  => [0,2,4,8,16], # 0=auto
+        'index' => 1,
       ],
       # }}}
+      'orderer' => [ # {{{
+        'order'      => ['featured',-1],
+        'switchMode' => 1,
+        'autodrop'   => false,
+      ],
+      # }}}
+    ],
+    $blocks = [ # TODO: DELET
       'paginator' => [ # {{{
         'render_callback' => [null, 'renderPaginator'],
         'attributes'      => [
@@ -92,30 +89,6 @@ class StorefrontModernBlocks {
           'gotoMode'      => [
             'type'        => 'number',
             'default'     => 1|2|4, # 0=none|1=separators|2=prev/next|4=first/last
-          ],
-        ],
-      ],
-      # }}}
-      'orderer' => [ # {{{
-        'render_callback' => [null, 'renderBase'],
-        'attributes'      => [
-          ### common
-          'customClass'   => [
-            'type'        => 'string',
-            'default'     => 'custom',
-          ],
-          ###
-          'order'         => [
-            'type'        => 'array',
-            'default'     => ['featured',-1],
-          ],
-          'switchMode'    => [
-            'type'        => 'number',
-            'default'     => 1,
-          ],
-          'autodrop'      => [
-            'type'        => 'boolean',
-            'default'     => false,
           ],
         ],
       ],
@@ -419,6 +392,15 @@ class StorefrontModernBlocks {
       'categorySlug' => [], # slug => id
       # }}}
     ];
+  public static
+    $svg = [ # {{{
+      'placeholder' => '
+      <svg preserveAspectRatio="none" viewBox="0 0 48 48">
+        <path d="M1 47h46V1H1v46z"/>
+      </svg>
+      ',
+    ];
+    # }}}
   # }}}
   # constructor {{{
   private function __construct()
@@ -439,11 +421,16 @@ class StorefrontModernBlocks {
       });
     }
     unset($a, $b);
+    # create parser instance
+    $I->tp = new Mustache_Engine([
+      'charset' => 'UTF-8',
+      'escape'  => (function($v) {return $v;}),
+    ]);
     # }}}
     # REGISTER files {{{
     # external
     $a = plugins_url().'/'.$I->BRAND.'/';
-    $b = file_exists($I->DIR.'httpFetch')
+    $b = file_exists(DIR_INC.'httpFetch')
       ? $a.'inc/httpFetch/httpFetch.js'
       : 'https://cdn.jsdelivr.net/npm/http-fetch-json@2/httpFetch.js';
     wp_register_script('http-fetch', $b, [], false, false);
@@ -451,17 +438,6 @@ class StorefrontModernBlocks {
     $b = $a.$I->BRAND.'.';
     wp_register_script($I->BRAND, $b.'js', ['http-fetch'], false, false);
     wp_register_style($I->BRAND, $b.'css');
-    ###
-    # register mustache autoloader
-    # https://github.com/bobthecow/mustache.php
-    require_once $I->DIR.'Mustache'.DIRECTORY_SEPARATOR.'Autoloader.php';
-    \Mustache_Autoloader::register();
-    # create parser instance
-    $I->tp = new \Mustache_Engine([
-      'charset'          => 'UTF-8',
-      'strict_callables' => true,
-      'escape'           => (function($v) {return $v;}),
-    ]);
     # }}}
     add_action('rest_api_init', function() use ($I) {
       # REGISTER REST api endpoint {{{
@@ -475,7 +451,7 @@ class StorefrontModernBlocks {
   # }}}
   # api {{{
   public static function init() {
-    if (!self::$I) {self::$I = new StorefrontModernBlocks();}
+    if (!self::$I) {self::$I = new Blocks();}
   }
   public static function config($menu) {
     # {{{
@@ -491,7 +467,7 @@ class StorefrontModernBlocks {
     ]);
     # }}}
   }
-  public static function parse($html, $ctx = null) {
+  public static function parse($html, $ctx = null, $delims = null) {
     # {{{
     # get instance
     if (!($I = self::$I)) {
@@ -502,87 +478,128 @@ class StorefrontModernBlocks {
     # as it removes editor's fold markers {{{..}}}
     $html = preg_replace('/<!--(.|\s)*?-->/', '', $html);
     # combine specified context with block renderers
-    if ($ctx) {
-      $ctx = array_merge($I->renderers, $ctx);
+    if (!$delims)
+    {
+      $ctx = $ctx
+        ? array_merge($I->renderers, $ctx)
+        : $I->renderers;
+    }
+    else
+    {
+      echo 'YEEEEEEEEEEEEEES?';
+      xdebug_break();
     }
     # complete
-    return $I->tp->render($html, $ctx);
+    return $I->tp->render($html, $ctx, $delims);
     # }}}
   }
-  private function render($name, $cfg = '') {
-    # {{{
+  # }}}
+  # renderer {{{
+  private function render($name, $opt = '')
+  {
+    # prepare {{{
     # get instance
     if (!($I = self::$I)) {
       return '';
     }
-    return '['.$name.']';
-    # prepare config
-    if (is_array($cfg)) {
-      $cfg = json_encode($cfg, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+    # get configuration
+    $cfg = is_array($opt)
+      ? $opt
+      : json_decode('{'.$opt.'}', true);
+    # check
+    if ($cfg)
+    {
+      if (array_key_exists($name, $this->defs))
+      {
+        # merge with defaults
+        $opt = $this->defs[$name];
+        foreach ($opt as $a => &$b)
+        {
+          if (array_key_exists($a, $cfg)) {
+            $b = $cfg[$a];
+          }
+        }
+        $cfg = $opt;
+      }
+      else
+      {
+        # zap
+        $cfg = (object)[];
+      }
     }
-    else {
-      $cfg = '{'.$cfg.'}';
+    elseif (array_key_exists($name, $this->defs))
+    {
+      # set defaults
+      $cfg = $this->defs[$name];
     }
-    # prepare
-    $x = '';
-    # parse config
-    $o = json_decode('{'.$o.'}', true);
-    # ...
-    # ...
-    # check variant
-    switch ($name) {
+    else
+    {
+      # empty
+      $cfg = (object)[];
     }
-    $x = '['.$name.']';
-    # done
-    return $x;
-    # create CSR block
-    return $I->parseTemplate(
-    '
-      <div class="{{name}}">
-        <div><!--{{config}}--></div>
-        {{placeholder}}
-      </div>
-    ', [
-      'name'   => $name,
-      'config' => $cfg,
-      'placeholder' => $I->templates['svg']['placeholder'],
-    ]);
+    # serialize config
+    $opt = JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES;
+    $opt = json_encode($cfg, $opt) ?: '{}';
+    $opt = htmlspecialchars($opt, ENT_NOQUOTES, 'UTF-8');
     # }}}
+    # operate
+    switch ($name) {
+    case 'products':
+      # {{{
+      $res = 'ZIPPO';
+      break;
+      # prepare
+      $T = $this->templates['products'];
+      $layout = explode(':', $attr['layout']);
+      foreach ($layout as &$a) {
+        $a = intval($a);
+      }
+      unset($a);
+      # determine grid style
+      $style = "--columns:{$layout[0]};--rows:{$layout[1]};";
+      if (($a = $attr['itemSize']) && strlen($a) > 2)
+      {
+        $a = explode(':', $a);
+        if (($b = intval($a[0])) > 0) {
+          $style .= "--item-width:{$b}px;";
+        }
+        if (($b = intval($a[1])) > 0) {
+          $style .= "--item-height:{$b}px;";
+        }
+      }
+      # compose
+      return $this->parseTemplate($T['main'], $T, [
+        'custom' => $attr['customClass'],
+        'style'  => $style,
+        'cfg'    => json_encode([
+          'layout'  => $layout,
+          'order'   => $attr['order'],
+          'options' => $attr['options'],
+          'wrapAround' => $attr['wrapAround'],
+          'lines' => true,
+        ]),
+        'placeholder' => $this->templates['svg']['placeholder'],
+      ]);
+      break;
+      # }}}
+    default:
+      # pure client-side rendering {{{
+      $res = $this->tp->render(
+        '<div class="{{a}}"><div>{{b}}</div>{{c}}</div>',
+        [
+          'a' => $this->BRAND.' '.$name,
+          'b' => '<!--'.$opt.'-->',
+          'c' => self::$svg['placeholder'],
+        ]
+      );
+      break;
+      # }}}
+    }
+    # done
+    return $res;
   }
   # }}}
   # TODO: DELET
-  # CSR base, TODO: DELETE {{{
-  public function renderBase($attr, $content, $block)
-  {
-    $name = str_replace('/', ' ', $block->name);
-    if (array_key_exists('customClass', $attr) && ($a = $attr['customClass'])) {
-      $name = $name.' '.$a;
-    }
-    else {
-      $name = $name.' custom';
-    }
-    $class = (array_key_exists('class', $attr) && $attr['class'])
-      ? $attr['class'] : '';
-    $style = (array_key_exists('style', $attr) && $attr['style'])
-      ? $attr['style'] : '';
-    ###
-    $cfg = [];
-    foreach ($attr as $a => $b)
-    {
-      if (!in_array($a, $this->base_attr)) {
-        $cfg[$a] = $b;
-      }
-    }
-    $cfg = json_encode($cfg, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
-    ###
-    return $this->parseTemplate($this->templates['base'], [
-      'name'  => $name,
-      'class' => $class,
-      'cfg'   => $cfg,
-      'placeholder' => $this->templates['svg']['placeholder'],
-    ]);
-  }
-  # }}}
   # products {{{
   public function renderProducts($attr, $content)
   {
@@ -1037,7 +1054,7 @@ class StorefrontModernBlocks {
       return null;
     }
     # get locale and language
-    $locale = (include $this->DIR.'lang.inc');
+    $locale = (include DIR_INC.'lang.inc');
     $lang = array_key_exists($p['lang'], $locale)
       ? $p['lang']
       : 'en';
@@ -1927,7 +1944,7 @@ if (defined('ABSPATH') && function_exists('add_action'))
     }
     # }}}
     # create instance
-    StorefrontModernBlocks::init();
+    Blocks::init();
   }, -2);
   /***/
   register_activation_hook(__FILE__, function() {
