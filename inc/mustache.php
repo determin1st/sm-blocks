@@ -1,5 +1,5 @@
 <?php
-namespace StorefrontModern;
+namespace SM;
 # {{{
 # https://github.com/bobthecow/mustache.php
 /**

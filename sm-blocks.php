@@ -10,7 +10,7 @@
 * License: UNLICENSE
 * License URI: https://unlicense.org/
 */
-namespace StorefrontModern;
+namespace SM;
 define(__NAMESPACE__.'\DIR_INC', __DIR__.DIRECTORY_SEPARATOR.'inc'.DIRECTORY_SEPARATOR);
 require_once DIR_INC.'mustache.php';
 class Blocks {
@@ -20,7 +20,6 @@ class Blocks {
   private
     $BRAND = 'sm-blocks',
     $ERROR = '',
-    $DIR   = __DIR__.DIRECTORY_SEPARATOR.'inc'.DIRECTORY_SEPARATOR,
     $LANG  = 'en',
     $db    = null,# database interface handle (MySQLi)
     $pfx   = null,# database tables prefix ("_wp", usually)
@@ -483,11 +482,6 @@ class Blocks {
       $ctx = $ctx
         ? array_merge($I->renderers, $ctx)
         : $I->renderers;
-    }
-    else
-    {
-      echo 'YEEEEEEEEEEEEEES?';
-      xdebug_break();
     }
     # complete
     return $I->tp->render($html, $ctx, $delims);
@@ -1939,8 +1933,8 @@ if (defined('ABSPATH') && function_exists('add_action'))
         remove_action('action_scheduler_run_queue', [ActionScheduler::runner(), 'run']);
       }
       define('DISABLE_WP_CRON', true);
-      #var_dump($GLOBALS['wp_filter']['plugins_loaded']);
       #var_dump(_get_cron_array());
+      #var_dump($GLOBALS['wp_filter']['wp_head']);
     }
     # }}}
     # create instance
