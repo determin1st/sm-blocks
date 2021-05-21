@@ -1,4 +1,5 @@
 inc/httpFetch
+inc/mustache.php
 *.vim
 *.swp
 
