@@ -4,26 +4,25 @@
 * Description: storefront modern blocks
 * Plugin URI: github.com/determin1st/sm-blocks
 * Author: determin1st
-* Version: 0.1
+* Version: 1
 * Requires at least: 5.5
 * Requires PHP: 7.2
 * License: UNLICENSE
 * License URI: https://unlicense.org/
 */
 namespace SM;
-define(__NAMESPACE__.'\DIR_INC', __DIR__.DIRECTORY_SEPARATOR.'inc'.DIRECTORY_SEPARATOR);
-require_once DIR_INC.'mustache.php';
 class Blocks {
   # data {{{
   private static
     $I     = null;
   private
-    $BRAND = 'sm-blocks',
-    $ERROR = '',
-    $LANG  = 'en',
-    $db    = null,# database interface handle (MySQLi)
-    $pfx   = null,# database tables prefix ("_wp", usually)
-    $tp    = null,# template parser (mustache)
+    $BRAND  = 'sm-blocks',
+    $ERROR  = '',
+    $LANG   = 'en',
+    $INCDIR = '',
+    $db     = null,# database interface handle (MySQLi)
+    $pfx    = null,# database tables prefix ("_wp", usually)
+    $tp     = null,# template parser (mustache)
     ###
     $renderers = [
       # {{{
@@ -37,22 +36,12 @@ class Blocks {
       # }}}
     ],
     $defs = [
-      'products' => [ # {{{
-        # dynamic grid layout: [min,max]
-        'columns' => [1,4],
-        'rows'    => [2,0],
-        # display mode: false=cards (vertical), true=lines (horizontal)
-        'lines' => false,
-        # item dimensions: [width,height]
-        # absolute units (px), 0=autodetect (take from css)
-        'cardSize' => [0,0],
-        'lineSize' => [0,0],
-        # records ordering
+      # {{{
+      'products' => [
+        'mode'  => 0,
+        'cols'  => [1,4],
+        'rows'  => [2,0],
         'order' => ['price',1],
-        # should empty grid cells at the last page
-        # be filled with items from the first page?
-        # (vertical display mode only)
-        'wrapAround' => true,
       ],
       # }}}
       'rows-selector' => [ # {{{
@@ -401,7 +390,13 @@ class Blocks {
     ];
     # }}}
   # }}}
-  # constructor {{{
+  # initializer {{{
+  public static function init()
+  {
+    if (!self::$I) {# private singleton
+      self::$I = new Blocks();
+    }
+  }
   private function __construct()
   {
     # plugins loaded
@@ -410,6 +405,7 @@ class Blocks {
     # set base
     $I       = $this;
     $I->LANG = substr(get_locale(), 0, 2);
+    $I->INCDIR = __DIR__.DIRECTORY_SEPARATOR.'inc'.DIRECTORY_SEPARATOR;
     $I->db   = $wpdb->dbh;
     $I->pfx  = $wpdb->prefix;
     # set renderers
@@ -420,8 +416,13 @@ class Blocks {
       });
     }
     unset($a, $b);
-    # create parser instance
-    $I->tp = new Mustache_Engine([
+    # create template parser instance
+    $a = '\\'.__NAMESPACE__.'\\Mustache_Engine';
+    $b = $I->INCDIR.'mustache.php';
+    if (!class_exists($a, false)) {
+      require_once($b);
+    }
+    $I->tp = new $a([
       'charset' => 'UTF-8',
       'escape'  => (function($v) {return $v;}),
     ]);
@@ -429,7 +430,7 @@ class Blocks {
     # REGISTER files {{{
     # external
     $a = plugins_url().'/'.$I->BRAND.'/';
-    $b = file_exists(DIR_INC.'httpFetch')
+    $b = file_exists($I->INCDIR.'httpFetch')
       ? $a.'inc/httpFetch/httpFetch.js'
       : 'https://cdn.jsdelivr.net/npm/http-fetch-json@2/httpFetch.js';
     wp_register_script('http-fetch', $b, [], false, false);
@@ -448,24 +449,77 @@ class Blocks {
     });
   }
   # }}}
-  # api {{{
-  public static function init() {
-    if (!self::$I) {self::$I = new Blocks();}
-  }
-  public static function config($menu) {
-    # {{{
-    # get instance
-    if (!($I = self::$I)) {
-      return '';
+  # renderer {{{
+  private function render($name, $opt = '')
+  {
+    # prepare {{{
+    $class = $this->BRAND.' '.$name;
+    $style = '';
+    $placeholder = self::$svg['placeholder'];
+    # parse configuration
+    $cfg = is_array($opt)
+      ? $opt : json_decode("{$opt}", true);
+    # check
+    if ($cfg)
+    {
+      # merge over defaults with old-school union operator
+      $cfg = array_key_exists($name, $this->defs)
+        ? $cfg + $this->defs[$name]
+        : (object)[];
     }
-    # create initial configuration (SSR)
-    return $I->apiConfig([
-      'lang'     => $I->LANG,
-      'route'    => [$I->db_Menu($menu), -1],
-      'category' => null,
-    ]);
+    elseif (array_key_exists($name, $this->defs))
+    {
+      # copy defaults
+      $cfg = $this->defs[$name];
+    }
+    else
+    {
+      # empty
+      $cfg = (object)[];
+    }
+    # serialize configuration
+    $opt = JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES;
+    $opt = json_encode($cfg, $opt) ?: '{}';
+    $opt = htmlspecialchars($opt, ENT_NOQUOTES, 'UTF-8');
     # }}}
+    # determine specific block's initial style,
+    # it will improve initial block for as soon as styles attached.
+    switch ($name) {
+    case 'products':
+      # {{{
+      # add mode class
+      $a = $cfg['mode'] ? 'lines' : 'cards';
+      $class .= " catalog $a";
+      # add minimal columns/rows count
+      $style .= '--cols:'.$cfg['cols'][0].';';
+      $style .= '--rows:'.$cfg['rows'][0].';';
+      # add item size
+      $a = $cfg['cards'];
+      if ($a[0]) {
+        $style .= '--card-cols'.$a[0].';';
+      }
+      if ($a[1]) {
+        $style .= '--card-rows'.$a[1].';';
+      }
+      $a = $cfg['lines'];
+      if ($a[0]) {
+        $style .= '--line-cols'.$a[0].';';
+      }
+      if ($a[1]) {
+        $style .= '--line-rows'.$a[1].';';
+      }
+      break;
+      # }}}
+    }
+    # include style in the result
+    $style && ($class .= '" style="'.$style);
+    # complete render with simply elegant heredoc
+    return <<<HTM
+<div class="$class"><div><!--$opt--></div>$placeholder</div>
+HTM;
   }
+  # }}}
+  # api {{{
   public static function parse($html, $ctx = null, $delims = null) {
     # {{{
     # get instance
@@ -487,305 +541,23 @@ class Blocks {
     return $I->tp->render($html, $ctx, $delims);
     # }}}
   }
-  # }}}
-  # renderer {{{
-  private function render($name, $opt = '')
-  {
-    # prepare {{{
+  public static function config($menu) {
+    # {{{
     # get instance
     if (!($I = self::$I)) {
       return '';
     }
-    # get configuration
-    $cfg = is_array($opt)
-      ? $opt
-      : json_decode('{'.$opt.'}', true);
-    # check
-    if ($cfg)
-    {
-      if (array_key_exists($name, $this->defs))
-      {
-        # merge with defaults
-        $opt = $this->defs[$name];
-        foreach ($opt as $a => &$b)
-        {
-          if (array_key_exists($a, $cfg)) {
-            $b = $cfg[$a];
-          }
-        }
-        $cfg = $opt;
-      }
-      else
-      {
-        # zap
-        $cfg = (object)[];
-      }
-    }
-    elseif (array_key_exists($name, $this->defs))
-    {
-      # set defaults
-      $cfg = $this->defs[$name];
-    }
-    else
-    {
-      # empty
-      $cfg = (object)[];
-    }
-    # serialize config
-    $opt = JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES;
-    $opt = json_encode($cfg, $opt) ?: '{}';
-    $opt = htmlspecialchars($opt, ENT_NOQUOTES, 'UTF-8');
+    # create initial configuration (SSR)
+    return $I->apiConfig([
+      'lang'     => $I->LANG,
+      'route'    => [$I->db_Menu($menu), -1],
+      'category' => null,
+    ]);
     # }}}
-    # operate
-    switch ($name) {
-    case 'products':
-      # {{{
-      $res = 'ZIPPO';
-      break;
-      # prepare
-      $T = $this->templates['products'];
-      $layout = explode(':', $attr['layout']);
-      foreach ($layout as &$a) {
-        $a = intval($a);
-      }
-      unset($a);
-      # determine grid style
-      $style = "--columns:{$layout[0]};--rows:{$layout[1]};";
-      if (($a = $attr['itemSize']) && strlen($a) > 2)
-      {
-        $a = explode(':', $a);
-        if (($b = intval($a[0])) > 0) {
-          $style .= "--item-width:{$b}px;";
-        }
-        if (($b = intval($a[1])) > 0) {
-          $style .= "--item-height:{$b}px;";
-        }
-      }
-      # compose
-      return $this->parseTemplate($T['main'], $T, [
-        'custom' => $attr['customClass'],
-        'style'  => $style,
-        'cfg'    => json_encode([
-          'layout'  => $layout,
-          'order'   => $attr['order'],
-          'options' => $attr['options'],
-          'wrapAround' => $attr['wrapAround'],
-          'lines' => true,
-        ]),
-        'placeholder' => $this->templates['svg']['placeholder'],
-      ]);
-      break;
-      # }}}
-    default:
-      # pure client-side rendering {{{
-      $res = $this->tp->render(
-        '<div class="{{a}}"><div>{{b}}</div>{{c}}</div>',
-        [
-          'a' => $this->BRAND.' '.$name,
-          'b' => '<!--'.$opt.'-->',
-          'c' => self::$svg['placeholder'],
-        ]
-      );
-      break;
-      # }}}
-    }
-    # done
-    return $res;
   }
   # }}}
-  # TODO: DELET
-  # products {{{
-  public function renderProducts($attr, $content)
-  {
-    # prepare
-    $T = $this->templates['products'];
-    $layout = explode(':', $attr['layout']);
-    foreach ($layout as &$a) {
-      $a = intval($a);
-    }
-    unset($a);
-    # determine grid style
-    $style = "--columns:{$layout[0]};--rows:{$layout[1]};";
-    if (($a = $attr['itemSize']) && strlen($a) > 2)
-    {
-      $a = explode(':', $a);
-      if (($b = intval($a[0])) > 0) {
-        $style .= "--item-width:{$b}px;";
-      }
-      if (($b = intval($a[1])) > 0) {
-        $style .= "--item-height:{$b}px;";
-      }
-    }
-    # compose
-    return $this->parseTemplate($T['main'], $T, [
-      'custom' => $attr['customClass'],
-      'style'  => $style,
-      'cfg'    => json_encode([
-        'layout'  => $layout,
-        'order'   => $attr['order'],
-        'options' => $attr['options'],
-        'wrapAround' => $attr['wrapAround'],
-        'lines' => true,
-      ]),
-      'placeholder' => $this->templates['svg']['placeholder'],
-    ]);
-  }
-  # }}}
-  # paginator {{{
-  public function renderPaginator($attr, $content)
-  {
-    # prepare
-    $T = $this->templates['paginator'];
-    # refine parameters
-    $a = explode(':', $attr['rangeSize']);
-    $rangeIndex = intval($a[0]);
-    $rangeSize  = $rangeIndex + intval($a[1]) + 1;
-    $gotoFL  = !!($attr['gotoMode'] & 4);
-    $gotoPN  = !!($attr['gotoMode'] & 2);
-    $gotoSep = !!($attr['gotoMode'] & 1);
-    # determine gap
-    $gap = $attr['rangeMode'] === 2
-      ? $T['gap-flexy']
-      : $T['gap-static'];
-    # create range
-    $pages = '';
-    if ($attr['rangeMode'] > 0)
-    {
-      $a = -1;
-      while (++$a < $rangeSize) {
-        $pages .= $T['page'];
-      }
-    }
-    # create configuration
-    $cfg = json_encode([
-      'goto'  => $attr['gotoMode'],
-      'range' => $attr['rangeMode'],
-      'index' => $rangeIndex,
-    ]);
-    # compose
-    return $this->parseTemplate($T['main'], $T, [
-      'custom' => $attr['customClass'],
-      'cfg'    => $cfg,
-      'gotoF'  => $gotoFL,
-      'gotoP'  => $gotoPN,
-      'sep1'   => $gotoSep,
-      'gap'    => $gap,
-      'pages'  => $pages,
-      'sep2'   => $gotoSep,
-      'gotoN'  => $gotoPN,
-      'gotoL'  => $gotoFL,
-      'placeholder' => $this->templates['svg']['placeholder'],
-    ]);
-  }
-  # }}}
-  # price-filter {{{
-  public function renderPriceFilter($attr, $content)
-  {
-    # prepare
-    $T = $this->templates['price-filter'];
-    # compose
-    return $this->renderSection([
-      'custom'    => trim('price-filter '.$attr['customClass']),
-      'cfg'       => [
-        'sectionSwitch' => $attr['sectionSwitch'],
-      ],
-      'opened'    => $attr['sectionOpened'],
-      'items'     => $this->parseTemplate($T['root'], $T, []),
-    ]);
-  }
-  # }}}
-  # category-filter {{{
-  public function renderCategoryFilter($attr, $content)
-  {
-    # get content
-    $content = $this->db_CategoryTree(
-      $attr['baseCategory'],
-      $attr['hasEmpty']
-    );
-    # create a section
-    return $this->renderSection([
-      'custom' => trim('category-filter '.$attr['customClass']),
-      'opened' => $attr['sectionOpened'],
-      'items'  => $content,
-    ]);
-  }
-  private function renderSection($attr)
-  {
-    # preapre
-    $T = $this->templates['section'];
-    # create items (sub-sections)
-    if (($content = $attr['items']) && is_array($content))
-    {
-      $id = $content['id'];
-      $content = $this->renderSectionItem($content, $T, $attr);
-    }
-    else
-    {
-      $id = -1;
-    }
-    # create configuration
-    $config = !!$attr['cfg']
-      ? $attr['cfg']
-      : [];
-    $config = json_encode(array_merge($config, [
-      'id'     => $id,
-      'opened' => $attr['opened'],
-      'arrow'  => true,
-    ]));
-    # compose
-    return $this->parseTemplate($T['main'], $T, [
-      'custom' => ($attr['custom'] ? $attr['custom'] : 'custom'),
-      'cfg'    => $config,
-      'items'  => $content,
-      'placeholder' => $this->templates['svg']['placeholder'],
-    ]);
-  }
-  private function renderSectionItem($node, $T, $attr)
-  {
-    # iterate slaves of this master
-    $html = '';
-    foreach ($node['slaves'] as $a)
-    {
-      # create configuration
-      $b = json_encode([
-        'id'     => $a['id'],
-        'name'   => $a['name'],
-        'depth'  => $a['depth'],
-        'arrow'  => $a['arrow'],
-        'opened' => false,
-        'order'  => $a['order'],
-        'count'  => $a['count'],
-        'total'  => $a['total'],
-      ]);
-      # check slave is also a master
-      if ($a['slaves'])
-      {
-        # create section item (recurse)
-        $b = $this->parseTemplate($T['item'], $T, [
-          'class'   => ($attr['opened'] ? ' o' : ''),
-          'cfg'     => $b,
-          'section' => true,
-          'items'   => $this->renderSectionItem($a, $T, $attr),
-        ]);
-      }
-      else
-      {
-        # create simple item
-        $b = $this->parseTemplate($T['item'], $T, [
-          'class'   => '',
-          'cfg'     => $b,
-          'section' => false,
-        ]);
-      }
-      # aggregate markup
-      $html .= $b;
-    }
-    return $html;
-  }
-  # }}}
-  # rest api
-  # entry point {{{
-  public function apiEntry($p)
+  # rest api {{{
+  public function apiEntry($p) # {{{
   {
     # extract parameters
     if (!($p = $p->get_json_params()) || !is_array($p)) {
@@ -1033,7 +805,6 @@ class Blocks {
     # }}}
   }
   # }}}
-  # helpers {{{
   private function apiConfig($p) # {{{
   {
     # get products metadata
@@ -1048,7 +819,7 @@ class Blocks {
       return null;
     }
     # get locale and language
-    $locale = (include DIR_INC.'lang.inc');
+    $locale = include($this->INCDIR.'lang.inc');
     $lang = array_key_exists($p['lang'], $locale)
       ? $p['lang']
       : 'en';
@@ -1104,7 +875,6 @@ class Blocks {
   }
   # }}}
   # }}}
-  # model
   # database {{{
   private function db_Menu($name) # {{{
   {
@@ -1669,7 +1439,7 @@ EOD;
   }
   # }}}
   # }}}
-  # action {{{
+  # ? {{{
   private function a_CartAdd($id, $count) # {{{
   {
     global $woocommerce;
@@ -1700,6 +1470,7 @@ EOD;
   }
   # }}}
   # }}}
+  # TODO: DELET
   # parser {{{
   private function parseTemplate($template, $data, $attr = [])
   {
@@ -1827,9 +1598,160 @@ EOD;
     return $F;
   }
   # }}}
+  # paginator {{{
+  public function renderPaginator($attr, $content)
+  {
+    # prepare
+    $T = $this->templates['paginator'];
+    # refine parameters
+    $a = explode(':', $attr['rangeSize']);
+    $rangeIndex = intval($a[0]);
+    $rangeSize  = $rangeIndex + intval($a[1]) + 1;
+    $gotoFL  = !!($attr['gotoMode'] & 4);
+    $gotoPN  = !!($attr['gotoMode'] & 2);
+    $gotoSep = !!($attr['gotoMode'] & 1);
+    # determine gap
+    $gap = $attr['rangeMode'] === 2
+      ? $T['gap-flexy']
+      : $T['gap-static'];
+    # create range
+    $pages = '';
+    if ($attr['rangeMode'] > 0)
+    {
+      $a = -1;
+      while (++$a < $rangeSize) {
+        $pages .= $T['page'];
+      }
+    }
+    # create configuration
+    $cfg = json_encode([
+      'goto'  => $attr['gotoMode'],
+      'range' => $attr['rangeMode'],
+      'index' => $rangeIndex,
+    ]);
+    # compose
+    return $this->parseTemplate($T['main'], $T, [
+      'custom' => $attr['customClass'],
+      'cfg'    => $cfg,
+      'gotoF'  => $gotoFL,
+      'gotoP'  => $gotoPN,
+      'sep1'   => $gotoSep,
+      'gap'    => $gap,
+      'pages'  => $pages,
+      'sep2'   => $gotoSep,
+      'gotoN'  => $gotoPN,
+      'gotoL'  => $gotoFL,
+      'placeholder' => $this->templates['svg']['placeholder'],
+    ]);
+  }
+  # }}}
+  # price-filter {{{
+  public function renderPriceFilter($attr, $content)
+  {
+    # prepare
+    $T = $this->templates['price-filter'];
+    # compose
+    return $this->renderSection([
+      'custom'    => trim('price-filter '.$attr['customClass']),
+      'cfg'       => [
+        'sectionSwitch' => $attr['sectionSwitch'],
+      ],
+      'opened'    => $attr['sectionOpened'],
+      'items'     => $this->parseTemplate($T['root'], $T, []),
+    ]);
+  }
+  # }}}
+  # category-filter {{{
+  public function renderCategoryFilter($attr, $content)
+  {
+    # get content
+    $content = $this->db_CategoryTree(
+      $attr['baseCategory'],
+      $attr['hasEmpty']
+    );
+    # create a section
+    return $this->renderSection([
+      'custom' => trim('category-filter '.$attr['customClass']),
+      'opened' => $attr['sectionOpened'],
+      'items'  => $content,
+    ]);
+  }
+  private function renderSection($attr)
+  {
+    # preapre
+    $T = $this->templates['section'];
+    # create items (sub-sections)
+    if (($content = $attr['items']) && is_array($content))
+    {
+      $id = $content['id'];
+      $content = $this->renderSectionItem($content, $T, $attr);
+    }
+    else
+    {
+      $id = -1;
+    }
+    # create configuration
+    $config = !!$attr['cfg']
+      ? $attr['cfg']
+      : [];
+    $config = json_encode(array_merge($config, [
+      'id'     => $id,
+      'opened' => $attr['opened'],
+      'arrow'  => true,
+    ]));
+    # compose
+    return $this->parseTemplate($T['main'], $T, [
+      'custom' => ($attr['custom'] ? $attr['custom'] : 'custom'),
+      'cfg'    => $config,
+      'items'  => $content,
+      'placeholder' => $this->templates['svg']['placeholder'],
+    ]);
+  }
+  private function renderSectionItem($node, $T, $attr)
+  {
+    # iterate slaves of this master
+    $html = '';
+    foreach ($node['slaves'] as $a)
+    {
+      # create configuration
+      $b = json_encode([
+        'id'     => $a['id'],
+        'name'   => $a['name'],
+        'depth'  => $a['depth'],
+        'arrow'  => $a['arrow'],
+        'opened' => false,
+        'order'  => $a['order'],
+        'count'  => $a['count'],
+        'total'  => $a['total'],
+      ]);
+      # check slave is also a master
+      if ($a['slaves'])
+      {
+        # create section item (recurse)
+        $b = $this->parseTemplate($T['item'], $T, [
+          'class'   => ($attr['opened'] ? ' o' : ''),
+          'cfg'     => $b,
+          'section' => true,
+          'items'   => $this->renderSectionItem($a, $T, $attr),
+        ]);
+      }
+      else
+      {
+        # create simple item
+        $b = $this->parseTemplate($T['item'], $T, [
+          'class'   => '',
+          'cfg'     => $b,
+          'section' => false,
+        ]);
+      }
+      # aggregate markup
+      $html .= $b;
+    }
+    return $html;
+  }
+  # }}}
 }
-# hookup {{{
-# check wordpress loaded
+# wordpress hookup {{{
 if (defined('ABSPATH') && function_exists('add_action'))
 {
   add_filter('option_active_plugins', function ($a) {
@@ -1850,7 +1772,7 @@ if (defined('ABSPATH') && function_exists('add_action'))
     # }}}
   });
   add_action('plugins_loaded', function() {
-    # unhook woocommerce at front {{{
+    # unhook woocommerce in frontend {{{
     global $GLOBALS;
     if (!is_admin() && function_exists('WC'))
     {
@@ -1937,17 +1859,16 @@ if (defined('ABSPATH') && function_exists('add_action'))
       #var_dump($GLOBALS['wp_filter']['wp_head']);
     }
     # }}}
-    # create instance
+    ### initialize blocks
     Blocks::init();
+    ###
   }, -2);
-  /***/
   register_activation_hook(__FILE__, function() {
     # remove cron jobs {{{
     wp_clear_scheduled_hook('woocommerce_geoip_updater');
     wp_clear_scheduled_hook('woocommerce_tracker_send_event');
     # }}}
   });
-  /***/
 }
 # }}}
 ?>
