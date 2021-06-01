@@ -434,9 +434,15 @@ class Blocks {
       ? $a.'inc/httpFetch/httpFetch.js'
       : 'https://cdn.jsdelivr.net/npm/http-fetch-json@2/httpFetch.js';
     wp_register_script('http-fetch', $b, [], false, false);
+    $b = $a.'inc/w3ui.js';
+    wp_register_script('w3ui', $b, [], false, false);
     # internal
     $b = $a.$I->BRAND.'.';
-    wp_register_script($I->BRAND, $b.'js', ['http-fetch'], false, false);
+    wp_register_script(
+      $I->BRAND, $b.'js',
+      ['http-fetch','w3ui'],
+      false, false
+    );
     wp_register_style($I->BRAND, $b.'css');
     # }}}
     add_action('rest_api_init', function() use ($I) {
@@ -487,9 +493,9 @@ class Blocks {
     switch ($name) {
     case 'products':
       # {{{
-      # add mode class
+      # add classes
       $a = $cfg['mode'] ? 'lines' : 'cards';
-      $class .= " catalog $a";
+      $class .= " gridlist $a";
       # add minimal columns/rows count
       $style .= '--cols:'.$cfg['cols'][0].';';
       $style .= '--rows:'.$cfg['rows'][0].';';
@@ -541,18 +547,22 @@ HTM;
     return $I->tp->render($html, $ctx, $delims);
     # }}}
   }
-  public static function config($menu) {
+  public static function javascript($BRAND) {
     # {{{
-    # get instance
+    # check
     if (!($I = self::$I)) {
       return '';
     }
-    # create initial configuration (SSR)
-    return $I->apiConfig([
+    # compose configuration
+    $URL  = '/?rest_route=/'.$I->BRAND.'/kiss';
+    $MENU = $I->db_Menu($BRAND);
+    $CFG  = $I->apiConfig([
       'lang'     => $I->LANG,
-      'route'    => [$I->db_Menu($menu), -1],
+      'route'    => [$MENU,-1],
       'category' => null,
     ]);
+    # compose invocation statement
+    return 'SHOP("'.$URL.'",'.$CFG.');';
     # }}}
   }
   # }}}
@@ -816,7 +826,7 @@ HTM;
     if (($q = $this->db_Products($q)) === null)
     {
       $this->ERROR = 'failed to get products';
-      return null;
+      return '';
     }
     # get locale and language
     $locale = include($this->INCDIR.'lang.inc');
@@ -834,8 +844,10 @@ HTM;
       'total'    => count($q),
     ], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
     # check
-    if ($q === null) {
+    if ($q === null)
+    {
       $this->ERROR = json_last_error_msg();
+      return '';
     }
     # done
     return $q;

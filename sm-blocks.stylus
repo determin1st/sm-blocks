@@ -121,7 +121,299 @@ a-container(xpad=0,ypad=0)
 			fill: transparent
 			stroke: transparent
 	// }}}
-	/* HIERARCHICAL MENU */
+	/*************/
+	/* PRIMITIVE */
+	/*************/
+	/*************/
+	/* COMPOUND  */
+	/*************/
+	&.gridlist // {{{
+		// configuration
+		// primary container (grid of grids)
+		--cols: 1
+		--rows: 1
+		--col-gap: 0.1666em // 8px
+		--row-gap: 0.3333em // 16px
+		// secondary containers (all item types)
+		// item sized in ppbs (1*ppb == 1*(--w3-size))
+		--card-cols: 6
+		--card-rows: 8
+		--line-cols: 13
+		--line-rows: 3
+		&.cards
+			--item-cols: var(--card-cols)
+			--item-rows: var(--card-rows)
+		&.lines
+			--item-cols: var(--line-cols)
+			--item-rows: var(--line-rows)
+		////
+		width: 100% // try to eat all the width (observed)
+		height: auto // grow/shrink automatically (calculated)
+		min-width: 0 // hint to the browser only, block zaps to nothing
+		min-height: 0 // ..same
+		display: flex // for horizontal alignment
+		flex-direction: row // tested! no others work stable
+		justify-content: center // configurabable
+		align-items: flex-start // top, non-applicabable (auto)
+		// custom paddings
+		padding-top: 0.3333em // 16px
+		padding-right: 0
+		padding-bottom: 0.3333em
+		padding-left: 0
+		> div
+			// PRIMARY: items grid
+			flex: 1 1 0
+			display: grid
+			grid-template-columns: repeat(var(--cols), 1fr)
+			grid-column-gap: var(--col-gap)
+			grid-row-gap: var(--row-gap)
+			contain: strict // optimize?
+			> .item
+				// item's container
+				display: none // not displayed by default
+				box-shadow: none // not standard container
+				> div
+					// SECONDARY: item's grid (sectionated)
+					// TODO: move to &.grid partially
+					display: grid
+					grid-template-columns: repeat(var(--item-cols), var(--w3-size))
+					grid-template-rows: repeat(var(--item-rows), var(--w3-size))
+					grid-column-gap: 0 // solid
+					grid-row-gap: 0 // solid
+					justify-self: stretch // width=100%
+					align-self: stretch // height=100%
+					contain: strict // optimize?
+					> div
+						// tertiary,
+						// section's container
+						padding: 0.0416em // 2px
+						> div
+							display: none
+						> svg
+							display: block
+				// item states
+				&.v
+					// initialized
+					display: block
+					> div.v.x
+						// content is visible only
+						// when constructed and loaded
+						> div
+							display: block
+						> svg
+							display: none
+	// }}}
+	/********/
+	/* TODO */
+	/********/
+	&.gridlist.cards // {{{
+		> div > .item > div
+			&.image // {{{
+				display: flex
+				flex-direction: row
+				align-items: center
+				justify-content: center
+				> img
+					flex: 1 0 0
+					width:  100%
+					height: 100%
+					max-width:  100%
+					max-height: 100%
+					display: none
+				> svg
+					flex: 1 1 0
+					width:  100%
+					height: 100%
+					display: block
+				&.v
+					> img
+						display: block
+					> svg
+						display: none
+			// }}}
+			&.title // {{{
+				order: 1
+				flex: 0 0 0
+				min-height: 3.45em
+				padding-bottom: 0.4em
+				> div
+					height: 100%
+					display: flex
+					align-items: center
+					justify-content: center
+					font-family: var(--sm-font-label)
+					font-size: 1.1em
+					font-weight: bold
+					line-height: 1
+					text-align: center
+					word-break: keep-all // +to break-word Asian languages
+					owerflow-break: keep-all // +to break-word Asian languages
+					overflow: hidden
+					color: black
+			// }}}
+			&.price // {{{
+				order: 0
+				max-height: 2.2em
+				display: flex
+				flex-direction: row
+				align-items: stretch
+				justify-content: center
+				padding-bottom: 0.4em
+				> div
+					flex: 0 0 auto
+					display: flex
+					flex-direction: row
+					align-items: flex-end
+					line-height: 1
+				> .currency
+					justify-content: flex-end
+					font-family: var(--sm-font-label)
+					font-size: 1.8em
+					padding-right: 0.15em
+					color: slategray
+				> .pad
+					flex: 1 1 0
+				> .value
+					> div
+						font-family: var(--sm-font-label)
+						text-overflow: ellipsis
+						overflow:      hidden
+						white-space:   nowrap
+						word-break:    break-all
+						overflow-wrap: anywhere // modern word-break
+					&.a
+						justify-content: center
+						padding-bottom: 0.14em
+						> .integer
+							font-size: 1.4em
+							color: darkslategray
+						> .fraction
+							font-size: 1.2em
+							color: slategray
+							padding-bottom: 0.03em
+					&.b
+						flex: 0 1 auto
+						padding-left: 1em
+						padding-bottom: 0.25em
+						text-decoration: line-through
+						text-decoration-color: darkslategray
+						> .integer
+							font-size: 1em
+							color: slategray
+						> .fraction
+							font-size: 0.8em
+							color: slategray
+							padding-bottom: 0.1em
+				////
+				&.equal
+					> .value.b > div
+						display: none
+			// }}}
+			&.actions // {{{
+				font-size: calc(var(--item-h) * var(--c-size) / 100)
+				display: flex
+				flex-direction: row
+				gap: 4px
+				// base
+				> button
+					flex: 1 1 0
+				// specific
+				> button.add // {{{
+					flex: 0 0 0
+					size = 0.917em // 44px
+					padY = (1 - size) / 2
+					padX = 0.125em
+					bord = 0.025em
+					min-width: size + 2*padX + 2*bord
+					//min-width: 0em // 0.917 + pad + border(2*0.025)
+					//padding: 0.0415em 0.083em 0.0415em 0.083em
+					padding: padY padX padY padX
+					> svg
+						width:  100%
+						height: 100%
+						display: block
+						> text
+							//font-size: 0.375em
+							font-size: 0.417em
+							//font-size: 0.458em
+							font-family: var(--sm-font-label)
+							font-weight: bold
+							fill: transparent
+						> .a
+							fill: rgba(var(--sm-color-4), 0.75)
+						> .b
+							fill: rgba(var(--sm-color-5))
+						> .c
+							fill: rgba(var(--sm-color-5), 0.5)
+						> .d
+							font-size: 0.458em
+						> .e
+							fill: transparent
+					&.v
+						&.h > svg
+							> .b
+								fill: rgba(var(--sm-color-4), 0.75)
+							> .c
+								fill: rgba(var(--sm-color-1), 0.25)
+							> .d
+								fill: rgba(var(--sm-color-0))
+						&.f > svg
+							> .a
+								fill: rgba(var(--sm-color-6), 0.65)
+							> .c
+								fill: rgba(var(--sm-color-7), 0.25)
+							//> .d
+							//	fill: rgba(var(--sm-color-7))
+						&.f.h > svg
+							> .c
+								fill: rgba(var(--sm-color-7), 0.125)
+							> .d
+								fill: rgba(var(--sm-color-7))
+						&.w > svg,
+						&.w.f > svg
+							> .a
+								fill: rgba(var(--sm-color-2))
+							> .b
+								fill: rgba(var(--sm-color-2))
+							> .c
+								fill: rgba(var(--sm-color-7), 0.125)
+							> .d
+								fill: transparent
+						&.x > svg
+							> .c
+								fill: rgba(var(--sm-color-1), 0.4)
+							> .d
+								fill: transparent
+							> .e
+								fill: rgba(var(--sm-color-0))
+						&.x.h > svg
+							> .c
+								fill: rgba(var(--sm-color-1), 0.25)
+							> .e
+								fill: rgba(var(--sm-color-5))
+						&.x.f > svg
+							> .c
+								fill: rgba(var(--sm-color-7), 0.15)
+							> .e
+								fill: rgba(var(--sm-color-6))
+						&.x.f.h > svg
+							> .d
+								fill: transparent
+						&.x.w > svg,
+						&.x.w.f > svg
+							> .e
+								fill: rgba(var(--sm-color-7))
+				// }}}
+			// }}}
+		////
+	// }}}
+	&.gridlist.lines // {{{
+		> div > .item > div
+			&.image // {{{
+				display: flex
+			// }}}
+		////
+	// }}}
 	&.menu // {{{
 		--root-size: 1em
 		--item-size: 0.75em
@@ -350,7 +642,6 @@ a-container(xpad=0,ypad=0)
 					opacity: 1
 		////
 	// }}}
-	/* HIERARCHICAL SECTION (horizontal tabs) */
 	&.section // {{{
 		// root
 		width:  100%
@@ -575,291 +866,6 @@ a-container(xpad=0,ypad=0)
 					// }}}
 				////
 	// }}}
-	/* CATALOG GRID and FEATURE SECTIONS */
-	&.catalog // {{{
-		// configuration
-		// primary container (grid of grids)
-		--cols: 1
-		--rows: 1
-		--col-gap: 0.1666em // 8px
-		--row-gap: 0.3333em // 16px
-		// secondary containers (all item types)
-		// item sized in ppbs (1*ppb == 1*(--w3-size))
-		--card-cols: 6
-		--card-rows: 8
-		--line-cols: 13
-		--line-rows: 3
-		&.cards
-			--item-cols: var(--card-cols)
-			--item-rows: var(--card-rows)
-		&.lines
-			--item-cols: var(--line-cols)
-			--item-rows: var(--line-rows)
-		////
-		width: 100% // try to eat all the width (observed)
-		height: auto // grow/shrink automatically (calculated)
-		min-width: 0 // hint to the browser only, block zaps to nothing
-		min-height: 0 // ..same
-		display: flex // for horizontal alignment
-		flex-direction: row // tested! no others work stable
-		justify-content: center // configurabable
-		align-items: flex-start // top, non-applicabable (auto)
-		// custom paddings
-		padding-top: 0.3333em // 16px
-		padding-right: 0
-		padding-bottom: 0.3333em
-		padding-left: 0
-		> div
-			// PRIMARY: items grid
-			flex: 1 1 0
-			display: grid
-			grid-template-columns: repeat(var(--cols), 1fr)
-			grid-column-gap: var(--col-gap)
-			grid-row-gap: var(--row-gap)
-			contain: strict // optimize?
-			> .item
-				// item's container
-				display: none // not displayed by default
-				box-shadow: none // not standard container
-				> div
-					// SECONDARY: item's grid (sectionated)
-					// TODO: move to &.grid partially
-					grid-template-columns: repeat(var(--item-cols), var(--w3-size))
-					grid-template-rows: repeat(var(--item-rows), var(--w3-size))
-					grid-column-gap: 0 // solid
-					grid-row-gap: 0 // solid
-					justify-self: stretch // width=100%
-					align-self: stretch // height=100%
-					contain: strict // optimize?
-					> div
-						// tertiary,
-						// section's container
-						padding: 0.0416em // 2px
-						> div
-							display: none
-						> svg
-							display: block
-				// item states
-				&.v
-					// initialized
-					display: block
-					> div.v.x
-						// content is visible only
-						// when constructed and loaded
-						> div
-							display: block
-						> svg
-							display: none
-	// }}}
-	&.catalog.cards // {{{
-		> div > .item > div
-			&.image // {{{
-				display: flex
-				flex-direction: row
-				align-items: center
-				justify-content: center
-				> img
-					flex: 1 0 0
-					width:  100%
-					height: 100%
-					max-width:  100%
-					max-height: 100%
-					display: none
-				> svg
-					flex: 1 1 0
-					width:  100%
-					height: 100%
-					display: block
-				&.v
-					> img
-						display: block
-					> svg
-						display: none
-			// }}}
-			&.title // {{{
-				order: 1
-				flex: 0 0 0
-				min-height: 3.45em
-				padding-bottom: 0.4em
-				> div
-					height: 100%
-					display: flex
-					align-items: center
-					justify-content: center
-					font-family: var(--sm-font-label)
-					font-size: 1.1em
-					font-weight: bold
-					line-height: 1
-					text-align: center
-					word-break: keep-all // +to break-word Asian languages
-					owerflow-break: keep-all // +to break-word Asian languages
-					overflow: hidden
-					color: black
-			// }}}
-			&.price // {{{
-				order: 0
-				max-height: 2.2em
-				display: flex
-				flex-direction: row
-				align-items: stretch
-				justify-content: center
-				padding-bottom: 0.4em
-				> div
-					flex: 0 0 auto
-					display: flex
-					flex-direction: row
-					align-items: flex-end
-					line-height: 1
-				> .currency
-					justify-content: flex-end
-					font-family: var(--sm-font-label)
-					font-size: 1.8em
-					padding-right: 0.15em
-					color: slategray
-				> .pad
-					flex: 1 1 0
-				> .value
-					> div
-						font-family: var(--sm-font-label)
-						text-overflow: ellipsis
-						overflow:      hidden
-						white-space:   nowrap
-						word-break:    break-all
-						overflow-wrap: anywhere // modern word-break
-					&.a
-						justify-content: center
-						padding-bottom: 0.14em
-						> .integer
-							font-size: 1.4em
-							color: darkslategray
-						> .fraction
-							font-size: 1.2em
-							color: slategray
-							padding-bottom: 0.03em
-					&.b
-						flex: 0 1 auto
-						padding-left: 1em
-						padding-bottom: 0.25em
-						text-decoration: line-through
-						text-decoration-color: darkslategray
-						> .integer
-							font-size: 1em
-							color: slategray
-						> .fraction
-							font-size: 0.8em
-							color: slategray
-							padding-bottom: 0.1em
-				////
-				&.equal
-					> .value.b > div
-						display: none
-			// }}}
-			&.actions // {{{
-				font-size: calc(var(--item-h) * var(--c-size) / 100)
-				display: flex
-				flex-direction: row
-				gap: 4px
-				// base
-				> button
-					flex: 1 1 0
-				// specific
-				> button.add // {{{
-					flex: 0 0 0
-					size = 0.917em // 44px
-					padY = (1 - size) / 2
-					padX = 0.125em
-					bord = 0.025em
-					min-width: size + 2*padX + 2*bord
-					//min-width: 0em // 0.917 + pad + border(2*0.025)
-					//padding: 0.0415em 0.083em 0.0415em 0.083em
-					padding: padY padX padY padX
-					> svg
-						width:  100%
-						height: 100%
-						display: block
-						> text
-							//font-size: 0.375em
-							font-size: 0.417em
-							//font-size: 0.458em
-							font-family: var(--sm-font-label)
-							font-weight: bold
-							fill: transparent
-						> .a
-							fill: rgba(var(--sm-color-4), 0.75)
-						> .b
-							fill: rgba(var(--sm-color-5))
-						> .c
-							fill: rgba(var(--sm-color-5), 0.5)
-						> .d
-							font-size: 0.458em
-						> .e
-							fill: transparent
-					&.v
-						&.h > svg
-							> .b
-								fill: rgba(var(--sm-color-4), 0.75)
-							> .c
-								fill: rgba(var(--sm-color-1), 0.25)
-							> .d
-								fill: rgba(var(--sm-color-0))
-						&.f > svg
-							> .a
-								fill: rgba(var(--sm-color-6), 0.65)
-							> .c
-								fill: rgba(var(--sm-color-7), 0.25)
-							//> .d
-							//	fill: rgba(var(--sm-color-7))
-						&.f.h > svg
-							> .c
-								fill: rgba(var(--sm-color-7), 0.125)
-							> .d
-								fill: rgba(var(--sm-color-7))
-						&.w > svg,
-						&.w.f > svg
-							> .a
-								fill: rgba(var(--sm-color-2))
-							> .b
-								fill: rgba(var(--sm-color-2))
-							> .c
-								fill: rgba(var(--sm-color-7), 0.125)
-							> .d
-								fill: transparent
-						&.x > svg
-							> .c
-								fill: rgba(var(--sm-color-1), 0.4)
-							> .d
-								fill: transparent
-							> .e
-								fill: rgba(var(--sm-color-0))
-						&.x.h > svg
-							> .c
-								fill: rgba(var(--sm-color-1), 0.25)
-							> .e
-								fill: rgba(var(--sm-color-5))
-						&.x.f > svg
-							> .c
-								fill: rgba(var(--sm-color-7), 0.15)
-							> .e
-								fill: rgba(var(--sm-color-6))
-						&.x.f.h > svg
-							> .d
-								fill: transparent
-						&.x.w > svg,
-						&.x.w.f > svg
-							> .e
-								fill: rgba(var(--sm-color-7))
-				// }}}
-			// }}}
-		////
-	// }}}
-	&.catalog.lines // {{{
-		> div > .item > div
-			&.image // {{{
-				display: flex
-			// }}}
-		////
-	// }}}
-	/* CATALOG CONTROLS */
 	&.orderer // {{{
 		// root
 		width:  100%
@@ -1549,7 +1555,6 @@ a-container(xpad=0,ypad=0)
 				// }}}
 		////
 	// }}}
-	/* CUSTOM */
 	button.w3-button // {{{
 		font-size: var(--w3-size)
 		width:  100%
@@ -1824,4 +1829,4 @@ a-container(xpad=0,ypad=0)
 			background-color: silver
 			box-shadow: inset 0 0 0 0.01em white
 		// }}}
-// ===
+/***/
