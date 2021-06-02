@@ -990,7 +990,7 @@ SHOP = (url, cfg = null) -> w3ui.catalog {
 					# base
 					@root    = root
 					@rootBox = root.firstChild
-					@cfg     = w3ui.assign {}, {
+					@cfg     = w3ui.attach {}, {
 						stretch: [true, true] # width,height dropdown stretching
 						gap: [1, 1] # px vertical(root),horizontal(inner item)
 						delay: [ # hover intents
@@ -1159,7 +1159,6 @@ SHOP = (url, cfg = null) -> w3ui.catalog {
 		range:
 			'products': # {{{
 				construct: !-> # {{{
-					debugger
 					@view = w3ui.gridlist {root: @root}
 				# }}}
 				init: !-> # {{{

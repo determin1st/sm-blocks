@@ -1,4 +1,4 @@
-inc/httpFetch
+inc/w3fetch.js
 inc/w3ui.js
 inc/mustache.php
 *.vim

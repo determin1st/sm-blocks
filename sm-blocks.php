@@ -391,12 +391,6 @@ class Blocks {
     # }}}
   # }}}
   # initializer {{{
-  public static function init()
-  {
-    if (!self::$I) {# private singleton
-      self::$I = new Blocks();
-    }
-  }
   private function __construct()
   {
     # plugins loaded
@@ -430,19 +424,15 @@ class Blocks {
     # REGISTER files {{{
     # external
     $a = plugins_url().'/'.$I->BRAND.'/';
-    $b = file_exists($I->INCDIR.'httpFetch')
-      ? $a.'inc/httpFetch/httpFetch.js'
-      : 'https://cdn.jsdelivr.net/npm/http-fetch-json@2/httpFetch.js';
-    wp_register_script('http-fetch', $b, [], false, false);
+    $b = file_exists($I->INCDIR.'w3fetch.js')
+      ? $a.'inc/w3fetch.js'
+      : 'https://cdn.jsdelivr.net/npm/w3fetch@1/w3fetch.js';
+    wp_register_script('w3fetch', $b, [], false, false);
     $b = $a.'inc/w3ui.js';
     wp_register_script('w3ui', $b, [], false, false);
     # internal
     $b = $a.$I->BRAND.'.';
-    wp_register_script(
-      $I->BRAND, $b.'js',
-      ['http-fetch','w3ui'],
-      false, false
-    );
+    wp_register_script($I->BRAND, $b.'js', ['w3fetch','w3ui'], false, false);
     wp_register_style($I->BRAND, $b.'css');
     # }}}
     add_action('rest_api_init', function() use ($I) {
@@ -526,6 +516,9 @@ HTM;
   }
   # }}}
   # api {{{
+  public static function init() {
+    !self::$I && (self::$I = new Blocks());
+  }
   public static function parse($html, $ctx = null, $delims = null) {
     # {{{
     # get instance

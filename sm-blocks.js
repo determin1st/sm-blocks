@@ -901,7 +901,7 @@ SHOP = function(url, cfg){
             var this$ = this;
             this.root = root;
             this.rootBox = root.firstChild;
-            this.cfg = w3ui.assign({}, {
+            this.cfg = w3ui.attach({}, {
               stretch: [true, true],
               gap: [1, 1],
               delay: [300, 600],
@@ -1049,7 +1049,6 @@ SHOP = function(url, cfg){
       range: {
         'products': {
           construct: function(){
-            debugger;
             this.view = w3ui.gridlist({
               root: this.root
             });
