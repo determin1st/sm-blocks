@@ -449,7 +449,7 @@ class Blocks {
   private function render($name, $opt = '')
   {
     # prepare {{{
-    $class = $this->BRAND.' '.$name;
+    $class = 'w3ui '.$this->BRAND.' '.$name;
     $style = '';
     $placeholder = self::$svg['placeholder'];
     # parse configuration

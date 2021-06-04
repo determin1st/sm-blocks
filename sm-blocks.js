@@ -901,7 +901,7 @@ SHOP = function(url, cfg){
             var this$ = this;
             this.root = root;
             this.rootBox = root.firstChild;
-            this.cfg = w3ui.attach({}, {
+            this.cfg = w3ui.merge({}, {
               stretch: [true, true],
               gap: [1, 1],
               delay: [300, 600],
@@ -1054,7 +1054,6 @@ SHOP = function(url, cfg){
             });
           },
           init: function(){
-            debugger;
             var v;
             (v = this.view).init();
             this.config.layout = v.layout.slice();
@@ -1062,7 +1061,6 @@ SHOP = function(url, cfg){
             this.state.range = v.buffer.range.slice();
           },
           sync: function(){
-            debugger;
             var a, b;
             a = this.config.layout;
             b = this.view.layout;

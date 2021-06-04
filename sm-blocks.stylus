@@ -13,14 +13,14 @@ a-container(xpad=0,ypad=0)
 	box-sizing: border-box
 	min-width: 0
 	min-height: 0
-	padding-top: 0
-	padding-right: 0
-	padding-bottom: 0
-	padding-left: 0
-	margin-top: ypad
-	margin-right: xpad
-	margin-bottom: ypad
-	margin-left: xpad
+	margin-top: 0
+	margin-right: 0
+	margin-bottom: 0
+	margin-left: 0
+	padding-top: ypad
+	padding-right: xpad
+	padding-bottom: ypad
+	padding-left: xpad
 	outline-width: 0
 	border-width: 0
 	background-color: transparent
@@ -49,7 +49,7 @@ a-container(xpad=0,ypad=0)
 	--sm-font-label: 'Arial Black', 'Arial Bold', 'Gadget', sans-serif
 	--sm-font-input: 'Consolas', 'Courier', monospace
 // }}}
-.sm-blocks
+.w3ui
 	// root {{{
 	// it is assumed that frame dimensions are set in relative "em" units,
 	// horizontal or vertical - doesn't matter,
@@ -121,12 +121,7 @@ a-container(xpad=0,ypad=0)
 			fill: transparent
 			stroke: transparent
 	// }}}
-	/*************/
-	/* PRIMITIVE */
-	/*************/
-	/*************/
-	/* COMPOUND  */
-	/*************/
+	/*===========*/
 	&.gridlist // {{{
 		// configuration
 		// primary container (grid of grids)
@@ -136,34 +131,39 @@ a-container(xpad=0,ypad=0)
 		--row-gap: 0.3333em // 16px
 		// secondary containers (all item types)
 		// item sized in ppbs (1*ppb == 1*(--w3-size))
-		--card-cols: 6
-		--card-rows: 8
-		--line-cols: 13
-		--line-rows: 3
+		--card-x: 3
+		--card-y: 5
+		--line-x: 13
+		--line-y: 3
 		&.cards
-			--item-cols: var(--card-cols)
-			--item-rows: var(--card-rows)
+			--item-x: var(--card-x)
+			--item-y: var(--card-y)
 		&.lines
-			--item-cols: var(--line-cols)
-			--item-rows: var(--line-rows)
+			--item-x: var(--line-x)
+			--item-y: var(--line-y)
 		////
 		width: 100% // try to eat all the width (observed)
 		height: auto // grow/shrink automatically (calculated)
 		min-width: 0 // hint to the browser only, block zaps to nothing
-		min-height: 0 // ..same
+		// the height is determined
+		min-height: calc(
+			var(--rows) * ((1em * var(--item-y)) + var(--row-gap)) - \
+			var(--row-gap)
+		)
 		display: flex // for horizontal alignment
-		flex-direction: row // tested! no others work stable
+		flex-direction: row // tested! others doesnt work stable
+		align-items: stretch // grid eats all height
 		justify-content: center // configurabable
-		align-items: flex-start // top, non-applicabable (auto)
 		// custom paddings
-		padding-top: 0.3333em // 16px
+		padding-top: 0
 		padding-right: 0
-		padding-bottom: 0.3333em
+		padding-bottom: 0
 		padding-left: 0
+		&.v > div
+			display: grid
 		> div
 			// PRIMARY: items grid
 			flex: 1 1 0
-			display: grid
 			grid-template-columns: repeat(var(--cols), 1fr)
 			grid-column-gap: var(--col-gap)
 			grid-row-gap: var(--row-gap)
@@ -203,9 +203,6 @@ a-container(xpad=0,ypad=0)
 						> svg
 							display: none
 	// }}}
-	/********/
-	/* TODO */
-	/********/
 	&.gridlist.cards // {{{
 		> div > .item > div
 			&.image // {{{
@@ -414,6 +411,11 @@ a-container(xpad=0,ypad=0)
 			// }}}
 		////
 	// }}}
+	/*===========*/
+/*===============*/
+/* CUSTOMIZATION */
+/*===============*/
+.sm-blocks
 	&.menu // {{{
 		--root-size: 1em
 		--item-size: 0.75em
