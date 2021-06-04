@@ -16,16 +16,16 @@ class Blocks {
   private static
     $I     = null;
   private
-    $BRAND  = 'sm-blocks',
-    $ERROR  = '',
-    $LANG   = 'en',
-    $INCDIR = '',
-    $db     = null,# database interface handle (MySQLi)
-    $pfx    = null,# database tables prefix ("_wp", usually)
-    $tp     = null,# template parser (mustache)
+    $BRAND   = 'sm',# CSS class selector
+    $LANG    = 'en',# text selector: /data/lang.inc
+    $ERROR   = '',  # fatal message
+    $DATADIR = '',  # /data
+    $INCDIR  = '',  # /inc
+    $db      = null,# database handle (MySQLi)
+    $pfx     = null,# database tables prefix ("_wp", usually)
+    $tp      = null,# template parser (mustache)
     ###
-    $renderers = [
-      # {{{
+    $renderers = [ # {{{
       'menu'            => null,
       'products'        => null,
       'paginator'       => null,
@@ -33,30 +33,28 @@ class Blocks {
       'rows-selector'   => null,
       'category-filter' => null,
       'price-filter'    => null,
-      # }}}
     ],
-    $defs = [
-      # {{{
+    # }}}
+    $defs = [ # TODO: refactor {{{
       'products' => [
         'mode'  => 0,
         'cols'  => [1,4],
         'rows'  => [2,0],
         'order' => ['price',1],
       ],
-      # }}}
-      'rows-selector' => [ # {{{
+      'rows-selector' => [
         'list'  => [0,2,4,8,16], # 0=auto
         'index' => 1,
       ],
-      # }}}
-      'orderer' => [ # {{{
+      'orderer' => [
         'order'      => ['featured',-1],
         'switchMode' => 1,
         'autodrop'   => false,
       ],
-      # }}}
     ],
-    $blocks = [ # TODO: DELET
+    # }}}
+    ###
+    $blocks = [ # TODO: DELET => defs
       'paginator' => [ # {{{
         'render_callback' => [null, 'renderPaginator'],
         'attributes'      => [
@@ -153,7 +151,7 @@ class Blocks {
       # }}}
       'products' => [ # {{{
         'main' => '
-        <div class="sm-blocks products {{custom}}" style="{{style}}">
+        <div class="products {{custom}}" style="{{style}}">
           <div data-cfg=\'{{cfg}}\'></div>
           {{placeholder}}
           <hr>
@@ -196,7 +194,7 @@ class Blocks {
       # }}}
       'paginator' => [ # {{{
         'main' => '
-        <div class="sm-blocks paginator {{custom}}">
+        <div class="paginator {{custom}}">
           <div data-cfg=\'{{cfg}}\'>
             {{gotoF}}{{gotoP}}{{sep1}}{{range}}{{sep2}}{{gotoN}}{{gotoL}}
           </div>
@@ -324,7 +322,7 @@ class Blocks {
       # }}}
       'section' => [ # {{{
         'main' => '
-        <div class="sm-blocks section {{custom}}">
+        <div class="section {{custom}}">
           <div class="item" data-cfg=\'{{cfg}}\'>
             {{title}}{{sep}}{{section}}
           </div>
@@ -369,16 +367,9 @@ class Blocks {
       ],
       # }}}
     ],
-    $base_attr = [ # TODO: DELETE
-      'customClass',
-      'class',
-      'style',
-    ],
     $cache = [
-      # {{{
       'categoryTree' => [], # key  => tree
       'categorySlug' => [], # slug => id
-      # }}}
     ];
   public static
     $svg = [ # {{{
@@ -396,21 +387,26 @@ class Blocks {
     # plugins loaded
     # PREPARE instance {{{
     global $wpdb;# reuse WordPress database instance
-    # set base
-    $I       = $this;
+    # alias instance
+    $I = $this;
+    # determine database
+    $I->db  = $wpdb->dbh;
+    $I->pfx = $wpdb->prefix;
+    # determine language
     $I->LANG = substr(get_locale(), 0, 2);
-    $I->INCDIR = __DIR__.DIRECTORY_SEPARATOR.'inc'.DIRECTORY_SEPARATOR;
-    $I->db   = $wpdb->dbh;
-    $I->pfx  = $wpdb->prefix;
-    # set renderers
-    foreach ($I->renderers as $a => &$b)
+    # determine base paths
+    $a = __DIR__.DIRECTORY_SEPARATOR;
+    $I->DATADIR = $a.'data'.DIRECTORY_SEPARATOR;
+    $I->INCDIR  = $a.'inc'.DIRECTORY_SEPARATOR;
+    # create block renderers
+    foreach ($I->renderers as $blockName => &$a)
     {
-      $b = (function ($text = '') use ($I, $a) {
-        return $I->render($a, $text);
+      $a = (function ($json = '') use ($I, $blockName) {
+        return $I->render($blockName, $json);
       });
     }
-    unset($a, $b);
-    # create template parser instance
+    unset($a);
+    # get template parser instance
     $a = '\\'.__NAMESPACE__.'\\Mustache_Engine';
     $b = $I->INCDIR.'mustache.php';
     if (!class_exists($a, false)) {
@@ -422,22 +418,26 @@ class Blocks {
     ]);
     # }}}
     # REGISTER files {{{
-    # external
-    $a = plugins_url().'/'.$I->BRAND.'/';
-    $b = file_exists($I->INCDIR.'w3fetch.js')
-      ? $a.'inc/w3fetch.js'
-      : 'https://cdn.jsdelivr.net/npm/w3fetch@1/w3fetch.js';
-    wp_register_script('w3fetch', $b, [], false, false);
-    $b = $a.'inc/w3ui.js';
-    wp_register_script('w3ui', $b, [], false, false);
     # internal
-    $b = $a.$I->BRAND.'.';
-    wp_register_script($I->BRAND, $b.'js', ['w3fetch','w3ui'], false, false);
-    wp_register_style($I->BRAND, $b.'css');
+    $a = $I->BRAND.'-blocks';
+    $b = plugins_url().'/'.$a.'/';
+    $c = $b.'blocks.';
+    wp_register_script($a, $c.'js', ['w3fetch','w3ui'], false, false);
+    wp_register_style($a, $c.'css', ['w3ui']);
+    # external
+    $a = 'w3fetch';
+    $c = file_exists($I->INCDIR.$a)
+      ? "{$b}inc/{$a}/{$a}.js"
+      : "https://cdn.jsdelivr.net/npm/{$a}@1/{$a}.js";
+    wp_register_script($a, $c, [], false, false);
+    $a = 'w3ui';
+    $c = "{$b}inc/{$a}/{$a}.";
+    wp_register_script($a, $c.'js', [], false, false);
+    wp_register_style($a, $c.'css');
     # }}}
     add_action('rest_api_init', function() use ($I) {
       # REGISTER REST api endpoint {{{
-      register_rest_route($I->BRAND, 'kiss', [
+      register_rest_route($I->BRAND, 'blocks', [
         'methods'  => 'POST',
         'callback' => [$I, 'apiEntry'],
       ]);
@@ -546,16 +546,16 @@ HTM;
     if (!($I = self::$I)) {
       return '';
     }
-    # compose configuration
-    $URL  = '/?rest_route=/'.$I->BRAND.'/kiss';
-    $MENU = $I->db_Menu($BRAND);
-    $CFG  = $I->apiConfig([
+    # prepare
+    $api  = '/?rest_route=/'.$I->BRAND.'/blocks';
+    $menu = $I->db_Menu($BRAND);
+    $cfg  = $I->apiConfig([
       'lang'     => $I->LANG,
-      'route'    => [$MENU,-1],
+      'route'    => [$menu,-1],
       'category' => null,
     ]);
-    # compose invocation statement
-    return 'SHOP("'.$URL.'",'.$CFG.');';
+    # complete
+    return 'app("'.$api.'",'.$cfg.');';
     # }}}
   }
   # }}}
@@ -822,7 +822,7 @@ HTM;
       return '';
     }
     # get locale and language
-    $locale = include($this->INCDIR.'lang.inc');
+    $locale = include($this->DATADIR.'lang.inc');
     $lang = array_key_exists($p['lang'], $locale)
       ? $p['lang']
       : 'en';

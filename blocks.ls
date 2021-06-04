@@ -1,570 +1,10 @@
 "use strict"
-SHOP = (url, cfg = null) -> w3ui.catalog {
-	brand: 'sm-blocks'
+app = (api, cfg = null) -> w3ui.catalog {
+	brand: 'sm'
 	root: document.documentElement
-	apiURL: url
+	api: api
 	config: cfg
-	debug: true
-	s:
-		productCard: do -> # {{{
-			init  = w3ui.promise!
-			sizes = null # dimensions of the card elements
-			template = w3ui.template !-> # {{{
-				/*
-				<div>
-					<div class="a">
-						<div class="image">
-							<img alt="product">
-							<svg preserveAspectRatio="none" fill-rule="evenodd" clip-rule="evenodd" viewBox="0 0 270.92 270.92">
-								<path fill-rule="nonzero" d="M135.46 245.27c-28.39 0-54.21-10.93-73.72-28.67L216.6 61.74c17.74 19.51 28.67 45.33 28.67 73.72 0 60.55-49.26 109.81-109.81 109.81zm0-219.62c29.24 0 55.78 11.56 75.47 30.25L55.91 210.93c-18.7-19.7-30.25-46.23-30.25-75.47 0-60.55 49.26-109.81 109.8-109.81zm84.55 27.76c-.12-.16-.18-.35-.33-.5-.1-.09-.22-.12-.32-.2-21.4-21.7-51.09-35.19-83.9-35.19-65.03 0-117.94 52.91-117.94 117.94 0 32.81 13.5 62.52 35.2 83.91.08.09.11.22.2.31.14.14.33.2.49.32 21.24 20.63 50.17 33.4 82.05 33.4 65.03 0 117.94-52.91 117.94-117.94 0-31.88-12.77-60.8-33.39-82.05z"/>
-							</svg>
-						</div>
-					</div>
-					<div class="b">
-						<div class="title"><div><span></span></div></div>
-						<div class="price">
-							<div class="currency"><span></span></div>
-							<div class="value a">
-								<div class="integer"><span></span></div>
-								<div class="fraction"><span></span><span></span></div>
-							</div>
-							<div class="value b">
-								<div class="integer"><span></span></div>
-								<div class="fraction"><span></span><span></span></div>
-							</div>
-						</div>
-					</div>
-					<div class="c">
-						<div class="actions"></div>
-					</div>
-				</div>
-				*/
-			# }}}
-			area = # {{{
-				image: do -> # {{{
-					Item = (block) !->
-						@block  = block
-						@box    = box = block.rootBox.querySelector '.image'
-						@image  = box.firstChild
-						@loaded = false
-						@load   = ~>> # {{{
-							# check image successfully loaded and valid
-							if not @image.complete or \
-							   (w = @image.naturalWidth) < 2 or \
-							   (h = @image.naturalHeight) < 2
-								###
-								return false
-							# wait variables initialized
-							await init
-							# get container size
-							cw = sizes.3
-							ch = sizes.0
-							# determine optimal display
-							if w >= h
-								# stretch by width
-								a  = h / w
-								b  = cw - w
-								w += b # 100%
-								h += a*b
-								# check overflow
-								if (b = h - ch) > 0
-									# reduce width
-									a = w / h
-									w = 100*(w - a*b)/cw
-									@image.style.maxWidth = w+'%'
-								else
-									# reduce height
-									h = 100*(h / ch)
-									@image.style.maxHeight = h+'%'
-							else
-								# stretch by height
-								a  = w / h
-								b  = ch - h
-								w += a*b
-								h += b
-								# check overflow
-								if (b = w - cw) > 0
-									# reduce height
-									a = h / w
-									h = 100*(h - a*b)/ch
-									@image.style.maxHeight = h+'%'
-								else
-									# reduce width
-									w = 100*(w / cw)
-									@image.style.maxWidth = w+'%'
-							# done
-							@box.classList.add 'v'
-							@loaded = true
-							return true
-						# }}}
-					###
-					Item.prototype =
-						set: (data) !-> # {{{
-							# clear
-							if @loaded
-								@image.removeEventListener 'load', @load
-								@box.classList.remove 'v'
-								@image.removeAttribute 'style'
-								@image.src = ''
-								@image.srcset = ''
-								@loaded = false
-							# set
-							if data and data.image
-								@image.addEventListener 'load', @load
-								for a,b of data.image
-									@image[a] = b
-						# }}}
-					###
-					return Item
-				# }}}
-				title: do -> # {{{
-					eBreakMarkers = /\s+([\\\|/.]){1}\s+/
-					Item = (block) !->
-						@block = block
-						@box   = box = block.rootBox.querySelector '.title'
-						@title = box = box.firstChild
-						@label = box.firstChild
-					###
-					Item.prototype =
-						set: (data) !-> # {{{
-							if data and (a = data.title)
-								# set
-								# TODO: DELETE
-								@label.textContent = data.index
-								return
-								# break title into lines
-								a = a.replace eBreakMarkers, "\n"
-								# TODO: check it fits the container height and
-								# TODO: cut string if required
-								# set
-								@label.textContent = a
-							else
-								# clear
-								@label.textContent = ''
-						# }}}
-					###
-					return Item
-				# }}}
-				price: do -> # {{{
-					eBreakThousands = /\B(?=(\d{3})+(?!\d))/
-					eNotNumber = /[^0-9]/
-					Item = (block) !->
-						@block    = block
-						@box      = box = block.rootBox.querySelector '.price'
-						@currency = w3ui.queryChild box, '.currency'
-						@boxes    = box = [
-							w3ui.queryChild box, '.value.a' # current
-							w3ui.queryChild box, '.value.b' # regular
-						]
-						@values   = [
-							box.0.children.0 # integer
-							box.0.children.1 # fraction
-							box.1.children.0
-							box.1.children.1
-						]
-						@money    = [0,0] # integers (no fraction)
-					###
-					Item.prototype =
-						set: (data) !-> # {{{
-							if data and (data = data.price)
-								# set
-								# prepare
-								# get global config
-								C = @block.master.group.config.currency
-								# split numbers [regular,current] into integer and fraction
-								b = data.0.split eNotNumber, 2
-								a = data.1.split eNotNumber, 2
-								# truncate fraction point
-								a.1 = if a.1
-									then (a.1.substring 0, C.3).padEnd C.3, '0'
-									else '0'.repeat C.3
-								b.1 = if b.1
-									then (b.1.substring 0, C.3).padEnd C.3, '0'
-									else '0'.repeat C.3
-								# determine money values
-								c = @money
-								d = +('1' + ('0'.repeat C.3))
-								c.0 = d*(+(a.0)) + (+a.1)
-								c.1 = d*(+(b.0)) + (+b.1)
-								# separate integer thousands
-								if C.2
-									a.0 = a.0.replace eBreakThousands, C.2
-									b.0 = b.0.replace eBreakThousands, C.2
-								# set values
-								@currency.firstChild.textContent = C.0
-								c = @values
-								c.0.firstChild.textContent = a.0
-								c.1.firstChild.textContent = C.1
-								c.1.lastChild.textContent  = a.1
-								c.2.firstChild.textContent = b.0
-								c.3.firstChild.textContent = C.1
-								c.3.lastChild.textContent  = b.1
-								# set styles
-								# price difference
-								c = @money
-								d = if c.0 == c.1
-									then 'equal'
-									else if c.0 > c.1
-										then 'lower'
-										else 'higher'
-								@box.classList.add d
-								# currency sign position
-								d = if C.4
-									then 'right'
-									else 'left'
-								@box.classList.add d, 'v'
-								###
-							else
-								# clear
-								@box.className = 'price'
-						# }}}
-					###
-					return Item
-				# }}}
-				actions: do -> # {{{
-					tCartIcon = w3ui.template !-> # {{{
-						/*
-						<svg viewBox="0 0 48 48" preserveAspectRatio="none">
-							<circle class="a" cx="13" cy="40" r="4"/>
-							<circle class="a" cx="38" cy="40" r="4"/>
-							<polygon class="a" points="33,38 18,38 16,36 35,36 "/>
-							<polygon class="b" points="43,34 10,35 4,9 0,9 0,5 7,5 13,31 40,30 43.5,14 47.5,14 "/>
-							<polygon class="c" points="39,29 14,30 10,12 42.5,14 "/>
-							<text class="d" x="26.5" y="29" text-anchor="middle">+</text>
-							<text class="e" x="26" y="28" text-anchor="middle">99</text>
-						</svg>
-						*/
-					# }}}
-					Item = (block, cfg) !->
-						@block   = block
-						@box     = box = block.rootBox.querySelector '.actions'
-						@buttons = btn = w3ui.append box, [
-							w3ui.blocks.button {
-								name: 'add'
-								html: tCartIcon
-								hint: cfg.locale.hint.0
-								event:
-									click: [@addToCart, @]
-							}
-							w3ui.blocks.button {
-								name: 'open'
-								label: cfg.locale.label.1
-								event:
-									click: [@openDetails, block]
-							}
-						]
-						@cartNum = btn.0.root.querySelector 'text.e'
-					###
-					Item.prototype =
-						set: (data) !-> # {{{
-							###
-							# prepare
-							a = @block.master.group.config.cart
-							b = @buttons
-							# check
-							if data
-								# enable
-								b.1.lock !data.link
-								b.0.lock (data.stock.status != 'instock' or not data.stock.count)
-								# set number of items in the cart
-								@cartNum.textContent = c = if (c = a[data.id]) and c.count
-									then ''+c.count
-									else ''
-								b.0.root.classList.toggle 'x', !!c
-							else
-								# disable
-								b.1.lock true
-								b.0.lock true
-						# }}}
-						addToCart: (I, e) ~>> # {{{
-							# TODO: miniCart block
-							# select click mode
-							return 1 if not e
-							# update cart data
-							a = I.block.master.group.config.cart
-							b = I.block.data
-							if c = a[b.id]
-								c.count += 1
-							else
-								a[b.id] = {count: 1}
-							# refresh view
-							I.set b
-							# send request
-							c = await goFetch {
-								action: 'a_CartAdd'
-								params: [b.id, 1]
-							}
-							# check
-							if c instanceof Error
-								# restore previous view
-								a[b.id].count -= 1
-								I.set b
-								return false
-							# update total
-							a.total.count++
-							# refresh mini-cart
-							CART.set a.total.count if CART
-							# done
-							return true
-						# }}}
-						openDetails: (B, e) ~>> # {{{
-							# TODO: productDetails block
-							# select click mode
-							return 1 if not e
-							# naviagate the link
-							window.location.assign B.data.link
-							# done
-							return false
-						# }}}
-						getProduct: (id) -> # {{{
-							# check
-							if not data
-								return null
-							# search
-							for a,b of data when b.product_id == id
-								return b
-							# not found
-							return null
-						# }}}
-					###
-					return Item
-				# }}}
-			# }}}
-			Items = (block) !-> # {{{
-				cfg = block.master.group.config
-				for a of area
-					@[a] = new area[a] block, cfg
-			# }}}
-			Block = (master) !-> # {{{
-				# construct
-				# create root
-				R = document.createElement 'div'
-				R.className = 'item'
-				R.innerHTML = template
-				# create placeholder (reuse master)
-				R.appendChild (master.root.children.1.cloneNode true)
-				# create object shape
-				@master  = master
-				@root    = R
-				@rootBox = R.firstChild
-				@items   = new Items @
-				@data    = null
-			###
-			Block.prototype =
-				set: (data) -> # {{{
-					# check
-					if data
-						if not @data or @data.id != data.id
-							# set stock status
-							a = data.stock.status
-							if @data and (b = @data.stock.status) != a
-								c = (b == 'instock' and 's1') or 's0'
-								@root.classList.remove c
-							if not @data or b != a
-								c = (a == 'instock' and 's1') or 's0'
-								@root.classList.add c
-							# set items
-							for a,a of @items
-								a.set data
-							# set self
-							@root.classList.add 'x' if not @data
-							@data = data
-					else if @data
-						# clear stock status
-						a = @data.stock.status
-						c = (a == 'instock' and 's1') or 's0'
-						@root.classList.remove c
-						# clear items
-						for a,a of @items
-							a.set!
-						# clear self
-						@root.classList.remove 'x'
-						@data = null
-					# done
-					return true
-				# }}}
-				refresh: !-> # {{{
-					# TODO: refactor
-					@items.actions.set @data
-				# }}}
-			# }}}
-			return (m) -> # {{{
-				# consruct
-				m = new Block m
-				# attach to the master
-				m.master.rootBox.appendChild m.root
-				# initialize last
-				if init.pending
-					# read container styles
-					s = getComputedStyle m.root
-					sizes := s = [
-						parseInt (s.getPropertyValue '--a-size')
-						parseInt (s.getPropertyValue '--b-size')
-						parseInt (s.getPropertyValue '--c-size')
-						parseInt (s.getPropertyValue 'padding-left')
-						parseInt (s.getPropertyValue 'padding-right')
-						parseInt (s.getPropertyValue 'padding-top')
-						parseInt (s.getPropertyValue 'padding-bottom')
-					]
-					# determine item size
-					c = m.master.resizer.sizes
-					s.3 = c.0 - s.3 - s.4 # width
-					s.4 = c.1 - s.5 - s.6 # height
-					# determine section sizes
-					s.0 = s.4 * s.0 / 100
-					s.1 = s.4 * s.1 / 100
-					s.2 = s.4 * s.2 / 100
-					# complete
-					s.length = 5
-					init.resolve!
-				# done
-				return m
-			# }}}
-		# }}}
-		productPrice: do -> # {{{
-			template = w3ui.template !-> # {{{
-				/*
-				<div class="currency"><span></span></div>
-				<div class="value a">
-					<div class="integer"><span></span></div>
-					<div class="fraction"><span></span><span></span></div>
-				</div>
-				<div class="value b">
-					<div class="integer"><span></span></div>
-					<div class="fraction"><span></span><span></span></div>
-				</div>
-				*/
-			# }}}
-			price = do -> # {{{
-				eBreakThousands = /\B(?=(\d{3})+(?!\d))/
-				eNotNumber = /[^0-9]/
-				Item = (block) !->
-					@block    = block
-					@box      = box = block.rootBox.querySelector '.price'
-					@currency = w3ui.queryChild box, '.currency'
-					@boxes    = box = [
-						w3ui.queryChild box, '.value.a' # current
-						w3ui.queryChild box, '.value.b' # regular
-					]
-					@values   = [
-						box.0.children.0 # integer
-						box.0.children.1 # fraction
-						box.1.children.0
-						box.1.children.1
-					]
-					@money    = [0,0] # integers (no fraction)
-				###
-				Item.prototype =
-					set: (data) !-> # {{{
-						if data and (data = data.price)
-							# set
-							# prepare
-							# get global config
-							C = @block.master.group.config.currency
-							# split numbers [regular,current] into integer and fraction
-							b = data.0.split eNotNumber, 2
-							a = data.1.split eNotNumber, 2
-							# truncate fraction point
-							a.1 = if a.1
-								then (a.1.substring 0, C.3).padEnd C.3, '0'
-								else '0'.repeat C.3
-							b.1 = if b.1
-								then (b.1.substring 0, C.3).padEnd C.3, '0'
-								else '0'.repeat C.3
-							# determine money values
-							c = @money
-							d = +('1' + ('0'.repeat C.3))
-							c.0 = d*(+(a.0)) + (+a.1)
-							c.1 = d*(+(b.0)) + (+b.1)
-							# separate integer thousands
-							if C.2
-								a.0 = a.0.replace eBreakThousands, C.2
-								b.0 = b.0.replace eBreakThousands, C.2
-							# set values
-							@currency.firstChild.textContent = C.0
-							c = @values
-							c.0.firstChild.textContent = a.0
-							c.1.firstChild.textContent = C.1
-							c.1.lastChild.textContent  = a.1
-							c.2.firstChild.textContent = b.0
-							c.3.firstChild.textContent = C.1
-							c.3.lastChild.textContent  = b.1
-							# set styles
-							# price difference
-							c = @money
-							d = if c.0 == c.1
-								then 'equal'
-								else if c.0 > c.1
-									then 'lower'
-									else 'higher'
-							@box.classList.add d
-							# currency sign position
-							d = if C.4
-								then 'right'
-								else 'left'
-							@box.classList.add d, 'v'
-							###
-						else
-							# clear
-							@box.className = 'price'
-					# }}}
-				###
-				return Item
-			# }}}
-			Block = (master) !-> # {{{
-				# create object shape
-				@master = master
-				@root   = R
-				@items  = new Items @
-				@data   = null
-			###
-			Block.prototype =
-				set: (data) -> # {{{
-					# check
-					if data
-						if not @data or @data.id != data.id
-							# set stock status
-							a = data.stock.status
-							if @data and (b = @data.stock.status) != a
-								c = (b == 'instock' and 's1') or 's0'
-								@root.classList.remove c
-							if not @data or b != a
-								c = (a == 'instock' and 's1') or 's0'
-								@root.classList.add c
-							# set items
-							for a,a of @items
-								a.set data
-							# set self
-							@root.classList.add 'x' if not @data
-							@data = data
-					else if @data
-						# clear stock status
-						a = @data.stock.status
-						c = (a == 'instock' and 's1') or 's0'
-						@root.classList.remove c
-						# clear items
-						for a,a of @items
-							a.set!
-						# clear self
-						@root.classList.remove 'x'
-						@data = null
-					# done
-					return true
-				# }}}
-			# }}}
-			return (m) -> # {{{
-				# construct
-				# create root
-				R = document.createElement 'div'
-				R.className = 'sm-product-price'
-				R.innerHTML = template
-				# create placeholder (reuse master)
-				R.appendChild (master.root.children.1.cloneNode true)
-				# done
-				return new Block m, R
-			# }}}
-		# }}}
-	m:
+	blocks:
 		route:
 			'main-menu': do -> # TODO {{{
 				# {{{
@@ -1158,8 +598,9 @@ SHOP = (url, cfg = null) -> w3ui.catalog {
 			# }}}
 		range:
 			'products': # {{{
-				construct: !-> # {{{
+				construct: -> # {{{
 					@view = w3ui.gridlist {root: @root}
+					return 0
 				# }}}
 				init: !-> # {{{
 					# initialize
@@ -1183,6 +624,9 @@ SHOP = (url, cfg = null) -> w3ui.catalog {
 					b = @view.buffer.range
 					if a.0 != b.0
 						view.setOffset a.0
+				# }}}
+				lock: (v) !-> # {{{
+					@view.lock v
 				# }}}
 				check: (level) -> # {{{
 					# skip own charge
@@ -3208,5 +2652,564 @@ SHOP = (url, cfg = null) -> w3ui.catalog {
 					level: 2
 				# }}}
 				return Block
+			# }}}
+		sm:
+			productCard: do -> # {{{
+				init  = w3ui.promise!
+				sizes = null # dimensions of the card elements
+				template = w3ui.template !-> # {{{
+					/*
+					<div>
+						<div class="a">
+							<div class="image">
+								<img alt="product">
+								<svg preserveAspectRatio="none" fill-rule="evenodd" clip-rule="evenodd" viewBox="0 0 270.92 270.92">
+									<path fill-rule="nonzero" d="M135.46 245.27c-28.39 0-54.21-10.93-73.72-28.67L216.6 61.74c17.74 19.51 28.67 45.33 28.67 73.72 0 60.55-49.26 109.81-109.81 109.81zm0-219.62c29.24 0 55.78 11.56 75.47 30.25L55.91 210.93c-18.7-19.7-30.25-46.23-30.25-75.47 0-60.55 49.26-109.81 109.8-109.81zm84.55 27.76c-.12-.16-.18-.35-.33-.5-.1-.09-.22-.12-.32-.2-21.4-21.7-51.09-35.19-83.9-35.19-65.03 0-117.94 52.91-117.94 117.94 0 32.81 13.5 62.52 35.2 83.91.08.09.11.22.2.31.14.14.33.2.49.32 21.24 20.63 50.17 33.4 82.05 33.4 65.03 0 117.94-52.91 117.94-117.94 0-31.88-12.77-60.8-33.39-82.05z"/>
+								</svg>
+							</div>
+						</div>
+						<div class="b">
+							<div class="title"><div><span></span></div></div>
+							<div class="price">
+								<div class="currency"><span></span></div>
+								<div class="value a">
+									<div class="integer"><span></span></div>
+									<div class="fraction"><span></span><span></span></div>
+								</div>
+								<div class="value b">
+									<div class="integer"><span></span></div>
+									<div class="fraction"><span></span><span></span></div>
+								</div>
+							</div>
+						</div>
+						<div class="c">
+							<div class="actions"></div>
+						</div>
+					</div>
+					*/
+				# }}}
+				area = # {{{
+					image: do -> # {{{
+						Item = (block) !->
+							@block  = block
+							@box    = box = block.rootBox.querySelector '.image'
+							@image  = box.firstChild
+							@loaded = false
+							@load   = ~>> # {{{
+								# check image successfully loaded and valid
+								if not @image.complete or \
+									(w = @image.naturalWidth) < 2 or \
+									(h = @image.naturalHeight) < 2
+									###
+									return false
+								# wait variables initialized
+								await init
+								# get container size
+								cw = sizes.3
+								ch = sizes.0
+								# determine optimal display
+								if w >= h
+									# stretch by width
+									a  = h / w
+									b  = cw - w
+									w += b # 100%
+									h += a*b
+									# check overflow
+									if (b = h - ch) > 0
+										# reduce width
+										a = w / h
+										w = 100*(w - a*b)/cw
+										@image.style.maxWidth = w+'%'
+									else
+										# reduce height
+										h = 100*(h / ch)
+										@image.style.maxHeight = h+'%'
+								else
+									# stretch by height
+									a  = w / h
+									b  = ch - h
+									w += a*b
+									h += b
+									# check overflow
+									if (b = w - cw) > 0
+										# reduce height
+										a = h / w
+										h = 100*(h - a*b)/ch
+										@image.style.maxHeight = h+'%'
+									else
+										# reduce width
+										w = 100*(w / cw)
+										@image.style.maxWidth = w+'%'
+								# done
+								@box.classList.add 'v'
+								@loaded = true
+								return true
+							# }}}
+						###
+						Item.prototype =
+							set: (data) !-> # {{{
+								# clear
+								if @loaded
+									@image.removeEventListener 'load', @load
+									@box.classList.remove 'v'
+									@image.removeAttribute 'style'
+									@image.src = ''
+									@image.srcset = ''
+									@loaded = false
+								# set
+								if data and data.image
+									@image.addEventListener 'load', @load
+									for a,b of data.image
+										@image[a] = b
+							# }}}
+						###
+						return Item
+					# }}}
+					title: do -> # {{{
+						eBreakMarkers = /\s+([\\\|/.]){1}\s+/
+						Item = (block) !->
+							@block = block
+							@box   = box = block.rootBox.querySelector '.title'
+							@title = box = box.firstChild
+							@label = box.firstChild
+						###
+						Item.prototype =
+							set: (data) !-> # {{{
+								if data and (a = data.title)
+									# set
+									# TODO: DELETE
+									@label.textContent = data.index
+									return
+									# break title into lines
+									a = a.replace eBreakMarkers, "\n"
+									# TODO: check it fits the container height and
+									# TODO: cut string if required
+									# set
+									@label.textContent = a
+								else
+									# clear
+									@label.textContent = ''
+							# }}}
+						###
+						return Item
+					# }}}
+					price: do -> # {{{
+						eBreakThousands = /\B(?=(\d{3})+(?!\d))/
+						eNotNumber = /[^0-9]/
+						Item = (block) !->
+							@block    = block
+							@box      = box = block.rootBox.querySelector '.price'
+							@currency = w3ui.queryChild box, '.currency'
+							@boxes    = box = [
+								w3ui.queryChild box, '.value.a' # current
+								w3ui.queryChild box, '.value.b' # regular
+							]
+							@values   = [
+								box.0.children.0 # integer
+								box.0.children.1 # fraction
+								box.1.children.0
+								box.1.children.1
+							]
+							@money    = [0,0] # integers (no fraction)
+						###
+						Item.prototype =
+							set: (data) !-> # {{{
+								if data and (data = data.price)
+									# set
+									# prepare
+									# get global config
+									C = @block.master.group.config.currency
+									# split numbers [regular,current] into integer and fraction
+									b = data.0.split eNotNumber, 2
+									a = data.1.split eNotNumber, 2
+									# truncate fraction point
+									a.1 = if a.1
+										then (a.1.substring 0, C.3).padEnd C.3, '0'
+										else '0'.repeat C.3
+									b.1 = if b.1
+										then (b.1.substring 0, C.3).padEnd C.3, '0'
+										else '0'.repeat C.3
+									# determine money values
+									c = @money
+									d = +('1' + ('0'.repeat C.3))
+									c.0 = d*(+(a.0)) + (+a.1)
+									c.1 = d*(+(b.0)) + (+b.1)
+									# separate integer thousands
+									if C.2
+										a.0 = a.0.replace eBreakThousands, C.2
+										b.0 = b.0.replace eBreakThousands, C.2
+									# set values
+									@currency.firstChild.textContent = C.0
+									c = @values
+									c.0.firstChild.textContent = a.0
+									c.1.firstChild.textContent = C.1
+									c.1.lastChild.textContent  = a.1
+									c.2.firstChild.textContent = b.0
+									c.3.firstChild.textContent = C.1
+									c.3.lastChild.textContent  = b.1
+									# set styles
+									# price difference
+									c = @money
+									d = if c.0 == c.1
+										then 'equal'
+										else if c.0 > c.1
+											then 'lower'
+											else 'higher'
+									@box.classList.add d
+									# currency sign position
+									d = if C.4
+										then 'right'
+										else 'left'
+									@box.classList.add d, 'v'
+									###
+								else
+									# clear
+									@box.className = 'price'
+							# }}}
+						###
+						return Item
+					# }}}
+					actions: do -> # {{{
+						tCartIcon = w3ui.template !-> # {{{
+							/*
+							<svg viewBox="0 0 48 48" preserveAspectRatio="none">
+								<circle class="a" cx="13" cy="40" r="4"/>
+								<circle class="a" cx="38" cy="40" r="4"/>
+								<polygon class="a" points="33,38 18,38 16,36 35,36 "/>
+								<polygon class="b" points="43,34 10,35 4,9 0,9 0,5 7,5 13,31 40,30 43.5,14 47.5,14 "/>
+								<polygon class="c" points="39,29 14,30 10,12 42.5,14 "/>
+								<text class="d" x="26.5" y="29" text-anchor="middle">+</text>
+								<text class="e" x="26" y="28" text-anchor="middle">99</text>
+							</svg>
+							*/
+						# }}}
+						Item = (block, cfg) !->
+							@block   = block
+							@box     = box = block.rootBox.querySelector '.actions'
+							@buttons = btn = w3ui.append box, [
+								w3ui.blocks.button {
+									name: 'add'
+									html: tCartIcon
+									hint: cfg.locale.hint.0
+									event:
+										click: [@addToCart, @]
+								}
+								w3ui.blocks.button {
+									name: 'open'
+									label: cfg.locale.label.1
+									event:
+										click: [@openDetails, block]
+								}
+							]
+							@cartNum = btn.0.root.querySelector 'text.e'
+						###
+						Item.prototype =
+							set: (data) !-> # {{{
+								###
+								# prepare
+								a = @block.master.group.config.cart
+								b = @buttons
+								# check
+								if data
+									# enable
+									b.1.lock !data.link
+									b.0.lock (data.stock.status != 'instock' or not data.stock.count)
+									# set number of items in the cart
+									@cartNum.textContent = c = if (c = a[data.id]) and c.count
+										then ''+c.count
+										else ''
+									b.0.root.classList.toggle 'x', !!c
+								else
+									# disable
+									b.1.lock true
+									b.0.lock true
+							# }}}
+							addToCart: (I, e) ~>> # {{{
+								# TODO: miniCart block
+								# select click mode
+								return 1 if not e
+								# update cart data
+								a = I.block.master.group.config.cart
+								b = I.block.data
+								if c = a[b.id]
+									c.count += 1
+								else
+									a[b.id] = {count: 1}
+								# refresh view
+								I.set b
+								# send request
+								c = await goFetch {
+									action: 'a_CartAdd'
+									params: [b.id, 1]
+								}
+								# check
+								if c instanceof Error
+									# restore previous view
+									a[b.id].count -= 1
+									I.set b
+									return false
+								# update total
+								a.total.count++
+								# refresh mini-cart
+								CART.set a.total.count if CART
+								# done
+								return true
+							# }}}
+							openDetails: (B, e) ~>> # {{{
+								# TODO: productDetails block
+								# select click mode
+								return 1 if not e
+								# naviagate the link
+								window.location.assign B.data.link
+								# done
+								return false
+							# }}}
+							getProduct: (id) -> # {{{
+								# check
+								if not data
+									return null
+								# search
+								for a,b of data when b.product_id == id
+									return b
+								# not found
+								return null
+							# }}}
+						###
+						return Item
+					# }}}
+				# }}}
+				Items = (block) !-> # {{{
+					cfg = block.master.group.config
+					for a of area
+						@[a] = new area[a] block, cfg
+				# }}}
+				Block = (master) !-> # {{{
+					# construct
+					# create root
+					R = document.createElement 'div'
+					R.className = 'item'
+					R.innerHTML = template
+					# create placeholder (reuse master)
+					R.appendChild (master.root.children.1.cloneNode true)
+					# create object shape
+					@master  = master
+					@root    = R
+					@rootBox = R.firstChild
+					@items   = new Items @
+					@data    = null
+				###
+				Block.prototype =
+					set: (data) -> # {{{
+						# check
+						if data
+							if not @data or @data.id != data.id
+								# set stock status
+								a = data.stock.status
+								if @data and (b = @data.stock.status) != a
+									c = (b == 'instock' and 's1') or 's0'
+									@root.classList.remove c
+								if not @data or b != a
+									c = (a == 'instock' and 's1') or 's0'
+									@root.classList.add c
+								# set items
+								for a,a of @items
+									a.set data
+								# set self
+								@root.classList.add 'x' if not @data
+								@data = data
+						else if @data
+							# clear stock status
+							a = @data.stock.status
+							c = (a == 'instock' and 's1') or 's0'
+							@root.classList.remove c
+							# clear items
+							for a,a of @items
+								a.set!
+							# clear self
+							@root.classList.remove 'x'
+							@data = null
+						# done
+						return true
+					# }}}
+					refresh: !-> # {{{
+						# TODO: refactor
+						@items.actions.set @data
+					# }}}
+				# }}}
+				return (m) -> # {{{
+					# consruct
+					m = new Block m
+					# attach to the master
+					m.master.rootBox.appendChild m.root
+					# initialize last
+					if init.pending
+						# read container styles
+						s = getComputedStyle m.root
+						sizes := s = [
+							parseInt (s.getPropertyValue '--a-size')
+							parseInt (s.getPropertyValue '--b-size')
+							parseInt (s.getPropertyValue '--c-size')
+							parseInt (s.getPropertyValue 'padding-left')
+							parseInt (s.getPropertyValue 'padding-right')
+							parseInt (s.getPropertyValue 'padding-top')
+							parseInt (s.getPropertyValue 'padding-bottom')
+						]
+						# determine item size
+						c = m.master.resizer.sizes
+						s.3 = c.0 - s.3 - s.4 # width
+						s.4 = c.1 - s.5 - s.6 # height
+						# determine section sizes
+						s.0 = s.4 * s.0 / 100
+						s.1 = s.4 * s.1 / 100
+						s.2 = s.4 * s.2 / 100
+						# complete
+						s.length = 5
+						init.resolve!
+					# done
+					return m
+				# }}}
+			# }}}
+			productPrice: do -> # {{{
+				template = w3ui.template !-> # {{{
+					/*
+					<div class="currency"><span></span></div>
+					<div class="value a">
+						<div class="integer"><span></span></div>
+						<div class="fraction"><span></span><span></span></div>
+					</div>
+					<div class="value b">
+						<div class="integer"><span></span></div>
+						<div class="fraction"><span></span><span></span></div>
+					</div>
+					*/
+				# }}}
+				price = do -> # {{{
+					eBreakThousands = /\B(?=(\d{3})+(?!\d))/
+					eNotNumber = /[^0-9]/
+					Item = (block) !->
+						@block    = block
+						@box      = box = block.rootBox.querySelector '.price'
+						@currency = w3ui.queryChild box, '.currency'
+						@boxes    = box = [
+							w3ui.queryChild box, '.value.a' # current
+							w3ui.queryChild box, '.value.b' # regular
+						]
+						@values   = [
+							box.0.children.0 # integer
+							box.0.children.1 # fraction
+							box.1.children.0
+							box.1.children.1
+						]
+						@money    = [0,0] # integers (no fraction)
+					###
+					Item.prototype =
+						set: (data) !-> # {{{
+							if data and (data = data.price)
+								# set
+								# prepare
+								# get global config
+								C = @block.master.group.config.currency
+								# split numbers [regular,current] into integer and fraction
+								b = data.0.split eNotNumber, 2
+								a = data.1.split eNotNumber, 2
+								# truncate fraction point
+								a.1 = if a.1
+									then (a.1.substring 0, C.3).padEnd C.3, '0'
+									else '0'.repeat C.3
+								b.1 = if b.1
+									then (b.1.substring 0, C.3).padEnd C.3, '0'
+									else '0'.repeat C.3
+								# determine money values
+								c = @money
+								d = +('1' + ('0'.repeat C.3))
+								c.0 = d*(+(a.0)) + (+a.1)
+								c.1 = d*(+(b.0)) + (+b.1)
+								# separate integer thousands
+								if C.2
+									a.0 = a.0.replace eBreakThousands, C.2
+									b.0 = b.0.replace eBreakThousands, C.2
+								# set values
+								@currency.firstChild.textContent = C.0
+								c = @values
+								c.0.firstChild.textContent = a.0
+								c.1.firstChild.textContent = C.1
+								c.1.lastChild.textContent  = a.1
+								c.2.firstChild.textContent = b.0
+								c.3.firstChild.textContent = C.1
+								c.3.lastChild.textContent  = b.1
+								# set styles
+								# price difference
+								c = @money
+								d = if c.0 == c.1
+									then 'equal'
+									else if c.0 > c.1
+										then 'lower'
+										else 'higher'
+								@box.classList.add d
+								# currency sign position
+								d = if C.4
+									then 'right'
+									else 'left'
+								@box.classList.add d, 'v'
+								###
+							else
+								# clear
+								@box.className = 'price'
+						# }}}
+					###
+					return Item
+				# }}}
+				Block = (master) !-> # {{{
+					# create object shape
+					@master = master
+					@root   = R
+					@items  = new Items @
+					@data   = null
+				###
+				Block.prototype =
+					set: (data) -> # {{{
+						# check
+						if data
+							if not @data or @data.id != data.id
+								# set stock status
+								a = data.stock.status
+								if @data and (b = @data.stock.status) != a
+									c = (b == 'instock' and 's1') or 's0'
+									@root.classList.remove c
+								if not @data or b != a
+									c = (a == 'instock' and 's1') or 's0'
+									@root.classList.add c
+								# set items
+								for a,a of @items
+									a.set data
+								# set self
+								@root.classList.add 'x' if not @data
+								@data = data
+						else if @data
+							# clear stock status
+							a = @data.stock.status
+							c = (a == 'instock' and 's1') or 's0'
+							@root.classList.remove c
+							# clear items
+							for a,a of @items
+								a.set!
+							# clear self
+							@root.classList.remove 'x'
+							@data = null
+						# done
+						return true
+					# }}}
+				# }}}
+				return (m) -> # {{{
+					# construct
+					# create root
+					R = document.createElement 'div'
+					R.className = 'sm-product-price'
+					R.innerHTML = template
+					# create placeholder (reuse master)
+					R.appendChild (master.root.children.1.cloneNode true)
+					# done
+					return new Block m, R
+				# }}}
 			# }}}
 }

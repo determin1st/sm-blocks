@@ -1,5 +1,6 @@
-inc/w3fetch.js
-inc/w3ui.js
+arc/
+inc/w3fetch/
+inc/w3ui/
 inc/mustache.php
 *.vim
 *.swp
